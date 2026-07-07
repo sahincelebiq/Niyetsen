@@ -12,6 +12,7 @@ from datetime import date
 
 import jwt
 from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from jwt import PyJWKClient
 
 from app.config import CATEGORIES, settings
 from app.core.gemini_client import GeminiUnavailable
@@ -32,6 +33,18 @@ GEMINI_DOWN_MSG = "Şu an yıldızlara ulaşamıyorum, birazdan tekrar dener mis
 # ------------------------------------------------------------------
 AUTH_ERROR = HTTPException(status_code=401, detail="Kimlik doğrulama gerekli.")
 
+# Supabase artık HS256 legacy secret yerine JWKS (RS256/ES256) ile imzalıyor;
+# anahtarlar Supabase tarafında rotate edilebildiği için burada cache'lenip
+# kid üzerinden çözülüyor (PyJWKClient kendi içinde cache'liyor).
+_jwks_client: PyJWKClient | None = None
+
+
+def _get_jwks_client() -> PyJWKClient:
+    global _jwks_client
+    if _jwks_client is None:
+        _jwks_client = PyJWKClient(f"{settings.SUPABASE_URL}/auth/v1/.well-known/jwks.json")
+    return _jwks_client
+
 
 def get_current_user(
     x_user_id: str | None = Header(default=None),
@@ -44,10 +57,11 @@ def get_current_user(
         raise AUTH_ERROR
     token = authorization.split(" ", 1)[1].strip()
     try:
+        signing_key = _get_jwks_client().get_signing_key_from_jwt(token)
         payload = jwt.decode(
             token,
-            settings.SUPABASE_JWT_SECRET,
-            algorithms=["HS256"],
+            signing_key.key,
+            algorithms=["RS256", "ES256"],
             audience="authenticated",
         )
     except jwt.PyJWTError:

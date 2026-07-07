@@ -27,7 +27,6 @@ class Settings:
     # Dev'de auth kapalı çalışabilir; PROD'DA ASLA. main.py bunu zorlar.
     AUTH_DISABLED: bool = _bool("AUTH_DISABLED", "true")
     SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "")
-    SUPABASE_JWT_SECRET: str = os.environ.get("SUPABASE_JWT_SECRET", "")
     # service_role anahtarı — SADECE backend'de yaşar, RLS'i bypass eder, .env dışına çıkmaz.
     SUPABASE_SERVICE_KEY: str = os.environ.get("SUPABASE_SERVICE_KEY", "")
     # false: InMemoryRepository (MVP varsayılanı, testler bunu kullanır).

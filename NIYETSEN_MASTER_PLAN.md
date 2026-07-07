@@ -223,10 +223,12 @@ yapılmadı — KAPI 1 bu adım tamamlanınca resmen kapanır.**
 - [ ] Supabase Auth: e-posta + Google + **Apple ile Giriş** (Expo:
       `expo-apple-authentication`, `expo-auth-session`) — mobil hâlâ anonim
       `X-User-Id` (AsyncStorage) kullanıyor, gerçek login YOK
-- [x] FastAPI JWT middleware yazıldı (`get_current_user`) — ⚠️ bu proje JWKS
-      tabanlı imzalama kullanıyor (Legacy HS256 secret yok), middleware şu an
-      HS256 bekliyor; gerçek login'e geçerken JWKS doğrulamasına taşınmalı.
-      `AUTH_DISABLED=true` kaldığı sürece devrede değil.
+- [x] FastAPI JWT middleware yazıldı (`get_current_user`) — JWKS tabanlı
+      doğrulamaya (`SUPABASE_URL/auth/v1/.well-known/jwks.json`, RS256/ES256)
+      taşındı; `SUPABASE_JWT_SECRET`/HS256 kaldırıldı. Testler sahte JWKS
+      client ile 29/29 geçiyor. `AUTH_DISABLED=true` kaldığı sürece devrede
+      değil — Apple/Google login akışı bağlanınca sadece bunu `false` yapmak
+      yeterli.
 - [ ] Chat geçmişi + intent DB'ye yazılır (plan/görevler/puan zaten Supabase'de
       kalıcı ama sohbet mesajları hâlâ sadece mobil local state'te — uygulama
       kapanınca sohbet geçmişi kaybolur, plan kaybolmaz)
