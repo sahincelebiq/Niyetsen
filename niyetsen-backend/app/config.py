@@ -1,0 +1,77 @@
+"""
+Niyetsen — Yapılandırma
+Tüm ayarlar tek yerden okunur. Sırlar YALNIZ .env'de yaşar (asla commit edilmez).
+"""
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+
+def _bool(name: str, default: str = "false") -> bool:
+    return os.environ.get(name, default).strip().lower() in ("1", "true", "yes")
+
+
+class Settings:
+    # --- AI ---
+    GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_TIMEOUT_SEC", "30"))
+    GEMINI_MAX_RETRIES: int = int(os.environ.get("GEMINI_MAX_RETRIES", "2"))
+
+    # --- Görsel ---
+    UNSPLASH_ACCESS_KEY: str = os.environ.get("UNSPLASH_ACCESS_KEY", "")
+
+    # --- Ortam ---
+    ENV: str = os.environ.get("ENV", "dev")  # dev | prod
+    # Dev'de auth kapalı çalışabilir; PROD'DA ASLA. main.py bunu zorlar.
+    AUTH_DISABLED: bool = _bool("AUTH_DISABLED", "true")
+    SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "")
+    SUPABASE_JWT_SECRET: str = os.environ.get("SUPABASE_JWT_SECRET", "")
+    # service_role anahtarı — SADECE backend'de yaşar, RLS'i bypass eder, .env dışına çıkmaz.
+    SUPABASE_SERVICE_KEY: str = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    # false: InMemoryRepository (MVP varsayılanı, testler bunu kullanır).
+    # true: SupabaseRepository — gerçek DB kalıcılığı (Faz 2).
+    USE_SUPABASE_DB: bool = _bool("USE_SUPABASE_DB", "false")
+
+    # --- MVP plan sınırları ---
+    # 365 günü TEK istekte üretme (maliyet + timeout). Haftalık partiler halinde
+    # üret; MVP'de ilk parti = 7 gün. (Cursor notu: uzun planlar için
+    # plan_service.generate_next_batch yuvası hazır.)
+    PLAN_BATCH_DAYS: int = int(os.environ.get("PLAN_BATCH_DAYS", "7"))
+    MAX_TASKS_PER_DAY: int = int(os.environ.get("MAX_TASKS_PER_DAY", "5"))
+
+    # --- Kanıt ---
+    PROOF_MAX_BYTES: int = 5 * 1024 * 1024        # 5 MB
+    PROOF_MIN_CONFIDENCE: int = 60                 # Gemini Vision güven eşiği
+    PROOF_MAX_ATTEMPTS: int = 3                    # 3. denemede beyanla kabul
+
+    # --- Rate limit (kullanıcı başına) ---
+    CHAT_RATE_LIMIT_PER_MIN: int = int(os.environ.get("CHAT_RATE_LIMIT_PER_MIN", "10"))
+
+
+settings = Settings()
+
+
+# ============================================================
+# OYUN SABİTLERİ — MASTER_PLAN §1–2'den birebir. DEĞİŞTİRME.
+# ============================================================
+CATEGORIES = ["İrade", "İstikrar", "Disiplin", "Özgüven", "Sosyallik", "Özsaygı"]
+
+POINTS_PER_TASK = 50          # görev tamamlama: etiketli her kategoriye +50
+BASE_PENALTY = 25             # ceza tabanı
+SILENT_PENALTY_CAP = 200      # sessiz kaçırma katlanma TAVANI (25→50→100→200)
+EXCUSE_PENALTY = 25           # mazeret yolu: sabit, katlanmaz
+EXCUSE_LIMIT = 10             # 10. mazerette tüm puan ×0.5, sayaç sıfırlanır
+POINTS_FLOOR = 0              # puan asla negatif olmaz
+
+# Rank merdiveni: eşik → kademe (kategori başına puanla)
+RANK_LADDER = [
+    (10_000, "Usta"),
+    (9_000, "Gold I"), (8_000, "Gold II"), (7_000, "Gold III"),
+    (6_000, "Silver I"), (5_000, "Silver II"), (4_000, "Silver III"),
+    (3_000, "Bronz I"), (2_000, "Bronz II"), (1_000, "Bronz III"),
+]
+RANK_UNRANKED = "Çaylak"      # 1000 altı
+
+FREEZE_TOKENS_PER_MONTH = 1   # Zincir Koruma Jetonu: ayda 1 otomatik

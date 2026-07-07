@@ -1,0 +1,82 @@
+"""
+Niyetsen — Kanıt Doğrulama Servisi (MASTER_PLAN §1.5)
+Foto + görev başlığı → Gemini Vision → 0-100 güven skoru.
+  skor >= 60            → onay
+  skor <  60, deneme <3 → nazik "bir kare daha" (reddetme, davet et)
+  3. deneme             → kullanıcı beyanıyla KABUL (kullanıcıyla savaşma —
+                          philosophy.py Yasa 1: sistem polislik için değil,
+                          alışkanlık için var)
+Konum verilmişse skora +10 bonus güven.
+"""
+from __future__ import annotations
+
+import logging
+
+from app.config import settings
+from app.core import prompts
+from app.core.gemini_client import GeminiUnavailable, generate_json_with_image
+from app.models.schemas import ProofResult
+
+log = logging.getLogger("niyetsen.proof")
+
+ALLOWED_MIME = {"image/jpeg", "image/png"}
+
+
+class ProofRejected(ValueError):
+    """Dosya kurallara uymuyor (boyut/tip) — 400 döner."""
+
+
+def validate_upload(image_bytes: bytes, mime_type: str) -> None:
+    if mime_type not in ALLOWED_MIME:
+        raise ProofRejected("Sadece JPEG veya PNG kabul edilir.")
+    if len(image_bytes) > settings.PROOF_MAX_BYTES:
+        raise ProofRejected("Fotoğraf 5 MB'den büyük olamaz.")
+    if len(image_bytes) < 100:
+        raise ProofRejected("Fotoğraf okunamadı.")
+
+
+async def evaluate_proof(
+    task_title: str,
+    image_bytes: bytes,
+    mime_type: str,
+    attempt_no: int,
+    has_location: bool = False,
+) -> ProofResult:
+    validate_upload(image_bytes, mime_type)
+
+    # 3. deneme: beyanla kabul — Vision'a hiç gitmeden onayla, maliyet de tasarruf.
+    if attempt_no >= settings.PROOF_MAX_ATTEMPTS:
+        return ProofResult(
+            approved=True, confidence=settings.PROOF_MIN_CONFIDENCE,
+            reason="Sana güveniyorum — beyanınla kabul edildi. 🌙",
+            attempt_no=attempt_no, accepted_by_declaration=True,
+        )
+
+    try:
+        data = await generate_json_with_image(
+            prompt=prompts.PROOF_VALIDATION_PROMPT.format(task_title=task_title),
+            image_bytes=image_bytes,
+            mime_type=mime_type,
+        )
+    except GeminiUnavailable:
+        # AI çöktü diye kullanıcının emeği yanmaz: kanıt kabul edilir, loglanır.
+        log.warning("Vision erişilemedi — kanıt iyi niyetle kabul edildi: %s", task_title)
+        return ProofResult(
+            approved=True, confidence=settings.PROOF_MIN_CONFIDENCE,
+            reason="Doğrulama servisi meşguldü; emeğin kabul edildi.",
+            attempt_no=attempt_no, accepted_by_declaration=True,
+        )
+
+    confidence = int(data.get("confidence") or 0)
+    if has_location:
+        confidence = min(100, confidence + 10)
+
+    approved = confidence >= settings.PROOF_MIN_CONFIDENCE
+    reason = str(data.get("reason") or "")
+    if not approved:
+        reason = "Tam emin olamadım, bir kare daha dener misin? " + reason
+
+    return ProofResult(
+        approved=approved, confidence=confidence,
+        reason=reason, attempt_no=attempt_no,
+    )

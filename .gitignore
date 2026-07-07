@@ -1,0 +1,16 @@
+# mobile/ kendi bağımsız git deposu — burada takip edilmiyor.
+mobile/
+
+# Eski arşiv (zip yedekleri) — versiyon kontrolüne gerek yok.
+_arsiv/
+
+# Editör / araç yerel durumu
+.DS_Store
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+.pytest_cache/
