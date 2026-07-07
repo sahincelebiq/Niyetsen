@@ -116,6 +116,36 @@ Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerl
 - MVP + v1: Unsplash (lisans temiz). Pinterest v2'ye ertelendi (API onayı yavaş +
   app içinde gösterim ToS riski — v2'de hukuki kontrol yapılacak).
 
+### 1.12 İrade Modu — alarm kilidi (YENİ KARAR, 2026-07-07)
+- Teknik gerçek: iOS/Android 3. parti uygulamaların sistem Saat/Alarm uygulamasına
+  alarm eklemesine veya bir bildirimin ertelenmesini/kapatılmasını OS seviyesinde
+  engellemesine izin vermiyor. "Fiziksel olarak erteleyememe" YOK.
+- Bunun yerine: Ayarlar'da opt-in **"İrade Modu"** toggle'ı (kullanıcı kendi açar).
+  Açıkken İrade/Disiplin kategorili görevlere `alarm_kur` ile yerel, tekrarlı/uzun
+  sesli bildirim kurulur (gerçek OS alarmı DEĞİL, expo-notifications yerel bildirim).
+- Süre içinde chat'te "yaptım" onayı gelmezse **yeni bir ceza mekanizması icat
+  edilmez** — mevcut sessiz kaçırma akışı (§1.2, `scoring_service.py`) otomatik
+  tetiklenir.
+- Veri modeli eki: `users.irade_modu_active` (boolean, varsayılan false) — §2'de.
+- Kapsam: FAZ 3'te (`alarm_kur` zaten o fazda planlı) inşa edilecek, şimdi
+  kodlanmıyor — sadece karar kilitlendi.
+
+### 1.13 Motivasyon Bonus-Görev Hub'ı (YENİ KARAR, 2026-07-07)
+- Ana 7/365 günlük plana dahil DEĞİL; ayrı, foto kanıtı istemeyen "bonus görev"
+  katmanı — CLAUDE.md'deki "plan uydurma, her görev kullanıcının anlattığı
+  hayattan türer" kuralını ihlal etmemesi için ana plandan ayrı tutulur.
+- İçerik: sabit, elle yazılmış ~20–30 maddelik Türkçe havuzdan (örn. 30 şınav,
+  pencereyi aç oksijen al, köpeği gezdir, soğuk duşa gir) rastgele seçilir —
+  Gemini çağrısı YOK, ekstra maliyet yok.
+- Akış: push bildirimi → kullanıcı chat'te "yaptım" der → küçük sabit bonus puan
+  (**+10**, normal görevin +50'sinden az — foto kanıtı olmadığı için güven skoru
+  daha düşük varsayılır).
+- Veri modeli eki: yeni tablo YOK — mevcut `point_log`'a `task_id=null`,
+  `reason="bonus_micro_challenge"` ile yazılır (§2).
+- Kapsam: FAZ 4'te (Expo Push altyapısının üzerine) inşa edilecek, şimdi
+  kodlanmıyor — sadece karar kilitlendi. Yeni bir function-calling aracı
+  gerekirse `tools.py`'daki KAPALI LİSTE kuralı gereği ayrıca onay istenecek.
+
 ---
 
 ## §2. VERİ MODELİ (Cursor bunu uydurmaz, buradan alır)
@@ -125,7 +155,7 @@ Supabase (Postgres). Dev'de lokal SQLite ile başlanabilir ama şema aynı kalı
 ```
 users        id (uuid, supabase auth), name, birth_date, zodiac_sign,
              timezone, notif_hour, created_at, subscription_status,
-             excuse_count, freeze_tokens
+             excuse_count, freeze_tokens, irade_modu_active (bool, def. false)
 intents      id, user_id, text, duration_days, status(active/done/abandoned),
              created_at
 plans        id, intent_id, generated_json, created_at
@@ -136,6 +166,7 @@ proofs       id, task_id, photo_url, location?, confidence_score,
              attempt_no, created_at
 points       user_id, category (6 sabit kategori), value  -- floor 0
 point_log    id, user_id, task_id?, category, delta, reason, created_at
+             -- reason="bonus_micro_challenge" + task_id=null: bonus-görev hub'ı
 streaks      user_id, current_len, best_len, last_active_date,
              silent_miss_streak
 chat_msgs    id, user_id, role, content, created_at   -- bellek için son N mesaj
@@ -201,12 +232,20 @@ Mobil:
 - [x] Plan ekranı (gün gün görselli görev kartları, boş durum + CTA)
 - [x] Hata durumları: ağ yok / Gemini hata (503) → ortak `ErrorBanner` + tekrar dene
 
-**KAPI 1 (MVP Definition of Done):** Expo Go'da "bu yıl daha sosyal ve sağlıklı
-olmak istiyorum, İstanbul'dayım" yaz → AI 2–3 soru sorsun → 7 günlük görselli plan
-ekranda görünsün. Ayrıca: Gemini kapalıyken uygulama çökmesin.
-Backend tarafı gerçek Gemini + Supabase ile uçtan uca doğrulandı (bkz. §aşağıdaki
-smoke test). **Fiziksel cihazda Expo Go üzerinden son onay henüz Şahin tarafından
-yapılmadı — KAPI 1 bu adım tamamlanınca resmen kapanır.**
+**KAPI 1 (MVP Definition of Done):** ✅ KAPANDI (2026-07-07). "bu yıl daha sosyal
+ve sağlıklı olmak istiyorum, İstanbul'dayım" yaz → AI soru sordu → sohbet akışı
+Expo web üzerinden Şahin tarafından uçtan uca doğrulandı (mobil ↔ backend ↔ Gemini
+gerçek zamanlı çalışıyor). Backend tarafı gerçek Gemini + Supabase ile ayrıca
+smoke test'le doğrulandı.
+**Not — sapmalar:**
+- Fiziksel cihazda Expo Go testi App Store'un SDK 57 Expo Go onayını henüz
+  vermemesi nedeniyle yapılamadı; proje SDK 54'e düşürüldü (App Store Expo Go
+  uyumlu). Fiziksel cihaz testi (özellikle kanıt fotoğrafı akışı için native
+  kamera) hâlâ AÇIK — bir sonraki fırsatta tekrar denenecek, UI/UX çalışmasını
+  bloklamıyor.
+- Unsplash API key'i henüz `.env`'e eklenmedi → plan görselleri şu an kategori
+  bazlı yedek görsellerle geliyor, konuyla alakalı gerçek görseller değil. Bu
+  ayrı bir iyileştirme maddesi olarak açık (bkz. FAZ 2/3 notları).
 
 > 🔴 DUR NOKTASI: Bu kapıyı geçince planı Belinay'a veya 2–3 arkadaşa Expo Go'dan
 > göster, "vay be" tepkisi ölç. Aha anı zayıfsa plan kalitesi prompt'unu burada
@@ -260,6 +299,9 @@ Hesap sil → tüm veri gerçekten siliniyor (DB'de kontrol et). JWT'siz istek 4
 - [ ] Function calling seti (`core/tools.py`): `gorev_olustur`, `kanit_dogrula`,
       `puan_guncelle`, `gorev_ertele_mazeretli`, `alarm_kur`, `takvime_ekle`
       (alarm/takvim mobilde expo-calendar + local notification ile)
+- [ ] **İrade Modu** (§1.12): Ayarlar'da opt-in toggle; açıkken İrade/Disiplin
+      görevlerine `alarm_kur` ile yerel tekrarlı bildirim; onaylanmazsa mevcut
+      sessiz kaçırma ceza akışı (yeni mekanizma icat etme, var olanı tetikle)
 
 **KAPI 3:** Bir görevi fotola → puan işlendi → rank ekranında görünüyor.
 Bir görevi sessiz kaçır → gece cron'u cezayı katlayarak işledi (log'da doğrula).
@@ -280,6 +322,9 @@ Mazeret yaz → sabit 25 kesildi, katlanma sıfırlandı. Puan 0'ın altına inm
       şablonla birebir
 - [ ] Kriz kelime filtresi (§1.8): tetiklenince güvenli mod yanıtı
 - [ ] Scope guardrail testi: matematik sorusu → model reddedip niyete döner
+- [ ] **Motivasyon Bonus-Görev Hub'ı** (§1.13): sabit ~20-30 maddelik havuzdan
+      rastgele push → chat'te "yaptım" onayı → `point_log`'a +10 bonus (foto
+      kanıtı istemez, ana plana dahil değil)
 
 **KAPI 4:** Bildirim seçilen saatte geliyor, tıklayınca uygulama doğru ekranda
 açılıyor. Chat, kullanıcının zincirini ve geçmişini bilerek konuşuyor
