@@ -17,6 +17,7 @@ from app.services import scoring_service
 def build_memory_block(
     state: Optional[GameState],
     name: str = "",
+    birth_date: str = "",
     zodiac: str = "",
     active_intent: str = "",
     today_status: str = "",
@@ -30,6 +31,8 @@ def build_memory_block(
     lines: list[str] = ["--- KULLANICI BELLEĞİ ---"]
     if name:
         lines.append(f"İsim: {name}")
+    if birth_date:
+        lines.append(f"Doğum tarihi: {birth_date}")
     if zodiac:
         lines.append(f"Burç: {zodiac}")
     if active_intent:

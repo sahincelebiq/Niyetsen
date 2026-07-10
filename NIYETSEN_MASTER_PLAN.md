@@ -155,13 +155,15 @@ Supabase (Postgres). Dev'de lokal SQLite ile başlanabilir ama şema aynı kalı
 ```
 users        id (uuid, supabase auth), name, birth_date, zodiac_sign,
              timezone, notif_hour, created_at, subscription_status,
-             excuse_count, freeze_tokens, irade_modu_active (bool, def. false)
+             excuse_count, freeze_tokens, irade_modu_active (bool, def. false),
+             kvkk_consent_at (timestamptz, onboarding'de zorunlu)
 intents      id, user_id, text, duration_days, status(active/done/abandoned),
              created_at
 plans        id, intent_id, generated_json, created_at
 tasks        id, plan_id, day_no, date, title, categories[], image_url,
-             image_keyword, status(pending/done/missed_silent/missed_excused),
-             proof_id?
+             image_keyword, image_source, image_attribution,
+             image_attribution_url,
+             status(pending/done/missed_silent/missed_excused), proof_id?
 proofs       id, task_id, photo_url, location?, confidence_score,
              attempt_no, created_at
 points       user_id, category (6 sabit kategori), value  -- floor 0
@@ -223,7 +225,9 @@ Backend:
       eklendi) + `POST /plan/next` (partili üretim): her görev 6 kategoriden
       etiketleniyor
 - [x] `services/image_service.py`: image_keyword → Unsplash URL; bulunamazsa
-      kategori bazlı yedek görsel
+      kategori bazlı ikinci Unsplash sorgusu; İngilizce/somut prompt kuralı,
+      güvenli içerik filtresi, deterministik ilgili sonuç, 800×600 crop ve
+      fotoğrafçı attribution alanları (2026-07-10 kalite iyileştirmesi)
 - [x] `services/plan_service.py`: plan JSON + görselleri birleştir, `Task.date`
       hesaplaması dahil
 
@@ -243,9 +247,10 @@ smoke test'le doğrulandı.
   uyumlu). Fiziksel cihaz testi (özellikle kanıt fotoğrafı akışı için native
   kamera) hâlâ AÇIK — bir sonraki fırsatta tekrar denenecek, UI/UX çalışmasını
   bloklamıyor.
-- Unsplash API key'i henüz `.env`'e eklenmedi → plan görselleri şu an kategori
-  bazlı yedek görsellerle geliyor, konuyla alakalı gerçek görseller değil. Bu
-  ayrı bir iyileştirme maddesi olarak açık (bkz. FAZ 2/3 notları).
+- Unsplash API key'i `.env`'e eklendi ve doğrulandı (2026-07-07) — canlı arama
+  testleri (`gym workout`, `yoga`, `reading book` vb.) gerçek Unsplash görseli
+  döndürüyor. `image_service.py` yalnızca sonuç bulunamayan/anahtar eksik
+  durumlarda `picsum.photos` yedeğine düşüyor.
 
 > 🔴 DUR NOKTASI: Bu kapıyı geçince planı Belinay'a veya 2–3 arkadaşa Expo Go'dan
 > göster, "vay be" tepkisi ölç. Aha anı zayıfsa plan kalitesi prompt'unu burada
@@ -259,25 +264,40 @@ smoke test'le doğrulandı.
       gerçek projede çalıştırıldı (`users/streaks/points/plans/tasks`, RLS açık,
       backend service_role ile bypass ediyor); `SupabaseRepository` round-trip
       smoke-test'i geçti
+- [x] **Supabase kalıcılığı gerçekten aktif** (2026-07-10): `.env`'de
+      `USE_SUPABASE_DB=true` + `SUPABASE_SERVICE_KEY` dolduruldu. Önceden bu
+      bayrak kapalıydı — smoke test geçmiş olsa da CANLI uygulama hâlâ
+      `InMemoryRepository` kullanıyordu (bug/gap olarak tespit edildi ve
+      kapatıldı).
 - [ ] Supabase Auth: e-posta + Google + **Apple ile Giriş** (Expo:
-      `expo-apple-authentication`, `expo-auth-session`) — mobil hâlâ anonim
-      `X-User-Id` (AsyncStorage) kullanıyor, gerçek login YOK
+      `expo-apple-authentication`, `expo-auth-session`) — üç akışın mobil kodu,
+      SecureStore oturumu ve Bearer JWT bağlantısı tamamlandı (2026-07-10).
+      E-posta gerçek Supabase hesabıyla uçtan uca geçti. Supabase Auth ayarlarında
+      Google/Apple hâlâ `external=false`; ilgili geliştirici client ID/secret
+      girilip gerçek cihaz testi yapılmadan bu kutu kapanmaz.
 - [x] FastAPI JWT middleware yazıldı (`get_current_user`) — JWKS tabanlı
       doğrulamaya (`SUPABASE_URL/auth/v1/.well-known/jwks.json`, RS256/ES256)
       taşındı; `SUPABASE_JWT_SECRET`/HS256 kaldırıldı. Testler sahte JWKS
-      client ile 29/29 geçiyor. `AUTH_DISABLED=true` kaldığı sürece devrede
-      değil — Apple/Google login akışı bağlanınca sadece bunu `false` yapmak
-      yeterli.
-- [ ] Chat geçmişi + intent DB'ye yazılır (plan/görevler/puan zaten Supabase'de
-      kalıcı ama sohbet mesajları hâlâ sadece mobil local state'te — uygulama
-      kapanınca sohbet geçmişi kaybolur, plan kaybolmaz)
-- [ ] Onboarding akışı: isim → doğum tarihi (burç otomatik) → bildirim saati →
-      KVKK açık rıza onayı → niyet sohbeti
-- [ ] Ayarlar ekranı: profil, bildirim saati, **Hesabımı Sil** (tam silme:
-      DB + Storage + auth kaydı)
+      client ile doğrulanıyor. Bearer gönderildiğinde dev'de de doğrulanıyor;
+      `AUTH_DISABLED=false` ayrı süreçte test edildi ve JWT'siz istek 401 döndü.
+- [x] Chat geçmişi + intent DB'ye yazılır (2026-07-10): yeni `chat_msgs` +
+      `intents` tabloları (migration `20260710000000_chat_and_intent.sql`);
+      `/chat` client_message_id unique constraint ile idempotent yazar; retry ve
+      eşzamanlı istek çift kayıt oluşturmaz. `GET /chat/session` mesajlar +
+      collected intent + ready_for_plan durumunu birlikte hydrate eder;
+      `/plan/generate` aktif intent'i done yapar. Gerçek Supabase'e karşı iki
+      bağımsız oturum ve Gemini dahil elle doğrulandı.
+- [x] Onboarding akışı: isim → doğum tarihi (burç otomatik) → bildirim saati →
+      KVKK açık rıza onayı → niyet sohbeti. `kvkk_consent_at` DB'de tutuluyor.
+- [x] Ayarlar ekranı: profil, bildirim saati, çıkış ve iki aşamalı
+      **Hesabımı Sil**. Gerçek test hesabında DB cascade + Auth silme doğrulandı;
+      Faz 3'te proofs bucket açılınca Storage temizliği aynı akışta devreye girer.
 
 **KAPI 2:** İki farklı cihazda aynı hesapla giriş → aynı plan görünüyor.
 Hesap sil → tüm veri gerçekten siliniyor (DB'de kontrol et). JWT'siz istek 401.
+✅ Teknik kriterler e-posta hesabı ve iki bağımsız oturumla geçti (2026-07-10):
+aynı chat + aynı plan okundu, hesap sonrası DB/Auth boş, JWT'siz istek 401.
+Google/Apple sağlayıcı aktivasyonu yukarıdaki açık auth maddesi olarak kalır.
 
 ---
 
@@ -311,6 +331,9 @@ Mazeret yaz → sabit 25 kesildi, katlanma sıfırlandı. Puan 0'ın altına inm
 
 ### FAZ 4 — Bildirim + Rehber Kişiliği (3–4 gün)
 
+- [x] Statik, responsive **Mistik Keşif** yuvası hazırlandı (2026-07-10):
+      Astroloji/Fal/Tarot yalnız “Yakında · v2” ekranı + zorunlu eğlence
+      disclaimer'ı; Gemini/RAG/kamera/fortune_log işlevi YOK.
 - [ ] Expo Push + FCM kurulumu; izin akışları (iOS + Android 13+)
 - [ ] Zamanlanmış bildirimler: kullanıcının seçtiği saat → görev bildirimi;
       +1 dk → Günlük Tarot bildirimi (v2'ye kadar tarot bildirimi "yakında" ekranına

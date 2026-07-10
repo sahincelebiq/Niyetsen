@@ -5,27 +5,44 @@ zorunlu (get_current_user içindeki yuva). JWT'siz endpoint yok (health hariç).
 """
 from __future__ import annotations
 
+import hashlib
 import logging
-import time
-from collections import defaultdict, deque
-from datetime import date
+import secrets
+import uuid
+from datetime import date, datetime, timezone
 
 import jwt
-from fastapi import APIRouter, Depends, File, Form, Header, HTTPException, UploadFile
+from fastapi import (
+    APIRouter, Depends, File, Form, Header, HTTPException, Request, Response,
+    UploadFile,
+)
 from jwt import PyJWKClient
 
 from app.config import CATEGORIES, settings
 from app.core.gemini_client import GeminiUnavailable
+from app.core.rate_limit import limiter
 from app.models.schemas import (
-    ChatRequest, ChatResponse, Plan, PlanGenerateRequest, ProofResult, StateResponse,
+    ChatMessage, ChatRequest, ChatResponse, ChatSessionResponse, Plan,
+    PlanGenerateRequest, ProfileUpdate, ProofRecord, ProofResult, StateResponse,
+    UserProfile,
 )
-from app.services import intent_service, plan_service, proof_service, scoring_service
+from app.services import (
+    intent_service, plan_service, profile_service, proof_service, scoring_service,
+    task_lifecycle_service, tool_service,
+)
 from app.storage.repository import repo
 
 log = logging.getLogger("niyetsen.api")
 router = APIRouter()
 
 GEMINI_DOWN_MSG = "Şu an yıldızlara ulaşamıyorum, birazdan tekrar dener misin? ✨"
+
+
+def _legacy_message_id(user_id: str, index: int, role: str, content: str) -> str:
+    digest = hashlib.sha256(
+        f"{user_id}:{index}:{role}:{content}".encode()
+    ).hexdigest()[:24]
+    return f"legacy-{digest}"
 
 
 # ------------------------------------------------------------------
@@ -50,7 +67,10 @@ def get_current_user(
     x_user_id: str | None = Header(default=None),
     authorization: str | None = Header(default=None),
 ) -> str:
-    if settings.AUTH_DISABLED:
+    # Dev kolaylığı: bearer yoksa X-User-Id kabul edilir. Gerçek bir bearer
+    # gönderildiyse AUTH_DISABLED açık olsa bile doğrula; böylece mobil auth
+    # entegrasyonu production kilidini açmadan güvenle test edilir.
+    if settings.AUTH_DISABLED and not authorization:
         return x_user_id or "demo"
 
     if not authorization or not authorization.lower().startswith("bearer "):
@@ -64,30 +84,13 @@ def get_current_user(
             algorithms=["RS256", "ES256"],
             audience="authenticated",
         )
-    except jwt.PyJWTError:
+    except Exception as exc:
+        log.warning("JWT doğrulama başarısız: %s", exc)
         raise AUTH_ERROR
 
     user_id = payload.get("sub")
     if not user_id:
         raise AUTH_ERROR
-    return user_id
-
-
-# ------------------------------------------------------------------
-# Basit bellek-içi rate limit (kullanıcı başına N istek/dk) — /chat için.
-# Cursor notu: çok-instance prod'da Redis tabanlıya geçir; arayüz aynı kalsın.
-# ------------------------------------------------------------------
-_hits: dict[str, deque] = defaultdict(deque)
-
-
-def rate_limit_chat(user_id: str = Depends(get_current_user)) -> str:
-    now = time.time()
-    q = _hits[user_id]
-    while q and now - q[0] > 60:
-        q.popleft()
-    if len(q) >= settings.CHAT_RATE_LIMIT_PER_MIN:
-        raise HTTPException(status_code=429, detail="Biraz nefes al 🌙 (dakikalık sınır)")
-    q.append(now)
     return user_id
 
 
@@ -100,13 +103,84 @@ def health() -> dict:
 
 
 @router.post("/chat", response_model=ChatResponse)
-async def chat(req: ChatRequest, user_id: str = Depends(rate_limit_chat)) -> ChatResponse:
+@limiter.limit(f"{settings.CHAT_RATE_LIMIT_PER_MIN}/minute")
+async def chat(
+    request: Request,
+    req: ChatRequest,
+    user_id: str = Depends(get_current_user),
+) -> ChatResponse:
     """Çekirdek halka 1/2: niyet toplama sohbeti."""
     state = repo.get_state(user_id)
+    profile = repo.get_profile(user_id)
+    active = repo.get_active_intent(user_id)
+    active_intent = (
+        active[0].model_dump_json(exclude_none=True)
+        if active else ""
+    )
     try:
-        return await intent_service.handle_chat(req, state=state)
+        response = await intent_service.handle_chat(
+            req,
+            state=state,
+            user_name=profile.name or "",
+            birth_date=profile.birth_date.isoformat() if profile.birth_date else "",
+            zodiac=profile.zodiac_sign or "",
+            active_intent=active_intent,
+        )
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+
+    response.tool_calls, tool_messages = tool_service.dispatch(
+        repo, user_id, response.tool_calls
+    )
+    if tool_messages:
+        response.reply = f"{response.reply}\n\n" + " ".join(tool_messages)
+
+    # İstemci bugün tüm geçmişi gönderiyor. Her mesajın kalıcı kimliği sayesinde
+    # retry/eşzamanlı istekler ikinci kayıt oluşturmaz. Eski istemciler için
+    # rol+metin+sıra tabanlı deterministik bir kimlik üretilir.
+    for index, message in enumerate(req.messages):
+        if not message.id:
+            message = message.model_copy(update={
+                "id": _legacy_message_id(
+                    user_id, index, message.role, message.content
+                )
+            })
+        repo.append_chat_message(user_id, message)
+
+    assistant_id = _legacy_message_id(
+        user_id, len(req.messages), "assistant", response.reply
+    )
+    response.message_id = assistant_id
+    repo.append_chat_message(
+        user_id,
+        ChatMessage(id=assistant_id, role="assistant", content=response.reply),
+    )
+    repo.save_intent(
+        user_id,
+        response.collected,
+        response.collected.duration_days or 365,
+        response.ready_for_plan,
+    )
+
+    return response
+
+
+@router.get("/chat/history", response_model=list[ChatMessage])
+def chat_history(user_id: str = Depends(get_current_user)) -> list[ChatMessage]:
+    """Uygulama yeniden açılınca / yeni cihazda sohbeti kaldığı yerden göstermek için."""
+    return repo.get_chat_history(user_id)
+
+
+@router.get("/chat/session", response_model=ChatSessionResponse)
+def chat_session(user_id: str = Depends(get_current_user)) -> ChatSessionResponse:
+    """Mesajlarla aktif niyet durumunu tek çağrıda hydrate eder."""
+    active = repo.get_active_intent(user_id)
+    collected, ready = active or (None, False)
+    return ChatSessionResponse(
+        messages=repo.get_chat_history(user_id),
+        collected=collected or {},
+        ready_for_plan=ready,
+    )
 
 
 @router.get("/plan", response_model=Plan)
@@ -130,6 +204,7 @@ async def generate_plan(req: PlanGenerateRequest, user_id: str = Depends(get_cur
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
     repo.save_plan(user_id, plan)
+    repo.complete_active_intent(user_id)
     return plan
 
 
@@ -161,14 +236,16 @@ async def upload_proof(
     task_id: str,
     photo: UploadFile = File(...),
     has_location: bool = Form(default=False),
+    latitude: float | None = Form(default=None),
+    longitude: float | None = Form(default=None),
     user_id: str = Depends(get_current_user),
 ) -> ProofResult:
     """Foto kanıt: Vision skoru → onay → puan. In-app kamera zorunluluğu mobilde."""
     task = repo.get_task(user_id, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Görev bulunamadı.")
-    if task.status == "done":
-        raise HTTPException(status_code=409, detail="Bu görev zaten tamamlandı.")
+    if task.status != "pending":
+        raise HTTPException(status_code=409, detail="Bu görev zaten sonuçlandı.")
 
     image_bytes = await photo.read()
     mime_type = photo.content_type or ""
@@ -178,6 +255,13 @@ async def upload_proof(
         # Geçersiz dosya (yanlış tip/boyut) bir "deneme hakkı" yakmaz.
         raise HTTPException(status_code=400, detail=str(e))
 
+    if (latitude is None) != (longitude is None):
+        raise HTTPException(status_code=422, detail="Konum için enlem ve boylam birlikte gerekli.")
+    if latitude is not None and not -90 <= latitude <= 90:
+        raise HTTPException(status_code=422, detail="Enlem -90 ile 90 arasında olmalı.")
+    if longitude is not None and not -180 <= longitude <= 180:
+        raise HTTPException(status_code=422, detail="Boylam -180 ile 180 arasında olmalı.")
+    effective_location = latitude is not None and longitude is not None
     attempt = repo.incr_proof_attempts(user_id, task_id)
     try:
         result = await proof_service.evaluate_proof(
@@ -185,33 +269,45 @@ async def upload_proof(
             image_bytes=image_bytes,
             mime_type=mime_type,
             attempt_no=attempt,
-            has_location=has_location,
+            has_location=effective_location,
         )
     except proof_service.ProofRejected as e:
         raise HTTPException(status_code=400, detail=str(e))
 
+    location = (
+        {"latitude": latitude, "longitude": longitude}
+        if effective_location else None
+    )
+    photo_url = repo.store_proof_photo(user_id, task_id, image_bytes, mime_type)
+    proof = ProofRecord(
+        id=str(uuid.uuid4()),
+        task_id=task_id,
+        photo_url=photo_url,
+        location=location,
+        confidence_score=result.confidence,
+        attempt_no=attempt,
+    )
+    repo.save_proof(user_id, proof)
+    result.proof_id = proof.id
+    result.photo_url = photo_url
+
     if result.approved:
-        state = repo.get_state(user_id)
-        scoring_service.complete_task(state, task.categories)
-        repo.save_state(state)
-        task.status = "done"
-        repo.update_task(user_id, task)
+        try:
+            task_lifecycle_service.approve_proof(repo, user_id, proof)
+        except task_lifecycle_service.TaskAlreadyResolved as exc:
+            raise HTTPException(status_code=409, detail=str(exc))
     return result
 
 
 @router.post("/task/{task_id}/excuse")
 def excuse_task(task_id: str, user_id: str = Depends(get_current_user)) -> dict:
     """Mazeret yolu: chat'teki gorev_ertele_mazeretli aracı da buraya düşer."""
-    task = repo.get_task(user_id, task_id)
-    if not task:
-        raise HTTPException(status_code=404, detail="Görev bulunamadı.")
-    if task.status != "pending":
-        raise HTTPException(status_code=409, detail="Görev zaten sonuçlanmış.")
-    state = repo.get_state(user_id)
-    events = scoring_service.miss_task_excused(state, task.categories)
-    repo.save_state(state)
-    task.status = "missed_excused"
-    repo.update_task(user_id, task)
+    try:
+        events = task_lifecycle_service.excuse_task(repo, user_id, task_id)
+    except task_lifecycle_service.TaskNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except task_lifecycle_service.TaskAlreadyResolved as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     return {
         "message": "Dürüstlüğün için teşekkürler — ceza sabit kaldı, katlanma sıfırlandı. "
                    "İstersen bugünün en küçük halkasını yine de koyabilirsin. 🌙",
@@ -219,35 +315,29 @@ def excuse_task(task_id: str, user_id: str = Depends(get_current_user)) -> dict:
     }
 
 
+def require_cron_secret(
+    x_cron_secret: str | None = Header(default=None),
+) -> None:
+    if not settings.CRON_SECRET:
+        raise HTTPException(status_code=503, detail="Cron sırrı yapılandırılmamış.")
+    if not x_cron_secret or not secrets.compare_digest(
+        x_cron_secret, settings.CRON_SECRET
+    ):
+        raise HTTPException(status_code=401, detail="Cron kimlik doğrulaması başarısız.")
+
+
 @router.post("/cron/close-day")
-def close_day(day: date | None = None, user_id: str = Depends(get_current_user)) -> dict:
+def close_day(
+    at: datetime | None = None,
+    _: None = Depends(require_cron_secret),
+) -> dict:
     """
-    Gün sonu (kullanıcı timezone 23:59): tamamlanmayan görevlere sessiz ceza,
-    zincir kapanışı. Cursor notu (v1): bu, TÜM kullanıcılar için zamanlanmış
-    işten çağrılır (Railway cron / APScheduler); burada tek kullanıcı sürümü.
+    Her kullanıcı için kendi timezone'unda son kapanmış günü hesaplar. Endpoint
+    kullanıcı JWT'si yerine yalnız sunucudaki cron sırrıyla çağrılır.
     """
-    day = day or date.today()
-    state = repo.get_state(user_id)
-    plan = repo.get_plan(user_id)
-
-    any_completed = False
-    penalized = 0
-    if plan:
-        for d in plan.days:
-            for t in d.tasks:
-                if t.date == day:
-                    if t.status == "done":
-                        any_completed = True
-                    elif t.status == "pending":
-                        scoring_service.miss_task_silent(state, t.categories)
-                        t.status = "missed_silent"
-                        repo.update_task(user_id, t)
-                        penalized += 1
-
-    streak_result = scoring_service.close_day(state, day, any_completed)
-    repo.save_state(state)
-    return {"streak": streak_result, "penalized_tasks": penalized,
-            "streak_len": state.streak_len, "freeze_tokens": state.freeze_tokens}
+    if at is not None and at.tzinfo is None:
+        at = at.replace(tzinfo=timezone.utc)
+    return task_lifecycle_service.close_due_users(repo, at)
 
 
 @router.get("/me/state", response_model=StateResponse)
@@ -264,3 +354,31 @@ def my_state(user_id: str = Depends(get_current_user)) -> StateResponse:
         excuse_count=s.excuse_count,
         silent_miss_streak=s.silent_miss_streak,
     )
+
+
+@router.get("/me/profile", response_model=UserProfile)
+def my_profile(user_id: str = Depends(get_current_user)) -> UserProfile:
+    return repo.get_profile(user_id)
+
+
+@router.put("/me/profile", response_model=UserProfile)
+def update_profile(
+    update: ProfileUpdate,
+    user_id: str = Depends(get_current_user),
+) -> UserProfile:
+    current = repo.get_profile(user_id)
+    try:
+        profile = profile_service.build_profile(update, current)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    repo.save_profile(user_id, profile)
+    return profile
+
+
+@router.delete("/me", status_code=204)
+def delete_my_account(user_id: str = Depends(get_current_user)) -> Response:
+    try:
+        repo.delete_account(user_id)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=500, detail=str(exc))
+    return Response(status_code=204)

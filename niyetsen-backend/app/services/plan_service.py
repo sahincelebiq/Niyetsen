@@ -16,7 +16,7 @@ from app.config import CATEGORIES, settings
 from app.core import prompts
 from app.core.gemini_client import generate_json
 from app.models.schemas import CollectedIntent, Plan, PlanDay, Task
-from app.services.image_service import get_image_url
+from app.services.image_service import category_fallback_query, get_image
 
 log = logging.getLogger("niyetsen.plan")
 
@@ -71,7 +71,11 @@ async def generate_batch(
             title = str(t.get("title") or "").strip()
             if not title:
                 continue
-            keyword = str(t.get("image_keyword") or title)
+            categories = _sanitize_categories(t.get("categories"))
+            keyword = str(t.get("image_keyword") or "").strip()
+            if not keyword:
+                keyword = category_fallback_query(categories)
+            image = get_image(keyword, categories=categories)
             tasks.append(
                 Task(
                     id=uuid.uuid4().hex[:12],
@@ -80,9 +84,12 @@ async def generate_batch(
                     title=title,
                     task_type=t.get("task_type") if t.get("task_type") in
                         ("yer", "alışkanlık", "sosyal", "kişisel_gelişim") else "alışkanlık",
-                    categories=_sanitize_categories(t.get("categories")),
+                    categories=categories,
                     image_keyword=keyword,
-                    image_url=get_image_url(keyword),
+                    image_url=image.url,
+                    image_source=image.source,
+                    image_attribution=image.attribution,
+                    image_attribution_url=image.attribution_url,
                     duration_min=int(t.get("duration_min") or 15),
                     tiny_version=str(t.get("tiny_version") or "2 dakikanı ayır ve sadece başla."),
                 )

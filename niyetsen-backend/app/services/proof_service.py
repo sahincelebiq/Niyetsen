@@ -20,6 +20,10 @@ from app.models.schemas import ProofResult
 log = logging.getLogger("niyetsen.proof")
 
 ALLOWED_MIME = {"image/jpeg", "image/png"}
+FILE_SIGNATURES = {
+    "image/jpeg": (b"\xff\xd8\xff",),
+    "image/png": (b"\x89PNG\r\n\x1a\n",),
+}
 
 
 class ProofRejected(ValueError):
@@ -33,6 +37,8 @@ def validate_upload(image_bytes: bytes, mime_type: str) -> None:
         raise ProofRejected("Fotoğraf 5 MB'den büyük olamaz.")
     if len(image_bytes) < 100:
         raise ProofRejected("Fotoğraf okunamadı.")
+    if not any(image_bytes.startswith(signature) for signature in FILE_SIGNATURES[mime_type]):
+        raise ProofRejected("Dosya içeriği bildirilen JPEG/PNG türüyle eşleşmiyor.")
 
 
 async def evaluate_proof(
@@ -67,7 +73,10 @@ async def evaluate_proof(
             attempt_no=attempt_no, accepted_by_declaration=True,
         )
 
-    confidence = int(data.get("confidence") or 0)
+    try:
+        confidence = max(0, min(100, int(data.get("confidence") or 0)))
+    except (TypeError, ValueError):
+        confidence = 0
     if has_location:
         confidence = min(100, confidence + 10)
 

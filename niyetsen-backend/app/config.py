@@ -32,6 +32,8 @@ class Settings:
     # false: InMemoryRepository (MVP varsayılanı, testler bunu kullanır).
     # true: SupabaseRepository — gerçek DB kalıcılığı (Faz 2).
     USE_SUPABASE_DB: bool = _bool("USE_SUPABASE_DB", "false")
+    # Railway/Render cron'unun X-Cron-Secret başlığında gönderdiği sunucu sırrı.
+    CRON_SECRET: str = os.environ.get("CRON_SECRET", "")
 
     # --- MVP plan sınırları ---
     # 365 günü TEK istekte üretme (maliyet + timeout). Haftalık partiler halinde

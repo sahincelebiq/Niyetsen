@@ -6,12 +6,13 @@ Gemini çağrısı mock'lanır — gerçek API anahtarı gerekmez.
 """
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta, timezone
 
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.config import settings
 from app.services import plan_service
 from app.storage.repository import repo
 
@@ -44,6 +45,7 @@ def _mock_gemini(monkeypatch):
         return FAKE_PLAN_JSON
 
     monkeypatch.setattr(plan_service, "generate_json", fake_generate_json)
+    monkeypatch.setattr(settings, "CRON_SECRET", "test-cron-secret")
 
 
 def _generate_plan(user_id: str) -> dict:
@@ -100,12 +102,15 @@ def test_cron_close_day_penalizes_day_two_task_not_just_day_one():
 
     cron_resp = client.post(
         "/cron/close-day",
-        params={"day": day2_date.isoformat()},
-        headers={"X-User-Id": user_id},
+        params={"at": datetime.combine(
+            day2_date, time(20, 59), tzinfo=timezone.utc
+        ).isoformat()},
+        headers={"X-Cron-Secret": "test-cron-secret"},
     )
     assert cron_resp.status_code == 200
     body = cron_resp.json()
-    assert body["penalized_tasks"] == 1  # sadece gün 2'nin görevi
+    user_result = next(row for row in body["results"] if row["user_id"] == user_id)
+    assert user_result["penalized_tasks"] == 1  # sadece gün 2'nin görevi
 
     # Gün 2'nin görevi cezalandı (sessiz kaçırma), diğer günler dokunulmadı.
     assert repo.get_task(user_id, task2_id).status == "missed_silent"
@@ -129,11 +134,16 @@ def test_cron_close_day_then_day_three_penalizes_only_that_day():
 
     cron_resp = client.post(
         "/cron/close-day",
-        params={"day": day3_date.isoformat()},
-        headers={"X-User-Id": user_id},
+        params={"at": datetime.combine(
+            day3_date, time(20, 59), tzinfo=timezone.utc
+        ).isoformat()},
+        headers={"X-Cron-Secret": "test-cron-secret"},
     )
     assert cron_resp.status_code == 200
-    assert cron_resp.json()["penalized_tasks"] == 1
+    user_result = next(
+        row for row in cron_resp.json()["results"] if row["user_id"] == user_id
+    )
+    assert user_result["penalized_tasks"] == 1
 
     assert repo.get_task(user_id, task3_id).status == "missed_silent"
     assert repo.get_task(user_id, task1_id).status == "pending"  # gün 1'e dokunulmadı

@@ -96,6 +96,42 @@ async def generate_json(
     raise GeminiUnavailable("Model geçerli JSON üretemedi")
 
 
+async def generate_function_calls(
+    contents: Any,
+    declarations: list[dict],
+    system_instruction: Optional[str] = None,
+) -> list[dict]:
+    """Return native Gemini function calls without executing model-selected code."""
+    from google.genai import types
+
+    config = types.GenerateContentConfig(
+        system_instruction=system_instruction,
+        tools=[types.Tool(function_declarations=declarations)],
+        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
+        tool_config=types.ToolConfig(
+            function_calling_config=types.FunctionCallingConfig(mode="AUTO")
+        ),
+    )
+    client = get_client()
+    last_err: Exception | None = None
+    for attempt in range(settings.GEMINI_MAX_RETRIES + 1):
+        try:
+            response = await asyncio.to_thread(
+                client.models.generate_content,
+                model=settings.GEMINI_MODEL,
+                contents=contents,
+                config=config,
+            )
+            return [
+                {"name": call.name, "args": dict(call.args or {})}
+                for call in (response.function_calls or [])
+            ]
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+            await asyncio.sleep(2 ** attempt)
+    raise GeminiUnavailable(str(last_err))
+
+
 async def generate_json_with_image(
     prompt: str,
     image_bytes: bytes,

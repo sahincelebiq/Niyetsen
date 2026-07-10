@@ -7,13 +7,19 @@ from __future__ import annotations
 
 import logging
 
-from app.core import prompt_builder, prompts
-from app.core.gemini_client import generate_json
-from app.models.schemas import ChatRequest, ChatResponse, CollectedIntent, GameState
+from app.core import prompt_builder, prompts, tools
+from app.core.gemini_client import generate_function_calls, generate_json
+from app.models.schemas import (
+    ChatRequest, ChatResponse, CollectedIntent, GameState, ToolCall,
+)
 
 log = logging.getLogger("niyetsen.intent")
 
 MAX_CLARIFYING_QUESTIONS = 4  # kullanıcıyı yorma (algoritma belgesi kuralı)
+TOOL_INTENT_MARKERS = (
+    "mazeret", "ertele", "alarm kur", "hatırlatıcı kur", "takvime ekle",
+    "kanıt", "fotoğraf", "yaptım", "görev oluştur", "görev ekle",
+)
 
 
 def _merge_collected(old: CollectedIntent, new_raw: dict) -> CollectedIntent:
@@ -47,7 +53,8 @@ def _merge_collected(old: CollectedIntent, new_raw: dict) -> CollectedIntent:
 
 
 async def handle_chat(req: ChatRequest, state: GameState | None = None,
-                user_name: str = "", zodiac: str = "") -> ChatResponse:
+                user_name: str = "", birth_date: str = "", zodiac: str = "",
+                active_intent: str = "") -> ChatResponse:
     """/chat'in beyni. Kriz kontrolü ÖNCE — motivasyon her şeyden sonra gelir."""
     last_user_msg = next(
         (m.content for m in reversed(req.messages) if m.role == "user"), ""
@@ -62,9 +69,31 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
             crisis=True,
         )
 
+    tool_calls: list[ToolCall] = []
+    normalized_message = last_user_msg.casefold()
+    if any(marker in normalized_message for marker in TOOL_INTENT_MARKERS):
+        raw_calls = await generate_function_calls(
+            last_user_msg,
+            declarations=tools.TOOL_DECLARATIONS,
+            system_instruction=(
+                "Yalnız kullanıcı açıkça bir işlem istiyorsa uygun aracı çağır. "
+                "Gerekli task_id bilinmiyorsa araç çağırma; kısa bir açıklama döndür. "
+                "Listede olmayan hiçbir işlemi çağırma."
+            ),
+        )
+        tool_calls = [
+            ToolCall(name=call["name"], args=call.get("args", {}))
+            for call in raw_calls
+            if tools.is_allowed(call.get("name", ""))
+        ]
+
     # 2) Bellek + bağlam kur (değişmez sıra: SYSTEM ayrı, CONTEXT + USER burada)
     memory = prompt_builder.build_memory_block(
-        state=state, name=user_name, zodiac=zodiac
+        state=state,
+        name=user_name,
+        birth_date=birth_date,
+        zodiac=zodiac,
+        active_intent=active_intent,
     )
     contents = prompt_builder.build_chat_contents(
         context=prompt_builder.build_context(memory),
@@ -94,4 +123,9 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
         "Niyetini biraz daha anlat: bu yıl hayatında neyin değişmesini istiyorsun? ✨"
     )
 
-    return ChatResponse(reply=reply, ready_for_plan=ready, collected=merged)
+    return ChatResponse(
+        reply=reply,
+        ready_for_plan=ready,
+        collected=merged,
+        tool_calls=tool_calls,
+    )

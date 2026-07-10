@@ -105,6 +105,11 @@ KURALLAR:
 - Günde 1-{max_tasks} görev; zorluk yavaş artsın (1. gün en kolay).
 - Her görevin tiny_version'ı ZORUNLU (2 dakika kuralı).
 - Kategori adlarını AYNEN verilen 6'dan seç, yenisini uydurma.
+- image_keyword MUTLAKA İngilizce, küçük harfli, somut ve 2-4 kelime olsun.
+  Fotoğrafta görülebilecek eylem/ortamı tarif et; "motivation", "success",
+  "health", "life" gibi soyut/genel tek kelimeler kullanma.
+  Örnekler: yer → "city park walk"; alışkanlık → "morning yoga mat";
+  sosyal → "friends coffee cafe"; kişisel_gelişim → "reading book desk".
 - JSON dışında hiçbir şey yazma.
 
 NİYET BİLGİSİ:
