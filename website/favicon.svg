@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
+  <title id="title">Niyetsen</title>
+  <defs>
+    <linearGradient id="n" x1="10" y1="8" x2="54" y2="56" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#c4b8ff"/>
+      <stop offset="1" stop-color="#7b6de0"/>
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="#faf8f5"/>
+  <path d="M15 49V17c0-4 5-6 8-2l22 29V19" fill="none" stroke="url(#n)" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="m39 20 6-7 6 7" fill="none" stroke="#9b8cf5" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

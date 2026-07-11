@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Geliştirme Günlüğü — Niyetsen</title>
+  <meta name="description" content="Niyetsen geliştirme güncellemeleri: hangi aşamadayız, neler yapıyoruz, sırada ne var.">
+  <meta name="robots" content="index, follow">
+  <meta name="theme-color" content="#9b8cf5">
+  <link rel="canonical" href="https://niyetsen.com/gelistirme.html">
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="icon" type="image/png" sizes="48x48" href="/favicon-48x48.png">
+  <link rel="icon" type="image/png" sizes="96x96" href="/favicon-96x96.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192x192.png">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+  <link rel="manifest" href="/site.webmanifest">
+<meta property="og:title" content="Geliştirme Günlüğü — Niyetsen">
+  <meta property="og:description" content="Niyetsen'i nasıl inşa ediyoruz? Tamamlanan fazlar, aktif geliştirme ve sıradaki adımlar.">
+  <meta property="og:url" content="https://niyetsen.com/gelistirme.html">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="tr_TR">
+  <meta property="og:image" content="https://niyetsen.com/images/og/default.png">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Geliştirme Günlüğü — Niyetsen">
+  <meta name="twitter:description" content="Niyetsen'in ürün yolculuğunu açık biçimde takip edin.">
+  <meta name="twitter:image" content="https://niyetsen.com/images/og/default.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/css/style.css?v=20260711-4">
+</head>
+<body>
+  <header>
+    <nav class="nav" aria-label="Ana menü">
+      <a class="logo" href="/">Niyetsen</a>
+      <div class="nav-links">
+        <a href="/">Ana Sayfa</a>
+        <a href="/blog/">Blog</a>
+        <a href="/gizlilik.html">Gizlilik</a>
+        <a href="/kullanim-kosullari.html">Koşullar</a>
+        <a href="mailto:ai@niyetsen.com">İletişim</a>
+      </div>
+    </nav>
+  </header>
+
+  <main>
+    <section class="page-hero">
+      <span class="section-label">Geliştirme günlüğü</span>
+      <h1>Neler yapıyoruz?</h1>
+      <p class="lead">
+        Kod değil, süreç. Niyetsen'i adım adım inşa ediyoruz — tamamlananlar,
+        devam edenler ve sırada bekleyenler. GitHub commit'leri değil; ürün hikâyesi.
+      </p>
+    </section>
+
+    <div class="phase-card">
+      <span class="status-tag progress">Şu an</span>
+      <h2>Faz 2 — Kalıcılık & Kimlik</h2>
+      <p class="lead">
+        MVP sohbet akışı kapandı. Şimdi verilerin kalıcı olması, gerçek giriş
+        ve onboarding üzerinde çalışıyoruz. Aynı hesapla iki cihazda aynı planı
+        görmek bir sonraki kapı.
+      </p>
+      <p class="phase-summary">
+        <strong>Tamamlanan:</strong> Supabase veritabanı, JWT middleware, plan/görev kalıcılığı<br>
+        <strong>Devam eden:</strong> Apple/Google/e-posta girişi, onboarding, sohbet geçmişi DB'ye<br>
+        <strong>Sırada:</strong> Hesap silme, KVKK onay akışı
+      </p>
+    </div>
+
+    <div class="timeline">
+      <article class="timeline-entry">
+        <div class="timeline-date">10 Temmuz 2026</div>
+        <h3>Web sitesi yayında</h3>
+        <p>
+          <span class="status-tag done">Tamamlandı</span>
+          niyetsen.com canlıya alındı. Hosting altyapısı kuruldu, gizlilik ve kullanım
+          koşulları sayfaları yayınlandı. Store formları için gerekli URL'ler hazır.
+        </p>
+        <p>İletişim: ai@niyetsen.com</p>
+      </article>
+
+      <article class="timeline-entry">
+        <div class="timeline-date">7 Temmuz 2026</div>
+        <h3>Faz 1 kapandı — MVP DoD</h3>
+        <p>
+          <span class="status-tag done">Tamamlandı</span>
+          “Bu yıl daha sosyal ve sağlıklı olmak istiyorum” yaz → AI soru sorar →
+          sohbet akışı uçtan uca çalışır. Backend Gemini + Supabase ile gerçek zamanlı
+          bağlantı doğrulandı.
+        </p>
+        <p>
+          Mobil sohbet ekranı, plan ekranı (gün gün görsel kartlar) ve hata yönetimi
+          tamamlandı.
+        </p>
+      </article>
+
+      <article class="timeline-entry">
+        <div class="timeline-date">Haziran — Temmuz 2026</div>
+        <h3>Altyapı & mimari</h3>
+        <p>
+          <span class="status-tag done">Tamamlandı</span>
+          FastAPI backend, Expo mobil iskelet, Gemini 2.5 Flash entegrasyonu,
+          Supabase şeması (users, plans, tasks, points, streaks), RLS politikaları.
+        </p>
+      </article>
+
+      <article class="timeline-entry">
+        <div class="timeline-date">Sırada</div>
+        <h3>Faz 3 — Görev motoru</h3>
+        <p>
+          <span class="status-tag next">Planlanıyor</span>
+          Uygulama içi kamera ile foto kanıt, Gemini Vision doğrulama, puan sistemi
+          (+50 / −25 katlanma tavan 200), mazeret yolu, gece cron ile zincir ve ceza
+          işleme, rank ekranı.
+        </p>
+      </article>
+
+      <article class="timeline-entry">
+        <div class="timeline-date">Sonrasında</div>
+        <h3>Faz 4–6 — Bildirim, paywall, store</h3>
+        <p>
+          <span class="status-tag next">Planlanıyor</span>
+          Push bildirimler, RevenueCat abonelik (450 TL/ay, 3.600 TL/yıl), PostHog
+          analitik, App Store & Play Store yayını. Fal modülü v2'ye ertelendi.
+        </p>
+      </article>
+    </div>
+
+    <p class="disclaimer section-spaced">
+      Sorularınız ve geri bildirimleriniz için: <a href="mailto:ai@niyetsen.com">ai@niyetsen.com</a>
+    </p>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <span>© 2026 Niyetsen</span>
+      <div class="footer-links">
+        <a href="/">Ana Sayfa</a>
+        <a href="/blog/">Blog</a>
+        <a href="/gelistirme.html">Geliştirme</a>
+        <a href="/gizlilik.html">Gizlilik</a>
+        <a href="/kullanim-kosullari.html">Kullanım Koşulları</a>
+        <a href="mailto:ai@niyetsen.com">ai@niyetsen.com</a>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
