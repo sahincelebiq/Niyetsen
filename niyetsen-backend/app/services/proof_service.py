@@ -10,14 +10,10 @@ Konum verilmişse skora +10 bonus güven.
 """
 from __future__ import annotations
 
-import logging
-
 from app.config import settings
 from app.core import prompts
-from app.core.gemini_client import GeminiUnavailable, generate_json_with_image
+from app.core.gemini_client import generate_json_with_image
 from app.models.schemas import ProofResult
-
-log = logging.getLogger("niyetsen.proof")
 
 ALLOWED_MIME = {"image/jpeg", "image/png"}
 FILE_SIGNATURES = {
@@ -58,20 +54,11 @@ async def evaluate_proof(
             attempt_no=attempt_no, accepted_by_declaration=True,
         )
 
-    try:
-        data = await generate_json_with_image(
-            prompt=prompts.PROOF_VALIDATION_PROMPT.format(task_title=task_title),
-            image_bytes=image_bytes,
-            mime_type=mime_type,
-        )
-    except GeminiUnavailable:
-        # AI çöktü diye kullanıcının emeği yanmaz: kanıt kabul edilir, loglanır.
-        log.warning("Vision erişilemedi — kanıt iyi niyetle kabul edildi: %s", task_title)
-        return ProofResult(
-            approved=True, confidence=settings.PROOF_MIN_CONFIDENCE,
-            reason="Doğrulama servisi meşguldü; emeğin kabul edildi.",
-            attempt_no=attempt_no, accepted_by_declaration=True,
-        )
+    data = await generate_json_with_image(
+        prompt=prompts.PROOF_VALIDATION_PROMPT.format(task_title=task_title),
+        image_bytes=image_bytes,
+        mime_type=mime_type,
+    )
 
     try:
         confidence = max(0, min(100, int(data.get("confidence") or 0)))

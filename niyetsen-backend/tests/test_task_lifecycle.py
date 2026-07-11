@@ -7,11 +7,14 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.config import settings
+from app.core.gemini_client import GeminiUnavailable
 from app.main import app
 from app.models.schemas import (
     GameState, Plan, PlanDay, ProofResult, Task, UserProfile,
 )
 from app.services import proof_service, task_lifecycle_service
+from app.services import consent_service
+from app.models.schemas import ConsentChoice, ConsentUpdate
 from app.storage.repository import InMemoryRepository, repo
 
 client = TestClient(app)
@@ -45,6 +48,14 @@ def _plan(task_id: str, task_date: date, categories: list[str] | None = None) ->
     )
 
 
+def _allow_proof(user_id: str) -> None:
+    consent_service.update(repo, user_id, ConsentUpdate(
+        privacy_policy=ConsentChoice(accepted=True),
+        kvkk_explicit_consent=ConsentChoice(accepted=True),
+        proof_photo_processing=ConsentChoice(accepted=True),
+    ))
+
+
 @pytest.mark.parametrize(
     ("content", "mime_type"),
     [
@@ -56,6 +67,7 @@ def _plan(task_id: str, task_date: date, categories: list[str] | None = None) ->
 def test_proof_upload_rejects_type_signature_and_tiny_files(content, mime_type):
     user_id = f"invalid-proof-{mime_type.replace('/', '-')}-{len(content)}"
     repo.save_plan(user_id, _plan(f"task-{user_id}", date.today()))
+    _allow_proof(user_id)
     response = client.post(
         f"/task/task-{user_id}/proof",
         files={"photo": ("proof.png", content, mime_type)},
@@ -68,6 +80,7 @@ def test_proof_upload_rejects_type_signature_and_tiny_files(content, mime_type):
 def test_proof_route_is_ownership_safe():
     owner = "proof-owner"
     repo.save_plan(owner, _plan("private-task", date.today()))
+    _allow_proof("proof-attacker")
     response = client.post(
         "/task/private-task/proof",
         files={"photo": ("proof.png", _image(), "image/png")},
@@ -81,6 +94,7 @@ def test_proof_upload_rejects_more_than_five_megabytes():
     user_id = "oversize-proof-user"
     task_id = "oversize-task"
     repo.save_plan(user_id, _plan(task_id, date.today()))
+    _allow_proof(user_id)
     content = b"\x89PNG\r\n\x1a\n" + b"\0" * settings.PROOF_MAX_BYTES
     response = client.post(
         f"/task/{task_id}/proof",
@@ -95,6 +109,7 @@ def test_invalid_location_does_not_consume_proof_attempt():
     user_id = "invalid-location-user"
     task_id = "invalid-location-task"
     repo.save_plan(user_id, _plan(task_id, date.today()))
+    _allow_proof(user_id)
     response = client.post(
         f"/task/{task_id}/proof",
         data={"has_location": "true", "latitude": "91", "longitude": "29"},
@@ -123,9 +138,10 @@ def test_third_proof_attempt_is_accepted_without_vision(monkeypatch):
     assert result.confidence == 60
 
 
-def test_rejected_proof_is_persisted_without_points(monkeypatch):
+def test_rejected_proof_is_not_persisted_or_scored(monkeypatch):
     user_id = "rejected-proof-user"
     repo.save_plan(user_id, _plan("rejected-task", date.today()))
+    _allow_proof(user_id)
 
     async def reject(**_kwargs):
         return ProofResult(
@@ -144,9 +160,8 @@ def test_rejected_proof_is_persisted_without_points(monkeypatch):
     assert response.status_code == 200
     assert response.json()["approved"] is False
     proofs = repo.get_proofs(user_id, "rejected-task")
-    assert len(proofs) == 1
-    assert proofs[0].confidence_score == 25
-    assert proofs[0].photo_url.startswith("storage://proofs/")
+    assert proofs == []
+    assert response.json()["photo_url"] is None
     assert repo.get_task(user_id, "rejected-task").status == "pending"
     assert repo.get_point_log(user_id) == []
 
@@ -154,6 +169,7 @@ def test_rejected_proof_is_persisted_without_points(monkeypatch):
 def test_approved_proof_persists_task_points_and_event(monkeypatch):
     user_id = "approved-proof-user"
     repo.save_plan(user_id, _plan("approved-task", date.today(), ["İrade", "Disiplin"]))
+    _allow_proof(user_id)
 
     async def approve(**_kwargs):
         return ProofResult(
@@ -180,6 +196,73 @@ def test_approved_proof_persists_task_points_and_event(monkeypatch):
         ("İrade", 50, "approved-task"),
         ("Disiplin", 50, "approved-task"),
     ]
+
+
+def test_gemini_unavailable_does_not_approve_persist_or_consume_attempt(monkeypatch):
+    user_id = "proof-gemini-down"
+    task_id = "proof-gemini-down-task"
+    repo.save_plan(user_id, _plan(task_id, date.today()))
+    _allow_proof(user_id)
+
+    async def unavailable(**_kwargs):
+        raise GeminiUnavailable("down")
+
+    monkeypatch.setattr(proof_service, "evaluate_proof", unavailable)
+    response = client.post(
+        f"/task/{task_id}/proof",
+        files={"photo": ("proof.png", _image(), "image/png")},
+        headers={"X-User-Id": user_id},
+    )
+    assert response.status_code == 503
+    assert repo.get_task(user_id, task_id).status == "pending"
+    assert repo.get_proof_attempts(user_id, task_id) == 0
+    assert repo.get_proofs(user_id, task_id) == []
+    assert repo.get_point_log(user_id) == []
+
+
+def test_proof_idempotency_key_returns_cached_result_without_double_points(monkeypatch):
+    user_id = "proof-idempotent"
+    task_id = "proof-idempotent-task"
+    repo.save_plan(user_id, _plan(task_id, date.today()))
+    _allow_proof(user_id)
+
+    async def approve(**_kwargs):
+        return ProofResult(
+            approved=True, confidence=90, reason="Onaylandı", attempt_no=1
+        )
+
+    monkeypatch.setattr(proof_service, "evaluate_proof", approve)
+    headers = {
+        "X-User-Id": user_id,
+        "X-Idempotency-Key": "camera-capture-1",
+    }
+    first = client.post(
+        f"/task/{task_id}/proof",
+        files={"photo": ("proof.png", _image(), "image/png")},
+        headers=headers,
+    )
+    second = client.post(
+        f"/task/{task_id}/proof",
+        files={"photo": ("proof.png", _image(), "image/png")},
+        headers=headers,
+    )
+    assert first.status_code == second.status_code == 200
+    assert first.json() == second.json()
+    assert repo.get_state(user_id).points["İrade"] == 50
+    assert len(repo.get_proofs(user_id, task_id)) == 1
+    assert len(repo.get_point_log(user_id)) == 1
+
+
+def test_proof_claim_blocks_concurrent_different_requests():
+    repository = InMemoryRepository()
+    user_id = "proof-concurrent"
+    task_id = "proof-concurrent-task"
+    repository.save_plan(user_id, _plan(task_id, date.today()))
+    first = repository.begin_proof_attempt(user_id, task_id, "capture-1")
+    second = repository.begin_proof_attempt(user_id, task_id, "capture-2")
+    assert first.status == "started"
+    assert second.status == "in_progress"
+    assert first.attempt_no == second.attempt_no == 1
 
 
 def test_excuse_persists_floor_adjusted_event():
@@ -259,3 +342,39 @@ def test_multi_user_close_day_uses_each_timezone_and_logs_floor():
     )
     assert len(repository.get_point_log("istanbul")) == 1
     assert len(repository.get_point_log("new-york")) == 1
+
+
+def test_same_day_multiple_silent_misses_each_advance_master_streak():
+    """MASTER §1.2 says every silent task miss advances n; it is not once/day."""
+    repository = InMemoryRepository()
+    user_id = "same-day-misses"
+    day = date(2026, 7, 11)
+    tasks = [
+        Task(
+            id=f"same-day-{index}",
+            day=1,
+            title=f"Görev {index}",
+            categories=["İrade"],
+            date=day,
+        )
+        for index in range(3)
+    ]
+    repository.save_plan(user_id, Plan(
+        id="same-day-plan",
+        duration_days=1,
+        batch_generated_until=1,
+        start_date=day,
+        days=[PlanDay(day=1, tasks=tasks)],
+    ))
+    state = GameState(user_id=user_id)
+    state.points["İrade"] = 500
+    repository.save_state(state)
+
+    result = task_lifecycle_service.close_user_day(repository, user_id, day)
+
+    assert result["penalized_tasks"] == 3
+    assert repository.get_state(user_id).points["İrade"] == 325
+    assert repository.get_state(user_id).silent_miss_streak == 3
+    assert [event.delta for event in repository.get_point_log(user_id)] == [
+        -25, -50, -100,
+    ]

@@ -11,8 +11,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.models.schemas import CollectedIntent
-from app.services import intent_service
+from app.models.schemas import CollectedIntent, ConsentChoice, ConsentUpdate
+from app.services import consent_service, intent_service
 from app.storage.repository import repo
 
 client = TestClient(app)
@@ -22,6 +22,14 @@ FAKE_REPLY = {
     "ready_for_plan": False,
     "collected": {},
 }
+
+
+def _allow_chat(user_id: str) -> None:
+    consent_service.update(repo, user_id, ConsentUpdate(
+        privacy_policy=ConsentChoice(accepted=True),
+        kvkk_explicit_consent=ConsentChoice(accepted=True),
+        ai_chat_processing=ConsentChoice(accepted=True),
+    ))
 
 
 @pytest.fixture(autouse=True)
@@ -34,6 +42,7 @@ def _mock_gemini(monkeypatch):
 
 def test_chat_persists_welcome_user_and_assistant_messages():
     user_id = "chat_hist_user_1"
+    _allow_chat(user_id)
     messages = [
         {"role": "assistant", "content": "Merhaba 🌙"},
         {"role": "user", "content": "İstanbul'dayım"},
@@ -56,6 +65,7 @@ def test_chat_persists_welcome_user_and_assistant_messages():
 
 def test_chat_does_not_duplicate_already_saved_messages_on_second_call():
     user_id = "chat_hist_user_2"
+    _allow_chat(user_id)
     first_messages = [
         {"role": "assistant", "content": "Merhaba 🌙"},
         {"role": "user", "content": "Ankara'dayım"},
@@ -90,6 +100,7 @@ def test_chat_history_empty_for_new_user():
 
 def test_same_client_message_id_is_idempotent():
     user_id = "chat_hist_idempotent"
+    _allow_chat(user_id)
     messages = [
         {"id": "welcome-fixed", "role": "assistant", "content": "Merhaba 🌙"},
         {"id": "user-fixed", "role": "user", "content": "İzmir'deyim"},

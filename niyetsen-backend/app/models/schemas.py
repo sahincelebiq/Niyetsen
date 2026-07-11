@@ -119,6 +119,12 @@ class ProofRecord(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
+class ProofAttemptClaim(BaseModel):
+    status: Literal["started", "in_progress", "completed"]
+    attempt_no: int
+    result: Optional[ProofResult] = None
+
+
 # ---------- Oyun durumu ----------
 class GameState(BaseModel):
     """Bir kullanıcının tüm oyunlaştırma durumu. Saf mantık bunun üstünde çalışır."""
@@ -180,5 +186,107 @@ class ProfileUpdate(BaseModel):
     birth_date: dt_date
     timezone: str = Field(default="Europe/Istanbul", min_length=1, max_length=80)
     notif_hour: int = Field(default=8, ge=0, le=23)
-    kvkk_consent: bool = False
+    # Legacy onboarding clients may still send true. Omitted/false never revokes
+    # consent; revocation belongs to the explicit /me/consent endpoint.
+    kvkk_consent: Optional[bool] = None
     irade_modu_active: bool = False
+
+
+# ---------- Versioned legal consent ----------
+ConsentKind = Literal[
+    "privacy_policy",
+    "kvkk_explicit_consent",
+    "ai_chat_processing",
+    "proof_photo_processing",
+    "marketing_communications",
+]
+
+
+class ConsentRecord(BaseModel):
+    kind: ConsentKind
+    version: str
+    accepted: bool
+    decided_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class ConsentChoice(BaseModel):
+    accepted: bool
+
+
+class ConsentUpdate(BaseModel):
+    privacy_policy: Optional[ConsentChoice] = None
+    kvkk_explicit_consent: Optional[ConsentChoice] = None
+    ai_chat_processing: Optional[ConsentChoice] = None
+    proof_photo_processing: Optional[ConsentChoice] = None
+    marketing_communications: Optional[ConsentChoice] = None
+
+
+class ConsentItem(BaseModel):
+    version: str
+    accepted: bool = False
+    decided_at: Optional[datetime] = None
+    required_for: list[str] = Field(default_factory=list)
+
+
+class ConsentStatus(BaseModel):
+    data_controller: str
+    contact_email: str
+    needs_reconsent: bool = False
+    privacy_policy: ConsentItem
+    kvkk_explicit_consent: ConsentItem
+    ai_chat_processing: ConsentItem
+    proof_photo_processing: ConsentItem
+    marketing_communications: ConsentItem
+
+
+# ---------- Push notifications / bonus tasks ----------
+class PushTokenRegistration(BaseModel):
+    token: str = Field(min_length=10, max_length=256)
+    platform: Literal["ios", "android"]
+
+
+class PushTokenRecord(PushTokenRegistration):
+    user_id: str
+    enabled: bool = True
+    last_task_reminder_date: Optional[dt_date] = None
+    last_bonus_offer_date: Optional[dt_date] = None
+
+
+class NotificationRecipient(BaseModel):
+    user_id: str
+    timezone: str = "Europe/Istanbul"
+    notif_hour: int = Field(default=8, ge=0, le=23)
+    token: str
+    last_task_reminder_date: Optional[dt_date] = None
+    last_bonus_offer_date: Optional[dt_date] = None
+
+
+BonusStatus = Literal["offered", "completed", "expired"]
+
+
+class BonusOffer(BaseModel):
+    id: str
+    user_id: str
+    bonus_key: str
+    title: str
+    tiny_instruction: str
+    category: Category
+    day: dt_date
+    status: BonusStatus = "offered"
+    completion_id: Optional[str] = None
+    offered_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    completed_at: Optional[datetime] = None
+
+
+class BonusCompletionRequest(BaseModel):
+    completion_id: str = Field(min_length=8, max_length=128)
+
+
+class BonusOfferResponse(BaseModel):
+    id: str
+    title: str
+    tiny_instruction: str
+    category: Category
+    day: dt_date
+    status: BonusStatus
+    points: int

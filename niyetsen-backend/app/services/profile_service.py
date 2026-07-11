@@ -27,8 +27,6 @@ def build_profile(update: ProfileUpdate, current: UserProfile) -> UserProfile:
     consent_at = current.kvkk_consent_at
     if update.kvkk_consent and consent_at is None:
         consent_at = datetime.now(timezone.utc)
-    if consent_at is None:
-        raise ValueError("Devam etmek için KVKK açık rızası gerekli.")
 
     return UserProfile(
         name=update.name.strip(),
@@ -38,5 +36,5 @@ def build_profile(update: ProfileUpdate, current: UserProfile) -> UserProfile:
         notif_hour=update.notif_hour,
         irade_modu_active=update.irade_modu_active,
         kvkk_consent_at=consent_at,
-        onboarding_complete=True,
+        onboarding_complete=consent_at is not None,
     )

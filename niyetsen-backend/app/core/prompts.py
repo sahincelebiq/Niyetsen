@@ -76,6 +76,21 @@ KURALLAR:
   seçeneklerini bir kez hatırlat.
 - JSON dışında hiçbir şey yazma."""
 
+GUIDE_JSON_INSTRUCTIONS = """GÖREV: Aktif planı olan kullanıcıya, KULLANICI BELLEĞİ ve
+sohbet geçmişini kullanarak kişisel rehberlik et. SADECE şu JSON'u döndür:
+{
+  "reply": "<2-5 cümlelik kısa, sıcak, kullanıcıya özel Türkçe cevap>",
+  "ready_for_plan": true,
+  "collected": {}
+}
+KURALLAR:
+- Kullanıcı belleğindeki zincir, son görev, rank, niyet, burç ve ruh hali
+  bilgilerinden ilgili olanı somut biçimde kullan.
+- Aktif plan varken şehir/ilgi/zaman gibi onboarding sorularını yeniden sorma.
+- Bilmediğin bilgiyi biliyormuş gibi söyleme.
+- Suçlama veya utandırma; kayıp hissi + kimlik tonunu koru.
+- JSON dışında hiçbir şey yazma."""
+
 # ============================================================
 # 3) PLAN ÜRETİMİ — yapısal JSON plan talimatı
 # ============================================================
@@ -139,11 +154,32 @@ CRISIS_RESPONSE = (
     "Şu an anlattığın şey bir görev listesinden çok daha önemli ve bunu tek "
     "başına taşımak zorunda değilsin. Ben bir uygulamayım ve bu noktada sana "
     "gerçek bir insanın iyi gelmesini isterim: güvendiğin biriyle konuşmanı ve "
-    "profesyonel destek almanı öneririm. Yanındayım; hazır olduğunda burada "
-    "olacağım. 🌙"
+    "profesyonel destek almanı öneririm. Kendine zarar verme tehlikesi yakınsa "
+    "yalnız kalma; Türkiye'de 112'yi ara veya en yakın acil servise git. "
+    "Yanındayım; hazır olduğunda burada olacağım. 🌙"
 )
 
 
 def contains_crisis_signal(text: str) -> bool:
     t = (text or "").lower()
     return any(k in t for k in CRISIS_KEYWORDS)
+
+
+OUT_OF_SCOPE_MARKERS = (
+    "ödevimi yap", "matematik sorusu", "denklem çöz", "kod yaz",
+    "python kodu", "hava durumu", "son dakika haber", "ürün öner",
+)
+
+SCOPE_REDIRECT_RESPONSE = (
+    "Ben genel bilgi ya da ödev asistanı değil, niyetinin rehberiyim. "
+    "Onu çözmem ama bugün kendine verdiğin söz için atacağın en küçük adımı "
+    "birlikte seçebiliriz. 🌙"
+)
+
+
+def contains_out_of_scope_signal(text: str) -> bool:
+    t = (text or "").casefold()
+    if any(marker in t for marker in OUT_OF_SCOPE_MARKERS):
+        return True
+    compact = t.replace(" ", "")
+    return any(op in compact for op in ("1+1", "2+2", "3*3", "10/2"))

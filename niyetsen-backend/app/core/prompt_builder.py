@@ -21,6 +21,7 @@ def build_memory_block(
     zodiac: str = "",
     active_intent: str = "",
     today_status: str = "",
+    recent_tasks: str = "",
     mood_notes: str = "",
 ) -> str:
     """
@@ -47,6 +48,8 @@ def build_memory_block(
         lines.append(f"Kalan zincir koruma jetonu: {state.freeze_tokens}")
     if today_status:
         lines.append(f"Bugün durumu: {today_status}")
+    if recent_tasks:
+        lines.append(f"Son görevler: {recent_tasks}")
     if mood_notes:
         lines.append(f"Son ruh hali notları: {mood_notes}")
     lines.append("--- ---")

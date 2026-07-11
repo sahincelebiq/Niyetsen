@@ -44,10 +44,15 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS: Expo dev istemcileri için açık; prod'da domain listesine daralt.
+# CORS: dev'de varsayılan açık; prod'da yalnız yapılandırılmış web origin'leri.
+# Native Expo/React Native istekleri tarayıcı CORS denetimine tabi değildir.
+cors_origins = settings.CORS_ALLOWED_ORIGINS
+if settings.ENV == "dev" and not cors_origins:
+    cors_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.ENV == "dev" else [],
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

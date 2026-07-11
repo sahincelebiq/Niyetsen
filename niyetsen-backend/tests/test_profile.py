@@ -22,13 +22,19 @@ def test_memory_block_includes_onboarding_identity():
         name="Şahin",
         birth_date="2001-07-01",
         zodiac="Yengeç",
+        today_status="1 done, 1 pending",
+        recent_tasks="Yürüyüş (done)",
+        mood_notes="Bugün enerjik hissediyorum",
     )
     assert "İsim: Şahin" in memory
     assert "Doğum tarihi: 2001-07-01" in memory
     assert "Burç: Yengeç" in memory
+    assert "Bugün durumu: 1 done, 1 pending" in memory
+    assert "Son görevler: Yürüyüş (done)" in memory
+    assert "Son ruh hali notları: Bugün enerjik hissediyorum" in memory
 
 
-def test_profile_requires_kvkk_consent():
+def test_profile_can_be_saved_before_consent_without_implied_rejection():
     response = client.put(
         "/me/profile",
         headers={"X-User-Id": "profile_no_consent"},
@@ -40,7 +46,8 @@ def test_profile_requires_kvkk_consent():
             "kvkk_consent": False,
         },
     )
-    assert response.status_code == 422
+    assert response.status_code == 200
+    assert response.json()["onboarding_complete"] is False
 
 
 def test_profile_onboarding_round_trip():

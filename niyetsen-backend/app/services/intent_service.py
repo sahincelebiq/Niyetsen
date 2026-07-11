@@ -54,7 +54,9 @@ def _merge_collected(old: CollectedIntent, new_raw: dict) -> CollectedIntent:
 
 async def handle_chat(req: ChatRequest, state: GameState | None = None,
                 user_name: str = "", birth_date: str = "", zodiac: str = "",
-                active_intent: str = "") -> ChatResponse:
+                active_intent: str = "", today_status: str = "",
+                recent_tasks: str = "", mood_notes: str = "",
+                has_active_plan: bool = False) -> ChatResponse:
     """/chat'in beyni. Kriz kontrolü ÖNCE — motivasyon her şeyden sonra gelir."""
     last_user_msg = next(
         (m.content for m in reversed(req.messages) if m.role == "user"), ""
@@ -67,6 +69,13 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
             ready_for_plan=False,
             collected=req.collected,
             crisis=True,
+        )
+
+    if prompts.contains_out_of_scope_signal(last_user_msg):
+        return ChatResponse(
+            reply=prompts.SCOPE_REDIRECT_RESPONSE,
+            ready_for_plan=req.collected.is_ready(),
+            collected=req.collected,
         )
 
     tool_calls: list[ToolCall] = []
@@ -94,12 +103,18 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
         birth_date=birth_date,
         zodiac=zodiac,
         active_intent=active_intent,
+        today_status=today_status,
+        recent_tasks=recent_tasks,
+        mood_notes=mood_notes,
     )
     contents = prompt_builder.build_chat_contents(
         context=prompt_builder.build_context(memory),
         history=[m.model_dump() for m in req.messages],
         extra_instructions=(
-            prompts.INTENT_JSON_INSTRUCTIONS
+            (
+                prompts.GUIDE_JSON_INSTRUCTIONS
+                if has_active_plan else prompts.INTENT_JSON_INSTRUCTIONS
+            )
             + f"\n\nŞU ANA KADAR TOPLANAN: {req.collected.model_dump_json()}"
         ),
     )
@@ -111,12 +126,16 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
 
     # 4) ÇİFTE KİLİT: model "hazırım" dese de asgari alanlar dolmadan plan yok.
     model_ready = bool(data.get("ready_for_plan"))
-    ready = model_ready and merged.is_ready()
+    ready = has_active_plan or (model_ready and merged.is_ready())
 
     # 5) Soru yorgunluğu emniyeti: yeterli tur döndüyse ve asgari alanlar
     #    doluysa, model hâlâ soru soruyor olsa bile hazır say.
     assistant_turns = sum(1 for m in req.messages if m.role == "assistant")
-    if not ready and merged.is_ready() and assistant_turns >= MAX_CLARIFYING_QUESTIONS:
+    if (
+        not has_active_plan
+        and not ready and merged.is_ready()
+        and assistant_turns >= MAX_CLARIFYING_QUESTIONS
+    ):
         ready = True
 
     reply = str(data.get("reply") or "").strip() or (

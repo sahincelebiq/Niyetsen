@@ -10,14 +10,16 @@ from __future__ import annotations
 import json
 import logging
 import uuid
+from datetime import date as dt_date, datetime, timezone
 from typing import Optional
 
 from supabase import Client, create_client
 
 from app.config import CATEGORIES, settings
 from app.models.schemas import (
-    ChatMessage, CollectedIntent, CronUser, GameState, Plan, PlanDay,
-    PointLogRecord, ProofRecord, ScoreEvent, Task, UserProfile,
+    BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, GameState,
+    NotificationRecipient, Plan, PlanDay, PointLogRecord, ProofAttemptClaim,
+    ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task, UserProfile,
 )
 from app.storage.base import Repository
 
@@ -72,6 +74,10 @@ def _task_row(plan_id: str, day: PlanDay, task: Task) -> dict:
         # proof_attempts kasıtlı olarak dahil edilmedi: upsert on-conflict bu alana
         # dokunmasın, var olan deneme sayısı korunsun (/plan/next tüm planı yeniden yazar).
     }
+
+
+def _bonus_from_row(row: dict) -> BonusOffer:
+    return BonusOffer(**row)
 
 
 class SupabaseRepository(Repository):
@@ -217,6 +223,54 @@ class SupabaseRepository(Repository):
         new_val = self.get_proof_attempts(user_id, task_id) + 1
         self._db.table("tasks").update({"proof_attempts": new_val}).eq("id", task_id).execute()
         return new_val
+
+    def begin_proof_attempt(
+        self, user_id: str, task_id: str, idempotency_key: str
+    ) -> ProofAttemptClaim:
+        rows = self._db.rpc("claim_proof_attempt", {
+            "p_user_id": user_id,
+            "p_task_id": task_id,
+            "p_idempotency_key": idempotency_key,
+        }).execute().data
+        row = rows[0] if isinstance(rows, list) else rows
+        if not row:
+            raise ValueError("Görev bulunamadı.")
+        if row.get("claim_status") == "not_found":
+            raise ValueError("Görev bulunamadı.")
+        if row.get("claim_status") == "resolved":
+            raise RuntimeError("Görev zaten sonuçlanmış.")
+        result = (
+            ProofResult(**row["result_json"])
+            if row.get("result_json") else None
+        )
+        return ProofAttemptClaim(
+            status=row["claim_status"],
+            attempt_no=row["attempt_no"],
+            result=result,
+        )
+
+    def finish_proof_attempt(
+        self,
+        user_id: str,
+        task_id: str,
+        idempotency_key: str,
+        result: ProofResult,
+    ) -> None:
+        self._db.rpc("finish_proof_attempt", {
+            "p_user_id": user_id,
+            "p_task_id": task_id,
+            "p_idempotency_key": idempotency_key,
+            "p_result": result.model_dump(mode="json"),
+        }).execute()
+
+    def abort_proof_attempt(
+        self, user_id: str, task_id: str, idempotency_key: str
+    ) -> None:
+        self._db.rpc("abort_proof_attempt", {
+            "p_user_id": user_id,
+            "p_task_id": task_id,
+            "p_idempotency_key": idempotency_key,
+        }).execute()
 
     def store_proof_photo(
         self, user_id: str, task_id: str, image_bytes: bytes, mime_type: str
@@ -411,6 +465,121 @@ class SupabaseRepository(Repository):
                 if profile.kvkk_consent_at else None
             ),
         }).eq("id", user_id).execute()
+
+    def get_consents(self, user_id: str) -> list[ConsentRecord]:
+        self._ensure_user(user_id)
+        rows = (
+            self._db.table("user_consents").select(
+                "consent_kind,version,accepted,decided_at"
+            ).eq("user_id", user_id).execute().data
+        )
+        return [
+            ConsentRecord(
+                kind=row["consent_kind"],
+                version=row["version"],
+                accepted=row["accepted"],
+                decided_at=row["decided_at"],
+            )
+            for row in rows
+        ]
+
+    def save_consent(self, user_id: str, consent: ConsentRecord) -> None:
+        self._ensure_user(user_id)
+        self._db.table("user_consents").upsert({
+            "user_id": user_id,
+            "consent_kind": consent.kind,
+            "version": consent.version,
+            "accepted": consent.accepted,
+            "decided_at": consent.decided_at.isoformat(),
+        }, on_conflict="user_id,consent_kind,version").execute()
+
+    def upsert_push_token(self, token: PushTokenRecord) -> None:
+        self._ensure_user(token.user_id)
+        self._db.table("push_tokens").upsert({
+            "user_id": token.user_id,
+            "token": token.token,
+            "platform": token.platform,
+            "enabled": True,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }, on_conflict="token").execute()
+
+    def disable_push_token(self, user_id: str, token: str) -> None:
+        self._db.table("push_tokens").update({
+            "enabled": False,
+        }).eq("user_id", user_id).eq("token", token).execute()
+
+    def list_notification_recipients(self) -> list[NotificationRecipient]:
+        rows = self._db.table("push_tokens").select(
+            "user_id,token,last_task_reminder_date,last_bonus_offer_date,"
+            "users!inner(timezone,notif_hour)"
+        ).eq("enabled", True).execute().data
+        return [
+            NotificationRecipient(
+                user_id=row["user_id"],
+                token=row["token"],
+                last_task_reminder_date=row.get("last_task_reminder_date"),
+                last_bonus_offer_date=row.get("last_bonus_offer_date"),
+                timezone=(row.get("users") or {}).get("timezone") or "Europe/Istanbul",
+                notif_hour=(row.get("users") or {}).get("notif_hour") or 8,
+            )
+            for row in rows
+        ]
+
+    def mark_task_reminder_sent(
+        self, user_id: str, token: str, day: dt_date
+    ) -> None:
+        self._db.table("push_tokens").update({
+            "last_task_reminder_date": day.isoformat(),
+        }).eq("user_id", user_id).eq("token", token).execute()
+
+    def mark_bonus_offer_sent(
+        self, user_id: str, token: str, day: dt_date
+    ) -> None:
+        self._db.table("push_tokens").update({
+            "last_bonus_offer_date": day.isoformat(),
+        }).eq("user_id", user_id).eq("token", token).execute()
+
+    def get_bonus_for_day(self, user_id: str, day: dt_date) -> BonusOffer | None:
+        row = _maybe_single(
+            self._db.table("bonus_offers").select("*")
+            .eq("user_id", user_id).eq("day", day.isoformat())
+        )
+        return _bonus_from_row(row) if row else None
+
+    def get_active_bonus(self, user_id: str) -> BonusOffer | None:
+        rows = (
+            self._db.table("bonus_offers").select("*")
+            .eq("user_id", user_id).eq("status", "offered")
+            .order("offered_at", desc=True).limit(1).execute().data
+        )
+        return _bonus_from_row(rows[0]) if rows else None
+
+    def save_bonus_offer(self, offer: BonusOffer) -> BonusOffer:
+        self._ensure_user(offer.user_id)
+        row = self._db.table("bonus_offers").upsert({
+            "id": offer.id,
+            "user_id": offer.user_id,
+            "bonus_key": offer.bonus_key,
+            "title": offer.title,
+            "tiny_instruction": offer.tiny_instruction,
+            "category": offer.category,
+            "day": offer.day.isoformat(),
+            "status": offer.status,
+            "offered_at": offer.offered_at.isoformat(),
+        }, on_conflict="user_id,day").execute().data
+        return _bonus_from_row(row[0]) if row else (
+            self.get_bonus_for_day(offer.user_id, offer.day) or offer
+        )
+
+    def claim_bonus_completion(
+        self, user_id: str, offer_id: str, completion_id: str
+    ) -> bool:
+        result = self._db.rpc("complete_bonus_offer", {
+            "p_user_id": user_id,
+            "p_offer_id": offer_id,
+            "p_completion_id": completion_id,
+        }).execute().data
+        return bool(result)
 
     def delete_account(self, user_id: str) -> None:
         # Storage önce: DB/Auth silinirse sahipliği sonradan bulmak zorlaşır.

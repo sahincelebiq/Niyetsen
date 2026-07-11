@@ -1,0 +1,8 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+startCommand = "python scripts/run_scheduled_jobs.py"
+cronSchedule = "*/5 * * * *"
+restartPolicyType = "NEVER"

@@ -10,11 +10,12 @@ from __future__ import annotations
 
 import sys
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from app.config import settings
 from app.models.schemas import (
-    ChatMessage, CollectedIntent, Plan, PlanDay, ProofRecord, ScoreEvent, Task,
+    BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, Plan, PlanDay,
+    ProofRecord, PushTokenRecord, ScoreEvent, Task,
 )
 
 SMOKE_USER_ID = "smoke_test_user"
@@ -151,6 +152,65 @@ def main() -> None:
     repo._db.table("point_log").delete().eq("reason", reason).execute()
     repo._db.table("proofs").delete().eq("id", proof_id).execute()
     repo._db.storage.from_("proofs").remove([storage_path])
+
+    print("→ Faz 4 consent + push token + bonus atomik tamamlama")
+    repo.save_consent(
+        SMOKE_USER_ID,
+        ConsentRecord(
+            kind="ai_chat_processing",
+            version=settings.AI_CHAT_CONSENT_VERSION,
+            accepted=True,
+        ),
+    )
+    assert any(
+        row.kind == "ai_chat_processing" and row.accepted
+        for row in repo.get_consents(SMOKE_USER_ID)
+    ), "user_consents round-trip başarısız"
+
+    push_token = "ExpoPushToken[smoke-test-token]"
+    repo.upsert_push_token(PushTokenRecord(
+        user_id=SMOKE_USER_ID,
+        token=push_token,
+        platform="ios",
+    ))
+    assert any(
+        row.user_id == SMOKE_USER_ID and row.token == push_token
+        for row in repo.list_notification_recipients()
+    ), "push_tokens round-trip başarısız"
+
+    repo._db.table("bonus_offers").delete().eq(
+        "user_id", SMOKE_USER_ID
+    ).eq("day", date.today().isoformat()).execute()
+    offer_id = str(uuid.uuid4())
+    offer = repo.save_bonus_offer(BonusOffer(
+        id=offer_id,
+        user_id=SMOKE_USER_ID,
+        bonus_key="smoke",
+        title="Smoke bonus",
+        tiny_instruction="Bir adım at.",
+        category="İrade",
+        day=date.today(),
+        offered_at=datetime.now(timezone.utc),
+    ))
+    assert offer.id == offer_id
+    assert repo.claim_bonus_completion(
+        SMOKE_USER_ID, offer_id, f"smoke-completion-{offer_id}"
+    )
+    after_bonus = repo.get_state(SMOKE_USER_ID)
+    assert after_bonus.points["İrade"] == 160, "bonus +10 uygulanmadı"
+    assert any(
+        row.reason == f"motivasyon bonus görevi:{offer_id}"
+        for row in repo.get_point_log(SMOKE_USER_ID)
+    ), "bonus point_log yazılmadı"
+    print("  OK — versioned consent, push token ve idempotent +10 bonus başarılı")
+
+    repo._db.table("point_log").delete().eq(
+        "reason", f"motivasyon bonus görevi:{offer_id}"
+    ).execute()
+    repo._db.table("bonus_offers").delete().eq("id", offer_id).execute()
+    repo._db.table("push_tokens").delete().eq("token", push_token).execute()
+    after_bonus.points["İrade"] = 150
+    repo.save_state(after_bonus)
 
     print("\n✅ Tüm Supabase round-trip testleri geçti. Supabase tablolarında "
           f"'{SMOKE_USER_ID}' kullanıcısını kontrol edebilirsin (Table Editor).")
