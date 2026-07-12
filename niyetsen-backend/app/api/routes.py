@@ -23,16 +23,18 @@ from app.config import BONUS_POINTS, CATEGORIES, settings
 from app.core.gemini_client import GeminiUnavailable
 from app.core.rate_limit import limiter
 from app.models.schemas import (
-    BonusCompletionRequest, BonusOfferResponse, ChatMessage, ChatRequest,
-    ChatResponse, ChatSessionResponse, ConsentStatus, ConsentUpdate, DailyTaskItem,
-    Plan, PlanGenerateRequest, PlanRenameRequest, PlanSummary, ProfileUpdate,
-    ProofRecord, ProofResult, PushTokenRecord, PushTokenRegistration,
-    RevenueCatWebhookPayload, StateResponse, SubscriptionInfo, UserProfile,
+    AttachmentIngestResponse, BonusCompletionRequest, BonusOfferResponse, ChatMessage,
+    ChatGreetingResponse, ChatRequest, ChatResponse, ChatSessionResponse, CollectedIntent,
+    ConsentStatus, ConsentUpdate, DailyTaskItem, Plan, PlanGenerateRequest, PlanRenameRequest,
+    PlanSummary, ProfileUpdate, ProofRecord, ProofResult, PushTokenRecord,
+    PushTokenRegistration, RevenueCatWebhookPayload, StateResponse, SubscriptionInfo,
+    UserProfile,
 )
 from app.services import (
-    bonus_service, consent_service, intent_service, notification_service,
-    plan_service, profile_service, project_service, proof_service, push_service,
-    scoring_service, subscription_service, task_lifecycle_service, tool_service,
+    attachment_service, bonus_service, consent_service, greeting_service, intent_service,
+    notification_service, plan_service, profile_service, project_service,
+    proof_service, push_service, scoring_service, subscription_service,
+    task_lifecycle_service, tool_service,
 )
 from app.services.bonus_pool import is_completion_message
 from app.storage.repository import repo
@@ -48,6 +50,10 @@ CONSENT_REQUIRED = {
 PAYWALL_DETAIL = {
     "code": "paywall_required",
     "message": "7 günlük denemen sona erdi. Zincirini korumak için devam et.",
+}
+MULTI_PLAN_PAYWALL = {
+    "code": "paywall_required",
+    "message": "İkinci plan için abonelik gerekir. Devam etmek için paketi aç.",
 }
 
 
@@ -182,7 +188,12 @@ def get_current_user(
 # ------------------------------------------------------------------
 @router.get("/health")
 def health() -> dict:
-    return {"status": "ok", "env": settings.ENV, "model": settings.GEMINI_MODEL}
+    return {
+        "status": "ok",
+        "env": settings.ENV,
+        "model_chat": settings.GEMINI_MODEL,
+        "model_plan": settings.GEMINI_MODEL_PLAN,
+    }
 
 
 @router.post("/chat", response_model=ChatResponse)
@@ -203,6 +214,9 @@ async def chat(
         if active else ""
     )
     today_status, recent_tasks = _task_memory(user_id, profile.timezone)
+    summaries = repo.list_plan_summaries(user_id)
+    active_summary = next((item for item in summaries if item.is_active), None)
+    plan_has_content = bool(active_summary and active_summary.has_content)
     last_user = next(
         (message for message in reversed(req.messages) if message.role == "user"),
         None,
@@ -242,6 +256,7 @@ async def chat(
                 recent_tasks=recent_tasks,
                 mood_notes=_recent_mood(req.messages),
                 has_active_plan=repo.get_plan(user_id) is not None,
+                plan_has_content=plan_has_content,
             )
         except GeminiUnavailable:
             raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
@@ -288,15 +303,63 @@ def chat_history(user_id: str = Depends(get_current_user)) -> list[ChatMessage]:
     return repo.get_chat_history(user_id)
 
 
+@router.get("/chat/greeting", response_model=ChatGreetingResponse)
+def chat_greeting(user_id: str = Depends(get_current_user)) -> ChatGreetingResponse:
+    """Yeni sohbet veya boş oturumda saat dilimine göre kişiselleştirilmiş karşılama."""
+    profile = repo.get_profile(user_id)
+    message = greeting_service.build_chat_greeting(
+        name=profile.name,
+        timezone_name=profile.timezone,
+    )
+    return ChatGreetingResponse(message=message)
+
+
 @router.get("/chat/session", response_model=ChatSessionResponse)
 def chat_session(user_id: str = Depends(get_current_user)) -> ChatSessionResponse:
     """Mesajlarla aktif niyet durumunu tek çağrıda hydrate eder."""
+    summaries = repo.list_plan_summaries(user_id)
+    active_summary = next((item for item in summaries if item.is_active), None)
+    plan_has_content = bool(active_summary and active_summary.has_content)
     active = repo.get_active_intent(user_id)
     collected, ready = active or (None, False)
+    collected_intent = collected or CollectedIntent()
+    can_generate = not plan_has_content and ready and collected_intent.is_ready()
     return ChatSessionResponse(
         messages=repo.get_chat_history(user_id),
-        collected=collected or {},
-        ready_for_plan=ready,
+        collected=collected_intent,
+        ready_for_plan=can_generate,
+        plan_has_content=plan_has_content,
+        active_plan_name=active_summary.name if active_summary else "Planım",
+    )
+
+
+@router.post("/chat/attachment", response_model=AttachmentIngestResponse)
+@limiter.limit(f"{settings.CHAT_RATE_LIMIT_PER_MIN}/minute")
+async def ingest_chat_attachment(
+    request: Request,
+    file: UploadFile = File(...),
+    user_id: str = Depends(get_current_user),
+) -> AttachmentIngestResponse:
+    """PDF/DOCX metin çıkarımı veya PNG/JPEG kısa görsel özeti."""
+    _require_consent(user_id, "chat")
+    _require_premium(user_id)
+    data = await file.read()
+    mime_type = file.content_type or ""
+    filename = file.filename or "ek"
+    try:
+        attachment_service.validate_attachment(data, mime_type)
+    except attachment_service.AttachmentRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    try:
+        summary = await attachment_service.ingest_attachment(data, mime_type, filename)
+    except attachment_service.AttachmentRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except GeminiUnavailable:
+        raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+    return AttachmentIngestResponse(
+        filename=filename,
+        summary=summary,
+        mime_type=mime_type.split(";")[0].strip().lower(),
     )
 
 
@@ -310,7 +373,17 @@ def start_new_project(user_id: str = Depends(get_current_user)) -> PlanSummary:
     try:
         return project_service.start_new_project(repo, user_id)
     except PermissionError:
-        raise HTTPException(status_code=402, detail=PAYWALL_DETAIL)
+        raise HTTPException(status_code=402, detail=MULTI_PLAN_PAYWALL)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except Exception:
+        log.exception("start_new_project failed user_id=%s", user_id)
+        if repo.count_completed_plans(user_id) >= 1:
+            raise HTTPException(status_code=402, detail=MULTI_PLAN_PAYWALL)
+        raise HTTPException(
+            status_code=500,
+            detail="Yeni niyet başlatılamadı. Birazdan tekrar dener misin?",
+        )
 
 
 @router.put("/projects/{plan_id}/activate", response_model=PlanSummary)
@@ -463,6 +536,9 @@ async def upload_proof(
             mime_type=mime_type,
             attempt_no=claim.attempt_no,
             has_location=effective_location,
+            tiny_version=task.tiny_version,
+            categories=task.categories,
+            task_type=task.task_type,
         )
     except GeminiUnavailable:
         repo.abort_proof_attempt(user_id, task_id, idempotency_key)

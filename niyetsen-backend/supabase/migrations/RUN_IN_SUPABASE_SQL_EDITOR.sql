@@ -24,3 +24,7 @@ alter table public.chat_msgs
 
 create index if not exists chat_msgs_user_plan_idx
   on public.chat_msgs(user_id, plan_id, created_at);
+
+-- FAZ 5: deneme süresi (sohbet /chat bu kolona bakar — eksikse 500 verir)
+alter table public.users
+  add column if not exists trial_started_at timestamptz;

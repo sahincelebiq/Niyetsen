@@ -42,41 +42,65 @@ def _strip_json_fences(text: str) -> str:
     return t
 
 
+def _resolve_model(model: Optional[str]) -> str:
+    return model or settings.GEMINI_MODEL
+
+
 async def generate_text(
     contents: Any,
     system_instruction: Optional[str] = None,
     force_json: bool = False,
+    *,
+    model: Optional[str] = None,
+    max_output_tokens: Optional[int] = None,
+    max_retries: Optional[int] = None,
+    response_schema: Optional[dict] = None,
+    disable_thinking: bool = False,
 ) -> str:
     """
     Dayanıklı çağrı: settings.GEMINI_MAX_RETRIES kez exponential backoff.
     contents: str | list (google-genai formatında parça listesi — vision dahil).
-    async: retry beklemesi asyncio.sleep ile yapılır ve asıl (senkron) SDK
-    çağrısı asyncio.to_thread'e taşınır — event loop'u bloklamaz (bu fonksiyon
-    async çağrı zincirinde: routes -> services -> buraya kadar await'lidir).
     """
     from google.genai import types
 
-    config = types.GenerateContentConfig(
-        system_instruction=system_instruction,
-        response_mime_type="application/json" if force_json else None,
-    )
+    resolved_model = _resolve_model(model)
+    retry_limit = settings.GEMINI_MAX_RETRIES if max_retries is None else max_retries
+    config_kwargs: dict[str, Any] = {
+        "system_instruction": system_instruction,
+        "response_mime_type": "application/json" if force_json else None,
+    }
+    if max_output_tokens is not None:
+        config_kwargs["max_output_tokens"] = max_output_tokens
+    if force_json and response_schema is not None:
+        config_kwargs["response_schema"] = response_schema
+    if disable_thinking:
+        config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+    config = types.GenerateContentConfig(**config_kwargs)
 
-    client = get_client()  # anahtar eksikse retry'a girmeden NET hata ver
+    client = get_client()
 
     last_err: Exception | None = None
-    for attempt in range(settings.GEMINI_MAX_RETRIES + 1):
+    for attempt in range(retry_limit + 1):
         try:
             resp = await asyncio.to_thread(
                 client.models.generate_content,
-                model=settings.GEMINI_MODEL,
+                model=resolved_model,
                 contents=contents,
                 config=config,
             )
             return resp.text or ""
         except Exception as e:  # noqa: BLE001 — SDK sürümüne göre hata tipleri değişir
             last_err = e
-            wait = 2 ** attempt
-            log.warning("Gemini hatası (deneme %s): %s — %ss bekleniyor", attempt + 1, e, wait)
+            if attempt >= retry_limit:
+                break
+            wait = min(2 ** attempt, 4)
+            log.warning(
+                "Gemini hatası (%s, deneme %s): %s — %ss bekleniyor",
+                resolved_model,
+                attempt + 1,
+                e,
+                wait,
+            )
             await asyncio.sleep(wait)
 
     raise GeminiUnavailable(str(last_err))
@@ -85,21 +109,41 @@ async def generate_text(
 async def generate_json(
     contents: Any,
     system_instruction: Optional[str] = None,
+    *,
+    model: Optional[str] = None,
+    max_output_tokens: Optional[int] = None,
+    max_retries: Optional[int] = None,
+    json_retries: int = 2,
+    response_schema: Optional[dict] = None,
+    disable_thinking: bool = False,
 ) -> dict:
-    """JSON zorla + güvenli parse. Bozuk JSON'da bir kez daha dener."""
-    for _ in range(2):
-        raw = await generate_text(contents, system_instruction=system_instruction, force_json=True)
+    """JSON zorla + güvenli parse. Bozuk JSON'da sınırlı tekrar."""
+    last_raw = ""
+    for _ in range(max(1, json_retries)):
+        raw = await generate_text(
+            contents,
+            system_instruction=system_instruction,
+            force_json=True,
+            model=model,
+            max_output_tokens=max_output_tokens,
+            max_retries=max_retries,
+            response_schema=response_schema,
+            disable_thinking=disable_thinking,
+        )
+        last_raw = raw
         try:
             return json.loads(_strip_json_fences(raw))
         except json.JSONDecodeError:
             log.warning("Gemini bozuk JSON döndürdü, tekrar deneniyor: %.200s", raw)
-    raise GeminiUnavailable("Model geçerli JSON üretemedi")
+    raise GeminiUnavailable(f"Model geçerli JSON üretemedi: {last_raw[:200]}")
 
 
 async def generate_function_calls(
     contents: Any,
     declarations: list[dict],
     system_instruction: Optional[str] = None,
+    *,
+    model: Optional[str] = None,
 ) -> list[dict]:
     """Return native Gemini function calls without executing model-selected code."""
     from google.genai import types
@@ -111,14 +155,16 @@ async def generate_function_calls(
         tool_config=types.ToolConfig(
             function_calling_config=types.FunctionCallingConfig(mode="AUTO")
         ),
+        max_output_tokens=256,
     )
     client = get_client()
+    resolved_model = _resolve_model(model)
     last_err: Exception | None = None
     for attempt in range(settings.GEMINI_MAX_RETRIES + 1):
         try:
             response = await asyncio.to_thread(
                 client.models.generate_content,
-                model=settings.GEMINI_MODEL,
+                model=resolved_model,
                 contents=contents,
                 config=config,
             )
@@ -128,7 +174,9 @@ async def generate_function_calls(
             ]
         except Exception as exc:  # noqa: BLE001
             last_err = exc
-            await asyncio.sleep(2 ** attempt)
+            if attempt >= settings.GEMINI_MAX_RETRIES:
+                break
+            await asyncio.sleep(min(2 ** attempt, 4))
     raise GeminiUnavailable(str(last_err))
 
 
@@ -136,12 +184,20 @@ async def generate_json_with_image(
     prompt: str,
     image_bytes: bytes,
     mime_type: str,
+    *,
+    model: Optional[str] = None,
 ) -> dict:
-    """Vision çağrısı (kanıt doğrulama, v2'de kahve/el falı da burayı kullanır)."""
+    """Vision çağrısı (kanıt doğrulama)."""
     from google.genai import types
 
     parts = [
         types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
         prompt,
     ]
-    return await generate_json(parts)
+    return await generate_json(
+        parts,
+        model=model,
+        max_output_tokens=256,
+        json_retries=1,
+        max_retries=1,
+    )

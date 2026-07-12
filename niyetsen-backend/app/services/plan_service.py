@@ -61,7 +61,12 @@ async def generate_batch(
         intent_block=_intent_block(collected, duration_days, start_day),
     )
 
-    data = await generate_json(instructions, system_instruction=prompts.SYSTEM_PROMPT)
+    data = await generate_json(
+        instructions,
+        system_instruction=prompts.SYSTEM_PROMPT,
+        model=settings.GEMINI_MODEL_PLAN,
+        max_output_tokens=8192,
+    )
 
     days: list[PlanDay] = []
     for d in (data.get("days") or [])[:batch]:

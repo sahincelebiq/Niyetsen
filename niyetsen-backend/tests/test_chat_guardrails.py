@@ -46,8 +46,8 @@ def test_math_question_redirects_to_user_intent(monkeypatch):
 def test_active_plan_uses_guide_mode_and_memory(monkeypatch):
     captured = {}
 
-    async def fake_json(contents, system_instruction=None):
-        captured["contents"] = contents
+    async def fake_json(*args, **kwargs):
+        captured["contents"] = args[0] if args else kwargs.get("contents")
         return {
             "reply": "23 günlük zincirin ve tamamladığın yürüyüş güçlü bir kanıt.",
             "ready_for_plan": True,
@@ -63,10 +63,11 @@ def test_active_plan_uses_guide_mode_and_memory(monkeypatch):
                 ]
             ),
             has_active_plan=True,
+            plan_has_content=True,
             today_status="1 done",
             recent_tasks="20 dakika yürüyüş (done)",
         )
     )
-    assert response.ready_for_plan is True
-    assert "Aktif plan varken" in captured["contents"]
+    assert response.ready_for_plan is False
+    assert "Aktif planı olan" in captured["contents"]
     assert "Son görevler: 20 dakika yürüyüş (done)" in captured["contents"]

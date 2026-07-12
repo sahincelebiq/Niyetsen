@@ -1,0 +1,42 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F3EFE3"/>
+      <stop offset="1" stop-color="#E7E0CE"/>
+    </linearGradient>
+    <linearGradient id="moon1" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8B6F52"/>
+      <stop offset="1" stop-color="#6E5539"/>
+    </linearGradient>
+    <linearGradient id="leaf1" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#A7C4A0"/>
+      <stop offset="1" stop-color="#7FA877"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="230" fill="url(#bg1)"/>
+
+  <!-- crescent moon cradling the sprout -->
+  <path d="M512 224
+           a288 288 0 1 0 236 452
+           a232 232 0 1 1 -236 -452 Z"
+        fill="url(#moon1)"/>
+
+  <!-- sprout stem -->
+  <path d="M512 720 C512 640 512 600 512 540"
+        stroke="#7FA877" stroke-width="26" stroke-linecap="round" fill="none"/>
+
+  <!-- left leaf -->
+  <path d="M512 596 C452 596 408 556 402 496 C462 496 508 536 512 596 Z"
+        fill="url(#leaf1)"/>
+  <!-- right leaf -->
+  <path d="M512 560 C572 560 616 520 622 460 C562 460 516 500 512 560 Z"
+        fill="url(#leaf1)"/>
+  <!-- top bud -->
+  <circle cx="512" cy="512" r="30" fill="#C9DAB0"/>
+
+  <!-- three small stars = the chain of days -->
+  <circle cx="690" cy="360" r="10" fill="#C9B79C"/>
+  <circle cx="726" cy="420" r="7" fill="#C9B79C"/>
+  <circle cx="662" cy="300" r="6" fill="#C9B79C"/>
+</svg>

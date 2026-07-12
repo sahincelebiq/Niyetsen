@@ -1,11 +1,40 @@
 """Çoklu plan projeleri — free=1 plan, abonelikle yeni niyet."""
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.services import plan_service
 
 client = TestClient(app)
+
+FAKE_PLAN_JSON = {
+    "days": [
+        {
+            "day": 1,
+            "theme": "Başlangıç",
+            "tasks": [
+                {
+                    "title": "Görev 1",
+                    "task_type": "alışkanlık",
+                    "categories": ["İstikrar"],
+                    "image_keyword": "morning walk",
+                    "duration_min": 10,
+                    "tiny_version": "2 dk başla.",
+                },
+            ],
+        },
+    ]
+}
+
+
+@pytest.fixture(autouse=True)
+def _mock_plan_gemini(monkeypatch):
+    async def fake_generate_json(*args, **kwargs):
+        return FAKE_PLAN_JSON
+
+    monkeypatch.setattr(plan_service, "generate_json", fake_generate_json)
 
 
 def _headers(user_id: str) -> dict[str, str]:

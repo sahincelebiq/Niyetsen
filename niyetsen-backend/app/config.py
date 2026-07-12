@@ -24,8 +24,13 @@ class Settings:
     # --- AI ---
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
     GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_MODEL_PLAN: str = os.environ.get("GEMINI_MODEL_PLAN", "gemini-2.5-pro")
     GEMINI_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_TIMEOUT_SEC", "30"))
+    GEMINI_PLAN_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_PLAN_TIMEOUT_SEC", "90"))
     GEMINI_MAX_RETRIES: int = int(os.environ.get("GEMINI_MAX_RETRIES", "2"))
+    GEMINI_CHAT_MAX_OUTPUT_TOKENS: int = int(
+        os.environ.get("GEMINI_CHAT_MAX_OUTPUT_TOKENS", "2048")
+    )
 
     # --- Görsel ---
     UNSPLASH_ACCESS_KEY: str = os.environ.get("UNSPLASH_ACCESS_KEY", "")

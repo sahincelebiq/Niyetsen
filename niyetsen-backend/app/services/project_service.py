@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import date
 
-from app.models.schemas import DailyTaskItem, PlanSummary
+from app.models.schemas import CollectedIntent, DailyTaskItem, PlanSummary
 from app.services import subscription_service
 from app.storage.base import Repository
 
@@ -43,6 +43,7 @@ def start_new_project(repo: Repository, user_id: str) -> PlanSummary:
     slot_no = repo.next_plan_slot(user_id)
     plan_id = repo.create_draft_plan(user_id, name=f"Plan {slot_no}", slot_no=slot_no)
     repo.set_active_plan(user_id, plan_id)
+    repo.save_intent(user_id, CollectedIntent(), 365, ready_for_plan=False)
     summaries = repo.list_plan_summaries(user_id)
     match = next((item for item in summaries if item.id == plan_id), None)
     if match is None:

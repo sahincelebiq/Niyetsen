@@ -23,11 +23,11 @@ def test_first_plan_starts_trial(repo: InMemoryRepository) -> None:
     subscription_service.start_trial_if_needed(repo, "user-1")
     info = subscription_service.get_subscription(repo, "user-1")
     assert info.status == "trial"
-    assert info.trial_days_remaining == 3
+    assert info.trial_days_remaining == 7
     assert info.has_premium_access is True
 
 
-def test_trial_expires_after_three_days(repo: InMemoryRepository) -> None:
+def test_trial_expires_after_seven_days(repo: InMemoryRepository) -> None:
     started = datetime(2026, 7, 10, 8, 0, tzinfo=timezone.utc)
     repo.update_subscription(
         "user-1",
@@ -39,7 +39,7 @@ def test_trial_expires_after_three_days(repo: InMemoryRepository) -> None:
         trial_started_at=started,
         timezone_name="Europe/Istanbul",
         has_plan=True,
-        today=date(2026, 7, 13),
+        today=date(2026, 7, 17),
     )
     assert info.has_premium_access is False
     assert info.show_paywall is True

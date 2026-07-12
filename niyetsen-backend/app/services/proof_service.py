@@ -43,6 +43,10 @@ async def evaluate_proof(
     mime_type: str,
     attempt_no: int,
     has_location: bool = False,
+    *,
+    tiny_version: str = "",
+    categories: list[str] | None = None,
+    task_type: str = "alışkanlık",
 ) -> ProofResult:
     validate_upload(image_bytes, mime_type)
 
@@ -55,7 +59,12 @@ async def evaluate_proof(
         )
 
     data = await generate_json_with_image(
-        prompt=prompts.PROOF_VALIDATION_PROMPT.format(task_title=task_title),
+        prompt=prompts.PROOF_VALIDATION_PROMPT.format(
+            task_title=task_title,
+            tiny_version=tiny_version or "belirtilmedi",
+            categories=", ".join(categories or []) or "belirtilmedi",
+            task_type=task_type,
+        ),
         image_bytes=image_bytes,
         mime_type=mime_type,
     )

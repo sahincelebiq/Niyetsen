@@ -58,6 +58,18 @@ class ChatSessionResponse(BaseModel):
     messages: list[ChatMessage] = Field(default_factory=list)
     collected: CollectedIntent = Field(default_factory=CollectedIntent)
     ready_for_plan: bool = False
+    plan_has_content: bool = False
+    active_plan_name: str = "Planım"
+
+
+class ChatGreetingResponse(BaseModel):
+    message: str
+
+
+class AttachmentIngestResponse(BaseModel):
+    filename: str
+    summary: str
+    mime_type: str
 
 
 # ---------- Plan ----------

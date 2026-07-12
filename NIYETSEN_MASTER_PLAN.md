@@ -107,15 +107,23 @@ Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerl
   yapar (chat_system_prompt.md'deki kural + kod tarafında test).
 
 ### 1.9 AI dayanıklılık & maliyet (EKSİKTİ)
-- Gemini çağrıları: timeout 30 sn, 2 kez exponential backoff retry, sonra kullanıcıya
-  nazik hata ("Şu an yıldızlara ulaşamıyorum, birazdan tekrar dene ✨").
+- Gemini çağrıları: chat için timeout 30 sn, 1 retry + `max_output_tokens=768`
+  (gecikmeyi düşürür); plan üretimi için timeout 90 sn, `gemini-2.5-pro`,
+  `max_output_tokens=8192`. Retry tükenince nazik hata ("Şu an yıldızlara
+  ulaşamıyorum, birazdan tekrar dene ✨").
+- **Çift model (2026-07-12):** `gemini-2.5-flash` = sohbet, araç çağrısı, kanıt
+  vision; `gemini-2.5-pro` = yalnızca plan üretimi (`GEMINI_MODEL_PLAN`).
 - Rate limit: kullanıcı başına dakikada 10 chat isteği (slowapi).
 - Store yayını ÖNCESİ Gemini ücretli katmana geç (free tier 1.500 istek/gün canlıda
-  yetmez). Model: `gemini-2.5-flash` (dev + prod başlangıç); pahalı işler
-  (plan üretimi) için gerekirse Pro'ya yükselt.
+  yetmez).
 - Prompt injection: kullanıcı mesajı asla system rolüne karışmaz; RAG içeriği
   CONTEXT bloğunda etiketli gider; model çıktısında function-call dışı araç
   denemesi reddedilir.
+- Sohbet tonu: gereksiz övgü yok; mantıklı, önceki cevaba dayalı sorular.
+- Kanıt vision: görev başlığı + `tiny_version` + kategoriler + `task_type` bağlamı
+  prompt'a gider.
+- Yeni/boş sohbet: `GET /chat/greeting` — kullanıcı timezone'una göre
+  Günaydın / İyi günler / İyi akşamlar + isim.
 
 ### 1.10 Analitik (EKSİKTİ, YATIRIMCI İÇİN KRİTİK)
 - Gün 1'den itibaren **PostHog** (ücretsiz katman yeter).
@@ -127,6 +135,18 @@ Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerl
 ### 1.11 Görsel kaynak
 - MVP + v1: Unsplash (lisans temiz). Pinterest v2'ye ertelendi (API onayı yavaş +
   app içinde gösterim ToS riski — v2'de hukuki kontrol yapılacak).
+- Atıf UI (2026-07-12): görev kartında görsel üzerinde küçük ⓘ rozeti; uzun basınca
+  fotoğrafçı metni + Unsplash linki. Metin DB'de kalır, ekranda gizlenir.
+
+### 1.13 Sohbet UX (2026-07-12)
+- Sabit üst header: ☰ menü her zaman erişilebilir (sohbet uzasa da kaydırma gerekmez).
+- Sol kenardan sağa kaydırma: Niyetlerim paneli açılır (☰ ile aynı).
+- Sohbet/plan senkronu: her niyet `plan_id` ile ayrı chat + intent; yeni niyet başlatınca
+  temiz oturum + boş intent. Planı olan niyette "Planını Oluştur" gizlenir.
+- Asistan balonu: zincir logosu (kutucuksuz metin); bekleme metni **düşünüyor…** +
+  hafif zincir animasyonu.
+- Dosya eki (v1): PDF/DOCX metin çıkarımı, PNG/JPEG kısa özet — `POST /chat/attachment`;
+  mesaja `[Ek dosya: …]` olarak eklenir (max 5 MB).
 
 ### 1.12 İrade Modu — alarm kilidi (YENİ KARAR, 2026-07-07)
 - Teknik gerçek: iOS/Android 3. parti uygulamaların sistem Saat/Alarm uygulamasına
