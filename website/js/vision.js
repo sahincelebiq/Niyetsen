@@ -10,7 +10,6 @@
   var particles = [];
   var centerWord = document.getElementById("vision-center-word");
   var listEl = document.getElementById("vision-list");
-  var words = ["Niyet", "Tutku", "Visyon", "İrade", "Disiplin", "Özgüven"];
   var listItems = [
     "Bu yıl daha cesur olacağım",
     "Her gün küçük bir adım",
@@ -18,6 +17,7 @@
     "Zincirimi koruyacağım",
     "Kendime söz verdim"
   ];
+  var centerWords = ["Vizyon", "Misyon", "Niyetsen"];
   var wordIndex = 0;
   var listIndex = 0;
   var dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -71,14 +71,14 @@
     });
   }
 
-  function cycleWord() {
+  function cycleCenterWord() {
     if (!centerWord) return;
     centerWord.classList.add("fade");
     setTimeout(function () {
-      wordIndex = (wordIndex + 1) % words.length;
-      centerWord.textContent = words[wordIndex];
+      wordIndex = (wordIndex + 1) % centerWords.length;
+      centerWord.textContent = centerWords[wordIndex];
       centerWord.classList.remove("fade");
-    }, 500);
+    }, 600);
   }
 
   function addListItem() {
@@ -95,9 +95,11 @@
   var rect = canvas.parentElement.getBoundingClientRect();
   if (!reducedMotion) draw(rect.width, rect.height);
 
+  if (centerWord) centerWord.textContent = centerWords[0];
+
   window.addEventListener("resize", resize);
   if (!reducedMotion) {
-    setInterval(cycleWord, 3200);
+    setInterval(cycleCenterWord, 4200);
     listItems.forEach(function (_, i) {
       setTimeout(addListItem, 800 + i * 600);
     });
