@@ -13,8 +13,8 @@ from typing import Optional
 
 from app.models.schemas import (
     BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, GameState,
-    NotificationRecipient, Plan, PointLogRecord, ProofAttemptClaim, ProofRecord,
-    ProofResult, PushTokenRecord, ScoreEvent, Task, UserProfile,
+    NotificationRecipient, Plan, PlanSummary, PointLogRecord, ProofAttemptClaim,
+    ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task, UserProfile,
 )
 
 
@@ -32,6 +32,30 @@ class Repository(ABC):
 
     @abstractmethod
     def get_plan(self, user_id: str) -> Optional[Plan]: ...
+
+    @abstractmethod
+    def get_plan_by_id(self, user_id: str, plan_id: str) -> Optional[Plan]: ...
+
+    @abstractmethod
+    def list_plan_summaries(self, user_id: str) -> list[PlanSummary]: ...
+
+    @abstractmethod
+    def set_active_plan(self, user_id: str, plan_id: str) -> None: ...
+
+    @abstractmethod
+    def create_draft_plan(self, user_id: str, *, name: str, slot_no: int) -> str: ...
+
+    @abstractmethod
+    def rename_plan(self, user_id: str, plan_id: str, name: str) -> None: ...
+
+    @abstractmethod
+    def plan_belongs_to_user(self, user_id: str, plan_id: str) -> bool: ...
+
+    @abstractmethod
+    def count_completed_plans(self, user_id: str) -> int: ...
+
+    @abstractmethod
+    def next_plan_slot(self, user_id: str) -> int: ...
 
     @abstractmethod
     def get_task(self, user_id: str, task_id: str) -> Optional[Task]: ...

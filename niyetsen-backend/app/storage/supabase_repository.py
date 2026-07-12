@@ -18,7 +18,7 @@ from supabase import Client, create_client
 from app.config import CATEGORIES, settings
 from app.models.schemas import (
     BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, GameState,
-    NotificationRecipient, Plan, PlanDay, PointLogRecord, ProofAttemptClaim,
+    NotificationRecipient, Plan, PlanDay, PlanSummary, PointLogRecord, ProofAttemptClaim,
     ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task, UserProfile,
 )
 from app.storage.base import Repository
@@ -145,6 +145,39 @@ class SupabaseRepository(Repository):
     # ------------------------------------------------------------------
     # Plan / Görev
     # ------------------------------------------------------------------
+    def _active_plan_id(self, user_id: str) -> Optional[str]:
+        row = _maybe_single(
+            self._db.table("users").select("active_plan_id").eq("id", user_id)
+        )
+        return row.get("active_plan_id") if row else None
+
+    def _set_active_plan_id(self, user_id: str, plan_id: str) -> None:
+        self._db.table("users").update({"active_plan_id": plan_id}).eq("id", user_id).execute()
+
+    def _plan_row_to_model(self, plan_row: dict, user_id: str) -> Plan:
+        task_rows = (
+            self._db.table("tasks").select("*").eq("plan_id", plan_row["id"])
+            .order("day_no").execute().data
+        )
+        days: dict[int, PlanDay] = {}
+        for row in task_rows:
+            day = days.setdefault(
+                row["day_no"],
+                PlanDay(day=row["day_no"], theme=row["day_theme"], tasks=[]),
+            )
+            day.tasks.append(_task_from_row(row))
+        active_id = self._active_plan_id(user_id)
+        return Plan(
+            id=plan_row["id"],
+            duration_days=plan_row["duration_days"],
+            batch_generated_until=plan_row["batch_generated_until"],
+            start_date=plan_row["start_date"],
+            days=[days[k] for k in sorted(days)],
+            name=plan_row.get("name") or "Planım",
+            slot_no=plan_row.get("slot_no") or 1,
+            is_active=plan_row["id"] == active_id,
+        )
+
     def save_plan(self, user_id: str, plan: Plan) -> None:
         self._ensure_user(user_id)
         self._db.table("plans").upsert({
@@ -153,33 +186,122 @@ class SupabaseRepository(Repository):
             "duration_days": plan.duration_days,
             "batch_generated_until": plan.batch_generated_until,
             "start_date": plan.start_date.isoformat(),
-        }, on_conflict="user_id").execute()
+            "name": plan.name,
+            "slot_no": plan.slot_no,
+        }, on_conflict="id").execute()
+        self._set_active_plan_id(user_id, plan.id)
 
         rows = [_task_row(plan.id, day, t) for day in plan.days for t in day.tasks]
         if rows:
             self._db.table("tasks").upsert(rows, on_conflict="id").execute()
 
     def get_plan(self, user_id: str) -> Optional[Plan]:
-        plan_row = _maybe_single(self._db.table("plans").select("*").eq("user_id", user_id))
+        active_id = self._active_plan_id(user_id)
+        if active_id:
+            plan_row = _maybe_single(
+                self._db.table("plans").select("*").eq("id", active_id).eq("user_id", user_id)
+            )
+            if plan_row:
+                plan = self._plan_row_to_model(plan_row, user_id)
+                return plan if plan.days else None
+        plan_row = _maybe_single(
+            self._db.table("plans").select("*").eq("user_id", user_id)
+            .order("slot_no").limit(1)
+        )
         if not plan_row:
             return None
+        self._set_active_plan_id(user_id, plan_row["id"])
+        plan = self._plan_row_to_model(plan_row, user_id)
+        return plan if plan.days else None
 
-        task_rows = (
-            self._db.table("tasks").select("*").eq("plan_id", plan_row["id"])
-            .order("day_no").execute().data
+    def get_plan_by_id(self, user_id: str, plan_id: str) -> Optional[Plan]:
+        plan_row = _maybe_single(
+            self._db.table("plans").select("*").eq("id", plan_id).eq("user_id", user_id)
         )
-        days: dict[int, PlanDay] = {}
-        for row in task_rows:
-            day = days.setdefault(row["day_no"], PlanDay(day=row["day_no"], theme=row["day_theme"], tasks=[]))
-            day.tasks.append(_task_from_row(row))
+        if not plan_row:
+            return None
+        plan = self._plan_row_to_model(plan_row, user_id)
+        return plan if plan.days else None
 
-        return Plan(
-            id=plan_row["id"],
-            duration_days=plan_row["duration_days"],
-            batch_generated_until=plan_row["batch_generated_until"],
-            start_date=plan_row["start_date"],
-            days=[days[k] for k in sorted(days)],
+    def list_plan_summaries(self, user_id: str) -> list[PlanSummary]:
+        self._ensure_user(user_id)
+        active_id = self._active_plan_id(user_id)
+        rows = (
+            self._db.table("plans").select("id,name,slot_no,batch_generated_until")
+            .eq("user_id", user_id).order("slot_no").execute().data
         )
+        if not rows:
+            plan_id = self.create_draft_plan(user_id, name="Plan 1", slot_no=1)
+            active_id = plan_id
+            rows = (
+                self._db.table("plans").select("id,name,slot_no,batch_generated_until")
+                .eq("user_id", user_id).order("slot_no").execute().data
+            )
+        summaries: list[PlanSummary] = []
+        for row in rows:
+            task_count = (
+                self._db.table("tasks").select("id", count="exact")
+                .eq("plan_id", row["id"]).limit(1).execute()
+            )
+            has_content = bool(task_count.count)
+            summaries.append(
+                PlanSummary(
+                    id=row["id"],
+                    name=row.get("name") or "Planım",
+                    slot_no=row.get("slot_no") or 1,
+                    is_active=row["id"] == active_id,
+                    has_content=has_content,
+                )
+            )
+        return summaries
+
+    def set_active_plan(self, user_id: str, plan_id: str) -> None:
+        if not self.plan_belongs_to_user(user_id, plan_id):
+            raise ValueError("Plan bulunamadı.")
+        self._set_active_plan_id(user_id, plan_id)
+
+    def create_draft_plan(self, user_id: str, *, name: str, slot_no: int) -> str:
+        self._ensure_user(user_id)
+        plan_id = str(uuid.uuid4())
+        self._db.table("plans").insert({
+            "id": plan_id,
+            "user_id": user_id,
+            "duration_days": 365,
+            "batch_generated_until": 0,
+            "start_date": dt_date.today().isoformat(),
+            "name": name,
+            "slot_no": slot_no,
+        }).execute()
+        self._set_active_plan_id(user_id, plan_id)
+        return plan_id
+
+    def rename_plan(self, user_id: str, plan_id: str, name: str) -> None:
+        if not self.plan_belongs_to_user(user_id, plan_id):
+            raise ValueError("Plan bulunamadı.")
+        self._db.table("plans").update({"name": name}).eq("id", plan_id).execute()
+
+    def plan_belongs_to_user(self, user_id: str, plan_id: str) -> bool:
+        row = _maybe_single(
+            self._db.table("plans").select("id").eq("id", plan_id).eq("user_id", user_id)
+        )
+        return row is not None
+
+    def count_completed_plans(self, user_id: str) -> int:
+        rows = self._db.table("plans").select("id").eq("user_id", user_id).execute().data
+        count = 0
+        for row in rows:
+            tasks = (
+                self._db.table("tasks").select("id", count="exact")
+                .eq("plan_id", row["id"]).limit(1).execute()
+            )
+            if tasks.count:
+                count += 1
+        return count
+
+    def next_plan_slot(self, user_id: str) -> int:
+        rows = self._db.table("plans").select("slot_no").eq("user_id", user_id).execute().data
+        slots = [row.get("slot_no") or 1 for row in rows]
+        return (max(slots) if slots else 0) + 1
 
     def get_task(self, user_id: str, task_id: str) -> Optional[Task]:
         # plans!inner ile sahiplik doğrulanır: başka kullanıcının task_id'siyle sızma olmaz.
@@ -356,11 +478,16 @@ class SupabaseRepository(Repository):
     # ------------------------------------------------------------------
     def append_chat_message(self, user_id: str, message: ChatMessage) -> None:
         self._ensure_user(user_id)
+        summaries = self.list_plan_summaries(user_id)
+        plan_id = next((item.id for item in summaries if item.is_active), None)
+        if not plan_id:
+            plan_id = self.create_draft_plan(user_id, name="Plan 1", slot_no=1)
         row = {
             "user_id": user_id,
             "client_message_id": message.id,
             "role": message.role,
             "content": message.content,
+            "plan_id": plan_id,
         }
         if message.id:
             self._db.table("chat_msgs").upsert(
@@ -372,9 +499,13 @@ class SupabaseRepository(Repository):
             self._db.table("chat_msgs").insert(row).execute()
 
     def get_chat_history(self, user_id: str) -> list[ChatMessage]:
+        summaries = self.list_plan_summaries(user_id)
+        plan_id = next((item.id for item in summaries if item.is_active), None)
+        if not plan_id:
+            return []
         rows = (
             self._db.table("chat_msgs").select("id,client_message_id,role,content")
-            .eq("user_id", user_id).order("created_at").execute().data
+            .eq("user_id", user_id).eq("plan_id", plan_id).order("created_at").execute().data
         )
         return [
             ChatMessage(
@@ -393,17 +524,23 @@ class SupabaseRepository(Repository):
         ready_for_plan: bool = False,
     ) -> None:
         self._ensure_user(user_id)
+        summaries = self.list_plan_summaries(user_id)
+        plan_id = next((item.id for item in summaries if item.is_active), None)
+        if not plan_id:
+            plan_id = self.create_draft_plan(user_id, name="Plan 1", slot_no=1)
         payload = json.dumps({
             "collected": collected.model_dump(mode="json"),
             "ready_for_plan": ready_for_plan,
         }, ensure_ascii=False)
         active = _maybe_single(
             self._db.table("intents").select("id").eq("user_id", user_id)
-            .eq("status", "active").order("created_at", desc=True).limit(1)
+            .eq("plan_id", plan_id).eq("status", "active")
+            .order("created_at", desc=True).limit(1)
         )
         values = {
             "text": payload,
             "duration_days": duration_days,
+            "plan_id": plan_id,
         }
         if active:
             self._db.table("intents").update(values).eq("id", active["id"]).execute()
@@ -415,9 +552,14 @@ class SupabaseRepository(Repository):
             }).execute()
 
     def get_active_intent(self, user_id: str) -> tuple[CollectedIntent, bool] | None:
+        summaries = self.list_plan_summaries(user_id)
+        plan_id = next((item.id for item in summaries if item.is_active), None)
+        if not plan_id:
+            return None
         active = _maybe_single(
             self._db.table("intents").select("text").eq("user_id", user_id)
-            .eq("status", "active").order("created_at", desc=True).limit(1)
+            .eq("plan_id", plan_id).eq("status", "active")
+            .order("created_at", desc=True).limit(1)
         )
         if not active:
             return None
@@ -431,9 +573,13 @@ class SupabaseRepository(Repository):
             return CollectedIntent(), False
 
     def complete_active_intent(self, user_id: str) -> None:
+        summaries = self.list_plan_summaries(user_id)
+        plan_id = next((item.id for item in summaries if item.is_active), None)
+        if not plan_id:
+            return
         self._db.table("intents").update({"status": "done"}).eq(
             "user_id", user_id
-        ).eq("status", "active").execute()
+        ).eq("plan_id", plan_id).eq("status", "active").execute()
 
     # ------------------------------------------------------------------
     # Profil / hesap yaşam döngüsü (Faz 2)

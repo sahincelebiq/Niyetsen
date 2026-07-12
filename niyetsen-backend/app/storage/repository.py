@@ -16,8 +16,8 @@ from typing import Optional
 from app.config import BONUS_POINTS, settings
 from app.models.schemas import (
     BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, GameState,
-    NotificationRecipient, Plan, PointLogRecord, ProofAttemptClaim, ProofRecord,
-    ProofResult, PushTokenRecord, ScoreEvent, Task, UserProfile,
+    NotificationRecipient, Plan, PlanSummary, PointLogRecord, ProofAttemptClaim,
+    ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task, UserProfile,
 )
 from app.storage.base import Repository
 
@@ -25,10 +25,12 @@ from app.storage.base import Repository
 class InMemoryRepository(Repository):
     def __init__(self) -> None:
         self._states: dict[str, GameState] = {}
-        self._plans: dict[str, Plan] = {}
+        self._plans_by_user: dict[str, dict[str, Plan]] = {}
+        self._plan_meta: dict[str, dict[str, dict]] = {}
+        self._active_plan_id: dict[str, str] = {}
         self._attempts: dict[tuple[str, str], int] = {}
-        self._chat_history: dict[str, list[ChatMessage]] = {}
-        self._intents: dict[str, list[dict]] = {}
+        self._chat_history: dict[tuple[str, str], list[ChatMessage]] = {}
+        self._intents: dict[tuple[str, str], list[dict]] = {}
         self._profiles: dict[str, UserProfile] = {}
         self._proof_photos: dict[str, bytes] = {}
         self._proofs: dict[str, list[ProofRecord]] = {}
@@ -50,31 +52,143 @@ class InMemoryRepository(Repository):
     def save_state(self, state: GameState) -> None:
         self._states[state.user_id] = state
 
-    def save_plan(self, user_id: str, plan: Plan) -> None:
-        self._plans[user_id] = plan
+    def _user_plans(self, user_id: str) -> dict[str, Plan]:
+        return self._plans_by_user.setdefault(user_id, {})
 
-    def get_plan(self, user_id: str) -> Optional[Plan]:
-        return self._plans.get(user_id)
+    def _user_meta(self, user_id: str) -> dict[str, dict]:
+        return self._plan_meta.setdefault(user_id, {})
 
-    def get_task(self, user_id: str, task_id: str) -> Optional[Task]:
-        plan = self._plans.get(user_id)
+    def _ensure_active_plan_id(self, user_id: str) -> str:
+        active = self._active_plan_id.get(user_id)
+        if active and active in self._user_plans(user_id):
+            return active
+        plans = self._user_plans(user_id)
+        if plans:
+            first_id = sorted(
+                plans,
+                key=lambda plan_id: self._user_meta(user_id).get(plan_id, {}).get("slot_no", 1),
+            )[0]
+            self._active_plan_id[user_id] = first_id
+            return first_id
+        return self.create_draft_plan(user_id, name="Plan 1", slot_no=1)
+
+    def _plan_from_store(self, user_id: str, plan_id: str) -> Optional[Plan]:
+        plan = self._user_plans(user_id).get(plan_id)
         if not plan:
             return None
-        for day in plan.days:
-            for t in day.tasks:
-                if t.id == task_id:
-                    return t
+        meta = self._user_meta(user_id).get(plan_id, {})
+        return plan.model_copy(
+            update={
+                "name": meta.get("name", "Planım"),
+                "slot_no": meta.get("slot_no", 1),
+                "is_active": self._active_plan_id.get(user_id) == plan_id,
+            }
+        )
+
+    def save_plan(self, user_id: str, plan: Plan) -> None:
+        plan_id = plan.id
+        self._user_plans(user_id)[plan_id] = plan.model_copy(
+            update={"name": plan.name, "slot_no": plan.slot_no}
+        )
+        meta = self._user_meta(user_id).setdefault(
+            plan_id,
+            {"name": plan.name or "Planım", "slot_no": plan.slot_no or 1},
+        )
+        meta["name"] = plan.name or meta["name"]
+        meta["slot_no"] = plan.slot_no or meta["slot_no"]
+        self._active_plan_id[user_id] = plan_id
+
+    def get_plan(self, user_id: str) -> Optional[Plan]:
+        plan_id = self._active_plan_id.get(user_id)
+        if not plan_id:
+            plans = self._user_plans(user_id)
+            if not plans:
+                return None
+            plan_id = self._ensure_active_plan_id(user_id)
+        plan = self._plan_from_store(user_id, plan_id)
+        if plan and not plan.days:
+            return None
+        return plan
+
+    def get_plan_by_id(self, user_id: str, plan_id: str) -> Optional[Plan]:
+        plan = self._plan_from_store(user_id, plan_id)
+        if not plan or not plan.days:
+            return None
+        return plan
+
+    def list_plan_summaries(self, user_id: str) -> list[PlanSummary]:
+        self._ensure_active_plan_id(user_id)
+        active_id = self._active_plan_id.get(user_id)
+        summaries: list[PlanSummary] = []
+        for plan_id, plan in self._user_plans(user_id).items():
+            meta = self._user_meta(user_id).get(plan_id, {})
+            summaries.append(
+                PlanSummary(
+                    id=plan_id,
+                    name=meta.get("name", "Planım"),
+                    slot_no=meta.get("slot_no", 1),
+                    is_active=plan_id == active_id,
+                    has_content=bool(plan.days),
+                )
+            )
+        return sorted(summaries, key=lambda item: item.slot_no)
+
+    def set_active_plan(self, user_id: str, plan_id: str) -> None:
+        if plan_id not in self._user_plans(user_id):
+            raise ValueError("Plan bulunamadı.")
+        self._active_plan_id[user_id] = plan_id
+
+    def create_draft_plan(self, user_id: str, *, name: str, slot_no: int) -> str:
+        plan_id = str(uuid.uuid4())
+        draft = Plan(
+            id=plan_id,
+            duration_days=365,
+            batch_generated_until=0,
+            start_date=dt_date.today(),
+            days=[],
+            name=name,
+            slot_no=slot_no,
+        )
+        self._user_plans(user_id)[plan_id] = draft
+        self._user_meta(user_id)[plan_id] = {"name": name, "slot_no": slot_no}
+        self._active_plan_id[user_id] = plan_id
+        return plan_id
+
+    def rename_plan(self, user_id: str, plan_id: str, name: str) -> None:
+        if plan_id not in self._user_plans(user_id):
+            raise ValueError("Plan bulunamadı.")
+        self._user_meta(user_id).setdefault(plan_id, {})["name"] = name
+        plan = self._user_plans(user_id)[plan_id]
+        self._user_plans(user_id)[plan_id] = plan.model_copy(update={"name": name})
+
+    def plan_belongs_to_user(self, user_id: str, plan_id: str) -> bool:
+        return plan_id in self._user_plans(user_id)
+
+    def count_completed_plans(self, user_id: str) -> int:
+        return sum(1 for plan in self._user_plans(user_id).values() if plan.days)
+
+    def next_plan_slot(self, user_id: str) -> int:
+        slots = [
+            meta.get("slot_no", 1)
+            for meta in self._user_meta(user_id).values()
+        ]
+        return (max(slots) if slots else 0) + 1
+
+    def get_task(self, user_id: str, task_id: str) -> Optional[Task]:
+        for plan in self._user_plans(user_id).values():
+            for day in plan.days:
+                for task in day.tasks:
+                    if task.id == task_id:
+                        return task
         return None
 
     def update_task(self, user_id: str, task: Task) -> None:
-        plan = self._plans.get(user_id)
-        if not plan:
-            return
-        for day in plan.days:
-            for i, t in enumerate(day.tasks):
-                if t.id == task.id:
-                    day.tasks[i] = task
-                    return
+        for plan in self._user_plans(user_id).values():
+            for day in plan.days:
+                for index, existing in enumerate(day.tasks):
+                    if existing.id == task.id:
+                        day.tasks[index] = task
+                        return
 
     def get_proof_attempts(self, user_id: str, task_id: str) -> int:
         if self.get_task(user_id, task_id) is None:
@@ -190,9 +304,9 @@ class InMemoryRepository(Repository):
     def list_cron_users(self) -> list[CronUser]:
         user_ids = (
             set(self._profiles)
-            | set(self._plans)
+            | set(self._plans_by_user)
             | set(self._states)
-            | set(self._chat_history)
+            | {user_id for user_id, _ in self._chat_history}
         )
         return [
             CronUser(
@@ -203,13 +317,15 @@ class InMemoryRepository(Repository):
         ]
 
     def append_chat_message(self, user_id: str, message: ChatMessage) -> None:
-        history = self._chat_history.setdefault(user_id, [])
+        plan_id = self._ensure_active_plan_id(user_id)
+        history = self._chat_history.setdefault((user_id, plan_id), [])
         if message.id and any(existing.id == message.id for existing in history):
             return
         history.append(message)
 
     def get_chat_history(self, user_id: str) -> list[ChatMessage]:
-        return list(self._chat_history.get(user_id, []))
+        plan_id = self._ensure_active_plan_id(user_id)
+        return list(self._chat_history.get((user_id, plan_id), []))
 
     def save_intent(
         self,
@@ -218,13 +334,14 @@ class InMemoryRepository(Repository):
         duration_days: int,
         ready_for_plan: bool = False,
     ) -> None:
+        plan_id = self._ensure_active_plan_id(user_id)
         active = {
             "collected": collected.model_dump(),
             "duration_days": duration_days,
             "ready_for_plan": ready_for_plan,
             "status": "active",
         }
-        intents = self._intents.setdefault(user_id, [])
+        intents = self._intents.setdefault((user_id, plan_id), [])
         for index, intent in enumerate(intents):
             if intent["status"] == "active":
                 intents[index] = active
@@ -232,13 +349,17 @@ class InMemoryRepository(Repository):
         intents.append(active)
 
     def get_active_intent(self, user_id: str) -> tuple[CollectedIntent, bool] | None:
-        for intent in reversed(self._intents.get(user_id, [])):
+        plan_id = self._ensure_active_plan_id(user_id)
+        for intent in reversed(self._intents.get((user_id, plan_id), [])):
             if intent["status"] == "active":
                 return CollectedIntent(**intent["collected"]), bool(intent["ready_for_plan"])
         return None
 
     def complete_active_intent(self, user_id: str) -> None:
-        for intent in reversed(self._intents.get(user_id, [])):
+        plan_id = self._active_plan_id.get(user_id)
+        if not plan_id:
+            return
+        for intent in reversed(self._intents.get((user_id, plan_id), [])):
             if intent["status"] == "active":
                 intent["status"] = "done"
                 return
@@ -353,9 +474,15 @@ class InMemoryRepository(Repository):
 
     def delete_account(self, user_id: str) -> None:
         self._states.pop(user_id, None)
-        self._plans.pop(user_id, None)
-        self._chat_history.pop(user_id, None)
-        self._intents.pop(user_id, None)
+        self._plans_by_user.pop(user_id, None)
+        self._plan_meta.pop(user_id, None)
+        self._active_plan_id.pop(user_id, None)
+        self._chat_history = {
+            key: value for key, value in self._chat_history.items() if key[0] != user_id
+        }
+        self._intents = {
+            key: value for key, value in self._intents.items() if key[0] != user_id
+        }
         self._profiles.pop(user_id, None)
         self._proofs.pop(user_id, None)
         self._point_log.pop(user_id, None)

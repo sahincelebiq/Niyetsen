@@ -91,6 +91,27 @@ class Plan(BaseModel):
     batch_generated_until: int  # kaçıncı güne kadar üretildi (partili üretim)
     start_date: dt_date  # gün 1'in takvim tarihi; her Task.date buradan türer
     days: list[PlanDay]
+    name: str = "Planım"
+    slot_no: int = 1
+    is_active: bool = True
+
+
+class PlanSummary(BaseModel):
+    id: str
+    name: str
+    slot_no: int
+    is_active: bool
+    has_content: bool
+
+
+class PlanRenameRequest(BaseModel):
+    name: str = Field(min_length=1, max_length=48)
+
+
+class DailyTaskItem(BaseModel):
+    plan_id: str
+    plan_name: str
+    task: Task
 
 
 class PlanGenerateRequest(BaseModel):

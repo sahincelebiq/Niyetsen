@@ -24,15 +24,15 @@ from app.core.gemini_client import GeminiUnavailable
 from app.core.rate_limit import limiter
 from app.models.schemas import (
     BonusCompletionRequest, BonusOfferResponse, ChatMessage, ChatRequest,
-    ChatResponse, ChatSessionResponse, ConsentStatus, ConsentUpdate, Plan,
-    PlanGenerateRequest, ProfileUpdate, ProofRecord, ProofResult,
-    PushTokenRecord, PushTokenRegistration, RevenueCatWebhookPayload,
-    StateResponse, SubscriptionInfo, UserProfile,
+    ChatResponse, ChatSessionResponse, ConsentStatus, ConsentUpdate, DailyTaskItem,
+    Plan, PlanGenerateRequest, PlanRenameRequest, PlanSummary, ProfileUpdate,
+    ProofRecord, ProofResult, PushTokenRecord, PushTokenRegistration,
+    RevenueCatWebhookPayload, StateResponse, SubscriptionInfo, UserProfile,
 )
 from app.services import (
     bonus_service, consent_service, intent_service, notification_service,
-    plan_service, profile_service, proof_service, push_service, scoring_service,
-    subscription_service, task_lifecycle_service, tool_service,
+    plan_service, profile_service, project_service, proof_service, push_service,
+    scoring_service, subscription_service, task_lifecycle_service, tool_service,
 )
 from app.services.bonus_pool import is_completion_message
 from app.storage.repository import repo
@@ -47,7 +47,7 @@ CONSENT_REQUIRED = {
 }
 PAYWALL_DETAIL = {
     "code": "paywall_required",
-    "message": "3 günlük denemen sona erdi. Zincirini korumak için devam et.",
+    "message": "7 günlük denemen sona erdi. Zincirini korumak için devam et.",
 }
 
 
@@ -300,6 +300,44 @@ def chat_session(user_id: str = Depends(get_current_user)) -> ChatSessionRespons
     )
 
 
+@router.get("/projects", response_model=list[PlanSummary])
+def list_projects(user_id: str = Depends(get_current_user)) -> list[PlanSummary]:
+    return project_service.list_projects(repo, user_id)
+
+
+@router.post("/projects/new", response_model=PlanSummary)
+def start_new_project(user_id: str = Depends(get_current_user)) -> PlanSummary:
+    try:
+        return project_service.start_new_project(repo, user_id)
+    except PermissionError:
+        raise HTTPException(status_code=402, detail=PAYWALL_DETAIL)
+
+
+@router.put("/projects/{plan_id}/activate", response_model=PlanSummary)
+def activate_project(plan_id: str, user_id: str = Depends(get_current_user)) -> PlanSummary:
+    try:
+        return project_service.activate_project(repo, user_id, plan_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.patch("/projects/{plan_id}", response_model=PlanSummary)
+def rename_project(
+    plan_id: str,
+    body: PlanRenameRequest,
+    user_id: str = Depends(get_current_user),
+) -> PlanSummary:
+    try:
+        return project_service.rename_project(repo, user_id, plan_id, body.name)
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/tasks/daily", response_model=list[DailyTaskItem])
+def daily_tasks(user_id: str = Depends(get_current_user)) -> list[DailyTaskItem]:
+    return project_service.get_today_tasks(repo, user_id)
+
+
 @router.get("/plan", response_model=Plan)
 def get_plan(user_id: str = Depends(get_current_user)) -> Plan:
     """Var olan planı OKUR (üretmez). Uygulama yeniden açılınca kaldığı yerden devam eder."""
@@ -312,8 +350,13 @@ def get_plan(user_id: str = Depends(get_current_user)) -> Plan:
 @router.post("/plan/generate", response_model=Plan)
 async def generate_plan(req: PlanGenerateRequest, user_id: str = Depends(get_current_user)) -> Plan:
     """Çekirdek halka 2/2: görselli plan (ilk parti). Sonraki partiler /plan/next."""
-    if repo.get_plan(user_id) is not None:
-        _require_premium(user_id)
+    summaries = repo.list_plan_summaries(user_id)
+    active = next((item for item in summaries if item.is_active), None)
+    if active and active.has_content:
+        raise HTTPException(
+            status_code=409,
+            detail="Bu niyet için plan zaten oluşturulmuş. Yeni plan için yeni niyet başlat.",
+        )
     try:
         plan = await plan_service.generate_batch(
             req.collected, duration_days=req.duration_days, start_date=date.today(),
@@ -322,6 +365,15 @@ async def generate_plan(req: PlanGenerateRequest, user_id: str = Depends(get_cur
         raise HTTPException(status_code=422, detail=str(e))
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+    if active:
+        plan = plan.model_copy(
+            update={
+                "id": active.id,
+                "name": active.name,
+                "slot_no": active.slot_no,
+                "is_active": True,
+            }
+        )
     repo.save_plan(user_id, plan)
     repo.complete_active_intent(user_id)
     subscription_service.start_trial_if_needed(repo, user_id)

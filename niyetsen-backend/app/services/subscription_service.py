@@ -10,7 +10,7 @@ from app.storage.base import Repository
 
 SubscriptionStatus = Literal["free", "trial", "active", "expired", "cancelled"]
 
-TRIAL_DAYS = 3
+TRIAL_DAYS = 7
 PREMIUM_STATUSES = frozenset({"trial", "active"})
 
 
@@ -111,6 +111,15 @@ def start_trial_if_needed(repo: Repository, user_id: str) -> None:
         subscription_status="trial",
         trial_started_at=now,
     )
+
+
+def require_paid_subscription(repo: Repository, user_id: str) -> SubscriptionInfo:
+    """İkinci+ plan yalnızca ödenmiş abonelikle (trial yetmez)."""
+    info = get_subscription(repo, user_id)
+    row = repo.get_subscription_row(user_id)
+    if row.get("subscription_status") != "active":
+        raise PermissionError("paywall")
+    return info
 
 
 def require_premium_access(repo: Repository, user_id: str) -> SubscriptionInfo:

@@ -27,11 +27,23 @@ Bu bölüm bağlayıcıdır. Cursor bu kararları sorgulamadan uygular.
 ### 1.1 Ücretsiz katman (ÇELİŞKİ ÇÖZÜLDÜ)
 Eski belgelerde iki farklı tanım vardı ("3 sohbet + 1 kullanım" vs "ilk plan +
 birkaç gün"). **Geçerli kural:**
-- Ücretsiz: onboarding sohbeti + **ilk gerçek plan tam görünür** + **3 gün görev
+- Ücretsiz: onboarding sohbeti + **ilk gerçek plan tam görünür** + **7 gün görev
   deneme** + günde 1 tarot çekimi.
-- 3. günün sonunda paywall: aylık 450 TL veya yıllık 3.600 TL (aylık ~300 TL eşdeğeri).
-- Gerekçe: "aha anı" yaşanmadan 450 TL ödenmez; kaybetme korkusu (3 günlük zincir +
+- 7. günün sonunda paywall: aylık 450 TL veya yıllık 3.600 TL (aylık ~300 TL eşdeğeri).
+- Gerekçe: "aha anı" yaşanmadan 450 TL ödenmez; kaybetme korkusu (7 günlük zincir +
   görünen plan) satışı yapar.
+
+### 1.1.1 Çoklu plan projeleri (YENİ — 2026-07-12)
+- **Free / deneme:** kullanıcı **yalnızca 1 plan** oluşturabilir — 7 günlük deneme
+  süresinde bile ikinci plan yok. İkinci plan için **ödenmiş abonelik** (450 TL) gerekir.
+- **Abone:** sınırsız yeni niyet başlatabilir; her niyet ayrı **plan slotu** (Plan 1,
+  Plan 2…) olarak saklanır; kullanıcı isimlendirebilir.
+- Sohbet geçmişi ve niyet toplama **aktif plan slotuna** bağlıdır (`plan_id`).
+- Mobil: sohbet ekranında sol **geçmiş sohbet** ikonu → proje listesi + "Yeni Niyet
+  Başlat"; Planım başlığına tıklayınca plan seçici + isimlendirme.
+- Bugün ekranı: tüm planlardan bugünün görevleri plan adı etiketiyle listelenir.
+- API: `GET /projects`, `POST /projects/new`, `PUT /projects/{id}/activate`,
+  `PATCH /projects/{id}`, `GET /tasks/daily`.
 
 ### 1.2 Ceza katlanması (AÇIK KAPATILDI)
 Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerli kural:**
@@ -391,7 +403,7 @@ doğrulanması. Bu ikisi yapılmadan KAPI 4 resmen KAPANMIŞ sayılmaz.
 > 🚧 BAŞLADI (2026-07-12): backend deneme/abonelik servisi + paywall ekranı +
 > PostHog HTTP iskeleti tamamlandı. RevenueCat SDK ve mağaza IAP ürünleri AÇIK.
 
-- [x] Deneme mantığı backend'de: ilk plan → `trial_started_at` + 3 gün (`subscription_service.py`);
+- [x] Deneme mantığı backend'de: ilk plan → `trial_started_at` + 7 gün (`subscription_service.py`);
       süre bitince `402 paywall_required` kilidi (chat/kanıt/bonus).
 - [x] `GET /me/subscription` + `POST /webhooks/revenuecat` (webhook sırrı `.env`).
 - [x] Paywall ekranı mobilde (`paywall.tsx`): fiyatlar, geri yükle, koşul linkleri.
