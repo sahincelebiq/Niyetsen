@@ -303,55 +303,86 @@ Google/Apple sağlayıcı aktivasyonu yukarıdaki açık auth maddesi olarak kal
 
 ### FAZ 3 — Görev Motoru: Kanıt + Puan + Zincir (5–7 gün)
 
-- [ ] Günlük görev ekranı: bugünün görevleri, tamamla/ertele aksiyonları
-- [ ] Uygulama içi kamera (expo-camera) — galeri kapalı (§1.5)
-- [ ] `POST /task/proof`: foto yükle (5MB limit) → Supabase Storage →
-      Gemini Vision güven skoru → ≥60 onay / <60 tekrar dene (maks 3)
-- [ ] `services/scoring_service.py`: +50 görev; sessiz kaçırma −25×2^n tavan 200;
-      mazeret yolu −25 sabit + sayaç sıfırla; 10 mazerette ×0.5; **taban 0**;
-      her hareket `point_log`'a
-- [ ] Mazeret akışı: chat'te "bugün yapamayacağım çünkü…" → model mazereti tanır →
-      `gorev_ertele_mazeretli` function call
-- [ ] Zincir: günlük iş (§1.3) — gün sonu cron (backend scheduler / Railway cron):
-      tamamlanmayanları işaretle, cezaları uygula, jeton kontrolü, streak güncelle
-- [ ] Rank ekranı: 6 kategori + kademe (Bronz III → Usta) + genel rütbe + zincir
-      sayacı büyük ve görünür
-- [ ] Function calling seti (`core/tools.py`): `gorev_olustur`, `kanit_dogrula`,
-      `puan_guncelle`, `gorev_ertele_mazeretli`, `alarm_kur`, `takvime_ekle`
-      (alarm/takvim mobilde expo-calendar + local notification ile)
-- [ ] **İrade Modu** (§1.12): Ayarlar'da opt-in toggle; açıkken İrade/Disiplin
-      görevlerine `alarm_kur` ile yerel tekrarlı bildirim; onaylanmazsa mevcut
-      sessiz kaçırma ceza akışı (yeni mekanizma icat etme, var olanı tetikle)
+> ✅ Bağımsız doğrulandı (2026-07-12, Claude Code): backend test suite 86/86 yeşil
+> + Şahin Expo Go'da gerçek cihazda foto→puan→rank akışını uçtan uca test etti.
+> Git commit "faz3: görev ve kanıt döngüsünü tamamla" (2026-07-11) ile bu
+> checkbox'lar arasındaki senkron kopukluğu bu güncellemeyle kapatıldı.
 
-**KAPI 3:** Bir görevi fotola → puan işlendi → rank ekranında görünüyor.
-Bir görevi sessiz kaçır → gece cron'u cezayı katlayarak işledi (log'da doğrula).
-Mazeret yaz → sabit 25 kesildi, katlanma sıfırlandı. Puan 0'ın altına inmiyor.
+- [x] Günlük görev ekranı: bugünün görevleri, tamamla/ertele aksiyonları
+      (`mobile/src/app/daily.tsx`) — Şahin tarafından Expo Go'da gerçek cihazda
+      test edildi (2026-07-12).
+- [x] Uygulama içi kamera (expo-camera) — galeri kapalı (§1.5): mobilde sadece
+      `expo-camera` kullanılıyor, `ImagePicker`/`MediaLibrary` referansı yok —
+      galeri gerçekten kapalı. Şahin gerçek cihazda kamerayla çekip gönderdi.
+- [x] `POST /task/{task_id}/proof`: foto yükle (5MB limit, jpeg/png imza
+      doğrulaması `proof_service.py`) → **Supabase Storage** (`proofs` bucket,
+      `storage://proofs/{user_id}/...` — Railway DEĞİL, Railway sadece backend
+      compute'u çalıştırıyor) → Gemini Vision güven skoru → ≥60 onay / <60
+      tekrar dene (maks 3, 3.'de beyanla kabul). Kod + testler doğrulandı.
+- [x] `services/scoring_service.py`: kurallar MASTER_PLAN §1.2 ile birebir
+      eşleşiyor (+50 görev; sessiz kaçırma −25×2^n tavan 200; mazeret −25 sabit
+      + sayaç sıfırla; 10 mazerette ×0.5; taban 0); test suite'te doğrulandı.
+- [x] Mazeret akışı: `POST /task/{task_id}/excuse` + `gorev_ertele_mazeretli`
+      function call — kod + test doğrulandı.
+- [x] Zincir: `task_lifecycle_service.close_user_day` / `close_due_users` —
+      Railway cron ile tetikleniyor; sessiz kaçırma/jeton/streak testleri geçti.
+- [x] Rank ekranı: backend `overall_rank`/`rank_for` wired (`routes.py`); test
+      doğrulandı.
+- [x] Function calling seti (`core/tools.py`): 6 aracın tamamı (`gorev_olustur`,
+      `kanit_dogrula`, `puan_guncelle`, `gorev_ertele_mazeretli`, `alarm_kur`,
+      `takvime_ekle`) tanımlı; `tool_service.py` dispatch ediyor, `is_allowed()`
+      kapalı liste enforcement'ı var.
+- [ ] **İrade Modu** (§1.12) — KISMEN: `users.irade_modu_active` toggle alanı
+      DB'de saklanıyor (`profile_service.py`) AMA açıkken İrade/Disiplin
+      görevlerine OTOMATİK `alarm_kur` tetikleme mantığı henüz YOK — sadece
+      genel `alarm_kur` aracı chat üzerinden (modelin kendi kararıyla)
+      çağrılabiliyor. §1.12'deki otomatik linkaj eksik kalan tek madde.
+
+**KAPI 3:** ✅ Fiilen KAPANDI (2026-07-12) — foto→puan→rank zinciri Şahin
+tarafından gerçek cihazda elle doğrulandı; sessiz kaçırma/mazeret/cron akışları
+backend'in 86/86 testiyle doğrulandı. Açık kalan tek madde: İrade Modu'nun
+otomatik tetikleme mantığı (yukarı bakınız) — bu KAPI 3'ü bloklamıyor, Faz 3'ün
+küçük bir artığı olarak kaydedildi.
 
 ---
 
 ### FAZ 4 — Bildirim + Rehber Kişiliği (3–4 gün)
 
+> ✅ Bağımsız doğrulandı (2026-07-12, Claude Code): backend kodu + otomatik
+> testler (86/86) tamam. Git commit "faz4: KVKK, bildirim ve bonus akışlarını
+> tamamla" (2026-07-11) ile checkbox senkron kopukluğu kapatıldı. AÇIK KALAN:
+> KAPI 4'ün elle doğrulama şartları (aşağıya bakınız) henüz yapılmadı.
+
 - [x] Statik, responsive **Mistik Keşif** yuvası hazırlandı (2026-07-10):
       Astroloji/Fal/Tarot yalnız “Yakında · v2” ekranı + zorunlu eğlence
       disclaimer'ı; Gemini/RAG/kamera/fortune_log işlevi YOK.
-- [ ] Expo Push + FCM kurulumu; izin akışları (iOS + Android 13+)
-- [ ] Zamanlanmış bildirimler: kullanıcının seçtiği saat → görev bildirimi;
-      +1 dk → Günlük Tarot bildirimi (v2'ye kadar tarot bildirimi "yakında" ekranına
-      gider — YA DA bu bildirimi v2'ye kadar kapalı tut, karar: KAPALI TUT)
-- [ ] Puan düşünce duygusal bildirim — ton: kayıp hissi + kimlik, ASLA suçlama
-      ("23 günlük zincirin seni bekliyor" ✅ / "yine yapmadın" ❌)
-- [ ] `core/prompt_builder.py`: SYSTEM + CONTEXT (KULLANICI BELLEĞİ bloğu: niyet,
-      zincir, son görevler, rank, burç, son ruh hali) + USER — README.md'deki
-      şablonla birebir
-- [ ] Kriz kelime filtresi (§1.8): tetiklenince güvenli mod yanıtı
-- [ ] Scope guardrail testi: matematik sorusu → model reddedip niyete döner
-- [ ] **Motivasyon Bonus-Görev Hub'ı** (§1.13): sabit ~20-30 maddelik havuzdan
-      rastgele push → chat'te "yaptım" onayı → `point_log`'a +10 bonus (foto
-      kanıtı istemez, ana plana dahil değil)
+- [x] Expo Push kurulumu: `push_service.py` Expo Push API (`exp.host/--/api/v2/
+      push/send`) üzerinden gönderiyor — Expo bu katmanda FCM/APNs'i
+      soyutluyor; kod + test doğrulandı. ⚠️ İzin akışlarının iki platformda da
+      (iOS + Android 13+) gerçek cihazda elle test edilmesi HENÜZ yapılmadı.
+- [x] Zamanlanmış bildirimler: `notification_service.run_due_notifications`
+      (Railway cron ile tetikleniyor) — kullanıcının seçtiği saat → görev
+      bildirimi; Günlük Tarot bildirimi kararlaştırıldığı gibi KAPALI. Kod +
+      test doğrulandı. ⚠️ Gerçek cihazda seçilen saatte bildirimin gelip doğru
+      ekranı açtığı HENÜZ elle doğrulanmadı.
+- [x] Puan düşünce duygusal bildirim: `push_service.emotional_penalty_body()`
+      — ton kuralına uygun ("N günlük zincirin seni bekliyor", suçlama yok).
+- [x] `core/prompt_builder.py` mevcut ve kullanılıyor.
+- [x] Kriz kelime filtresi (§1.8): `prompts.py` `CRISIS_KEYWORDS` +
+      `contains_crisis_signal()`, `intent_service.py`'de her şeyden ÖNCE
+      kontrol ediliyor; `test_chat_guardrails.py::test_crisis_message_short_
+      circuits_model` geçiyor.
+- [x] Scope guardrail testi: `test_chat_guardrails.py::test_math_question_
+      redirects_to_user_intent` geçiyor.
+- [x] **Motivasyon Bonus-Görev Hub'ı** (§1.13): `bonus_service.py` + testler
+      (`test_bonus_completion_awards_ten_points_once`, `test_chat_yaptim_
+      completes_active_bonus_without_model`) geçiyor.
 
-**KAPI 4:** Bildirim seçilen saatte geliyor, tıklayınca uygulama doğru ekranda
-açılıyor. Chat, kullanıcının zincirini ve geçmişini bilerek konuşuyor
-(3 örnek diyalogla elle doğrula). Kriz mesajına güvenli yanıt veriyor.
+**KAPI 4:** ⚠️ KISMEN KAPANDI — kriz mesajına güvenli yanıt kod+testle
+doğrulandı. AÇIK KALAN iki elle-doğrulama maddesi: (1) bildirimin gerçek
+cihazda seçilen saatte gelip doğru ekranı açtığının test edilmesi, (2) "chat,
+zinciri/geçmişi bilerek konuşuyor" iddiasının 3 örnek diyalogla elle
+doğrulanması. Bu ikisi yapılmadan KAPI 4 resmen KAPANMIŞ sayılmaz.
 
 ---
 
