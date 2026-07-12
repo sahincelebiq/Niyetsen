@@ -7,9 +7,12 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 
 from app.api.routes import router
 from app.config import settings
+from app.core.rate_limit import limiter
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
 
@@ -27,16 +30,29 @@ if settings.ENV == "prod" and not settings.USE_SUPABASE_DB:
         "doldur ve USE_SUPABASE_DB=true yap."
     )
 
+if settings.ENV == "prod" and not settings.CRON_SECRET:
+    raise RuntimeError(
+        "ENV=prod iken CRON_SECRET boş olamaz. Güçlü ve yalnız sunucuda tutulan "
+        "bir cron sırrı yapılandır."
+    )
+
 app = FastAPI(
     title="Niyetsen API",
     version="0.1.0",
     description="Niyetini söze, sözünü zincire çevir. 🌙",
 )
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
-# CORS: Expo dev istemcileri için açık; prod'da domain listesine daralt.
+# CORS: dev'de varsayılan açık; prod'da yalnız yapılandırılmış web origin'leri.
+# Native Expo/React Native istekleri tarayıcı CORS denetimine tabi değildir.
+cors_origins = settings.CORS_ALLOWED_ORIGINS
+if settings.ENV == "dev" and not cors_origins:
+    cors_origins = ["*"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"] if settings.ENV == "dev" else [],
+    allow_origins=cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

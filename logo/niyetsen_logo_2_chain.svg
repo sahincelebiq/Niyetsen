@@ -1,0 +1,34 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg2" cx="0.5" cy="0.4" r="0.8">
+      <stop offset="0" stop-color="#EFEAD8"/>
+      <stop offset="1" stop-color="#DFD6BF"/>
+    </radialGradient>
+    <linearGradient id="ring2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#8FB185"/>
+      <stop offset="1" stop-color="#6B8F63"/>
+    </linearGradient>
+    <linearGradient id="ringB2" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9C7C5B"/>
+      <stop offset="1" stop-color="#77593C"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="230" fill="url(#bg2)"/>
+
+  <!-- interlocking chain links tracing an implied "N" / continuous streak -->
+  <g fill="none" stroke-width="42" stroke-linecap="round">
+    <!-- link 1 (green) bottom-left -->
+    <ellipse cx="380" cy="660" rx="96" ry="150"
+             stroke="url(#ring2)" transform="rotate(-30 380 660)"/>
+    <!-- link 2 (brown) middle -->
+    <ellipse cx="512" cy="512" rx="96" ry="150"
+             stroke="url(#ringB2)" transform="rotate(-30 512 512)"/>
+    <!-- link 3 (green) top-right -->
+    <ellipse cx="644" cy="364" rx="96" ry="150"
+             stroke="url(#ring2)" transform="rotate(-30 644 364)"/>
+  </g>
+
+  <!-- small seed dot at the start of the chain -->
+  <circle cx="300" cy="770" r="20" fill="#C9B79C"/>
+</svg>

@@ -6,6 +6,26 @@ Buradaki metinler modele giden ham malzemedir; ton değişiklikleri SADECE burad
 
 ASSISTANT_NAME = "Niyet Rehberi"  # Cursor notu: marka adı netleşince tek yerden değişir.
 
+CHAT_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "reply": {"type": "string"},
+        "ready_for_plan": {"type": "boolean"},
+        "collected": {
+            "type": "object",
+            "properties": {
+                "city": {"type": "string", "nullable": True},
+                "interests": {"type": "array", "items": {"type": "string"}},
+                "weekly_hours": {"type": "number", "nullable": True},
+                "duration_days": {"type": "integer", "nullable": True},
+                "social_pref": {"type": "string", "nullable": True},
+                "budget": {"type": "string", "nullable": True},
+            },
+        },
+    },
+    "required": ["reply", "ready_for_plan", "collected"],
+}
+
 # ============================================================
 # 1) SABİT SYSTEM PROMPT — her /chat isteğinde system rolüyle gider
 # ============================================================
@@ -23,6 +43,8 @@ GÖREVLERİN:
 1. Kullanıcı hayat hedefini yazınca eksikleri SORULARLA netleştirirsin
    (şehir, ilgi alanları, haftalık zaman, süre, sosyal mi/yalnız mı, bütçe).
    3-4 soruda topla; kullanıcıyı sorgu yağmuruna tutma.
+   Sorular MANTIKLI ve somut olsun — önceki cevaba dayansın, genel geçer olmasın.
+   Her mesajda övmek zorunda değilsin; gerektiğinde netleştirici, meraklı sor.
 2. Bu cevaplardan kişiye ÖZEL görevler türetirsin — şablon değil, onun hayatı.
 3. Görev kaçırıldığında suçlamadan, kayıp hissi + kimlikle konuşursun:
    "12 günlük zincirini bugün kıracak mısın?" ✅  "tembelsin/yine mi" ❌
@@ -70,10 +92,36 @@ INTENT_JSON_INSTRUCTIONS = """GÖREV: Kullanıcının niyetini netleştir. SADEC
 }
 KURALLAR:
 - "collected" alanını, şimdiye kadarki TÜM konuşmadan doldur (önceki bilgileri koru).
+- Kullanıcı uyku/çalışma rutinini anlatırsa kalan süreyi hesapla: günlük 24 saatten
+  uyku ve işi çıkar; kalanı haftalık kişisel gelişim saatine çevir → weekly_hours.
+  (Örn. 8s uyku + 10s iş = 6s/gün → ~42 weekly_hours; abartma, gerçekçi kal.)
+- İlgi alanlarını somut çıkar (finans, kitap, sağlık, entelektüel gelişim vb.).
 - ready_for_plan yalnızca city + en az 1 interest + weekly_hours dolduysa true olabilir.
-- Eksik varsa reply içinde TEK soru sor (soru yağmuru yok).
+- Eksik varsa reply içinde TEK, somut soru sor (soru yağmuru yok).
+- Kullanıcıyı gereksiz övme; kısa, meraklı, mantıklı sorular sor.
+- Önceki cevaba atıf yap; "harika/süper" gibi boş övgüleri sık tekrarlama.
+- reply alanı TEK SATIR olsun (satır sonu yok); JSON geçerli ve parse edilebilir kalsın.
 - duration_days sorulmadıysa varsayılan 365 kabul et ama kullanıcıya 30/90/180
   seçeneklerini bir kez hatırlat.
+- JSON dışında hiçbir şey yazma."""
+
+GUIDE_JSON_INSTRUCTIONS = """GÖREV: Aktif planı olan kullanıcıya, KULLANICI BELLEĞİ ve
+sohbet geçmişini kullanarak kişisel rehberlik et. SADECE şu JSON'u döndür:
+{
+  "reply": "<2-5 cümlelik kısa, sıcak, kullanıcıya özel Türkçe cevap>",
+  "ready_for_plan": false,
+  "collected": {}
+}
+KURALLAR:
+- Kullanıcı belleğindeki zincir, son görev, rank, niyet, burç ve ruh hali
+  bilgilerinden ilgili olanı somut biçimde kullan.
+- Aktif plan varken şehir/ilgi/zaman gibi onboarding sorularını yeniden sorma.
+- Kullanıcı yeni/kapsamlı plan isterse: mevcut planı sürdürmeyi öner; tamamen yeni
+  niyet için ☰ menüden "Yeni Niyet Başlat" yolunu nazikçe hatırlat.
+- Uyku/iş saatlerini anlatırsa kalan süreyi mantıksal özetle (matematiksel, kısa).
+- Bilmediğin bilgiyi biliyormuş gibi söyleme.
+- Suçlama veya utandırma; kayıp hissi + kimlik tonunu koru.
+- reply TEK SATIR; JSON geçerli ve parse edilebilir kalsın.
 - JSON dışında hiçbir şey yazma."""
 
 # ============================================================
@@ -102,9 +150,15 @@ SADECE şu JSON'u döndür:
 KURALLAR:
 - Görevler KULLANICININ ANLATTIĞI hayattan türer; şablon/genel görev YASAK.
   Şehri biliyorsan yer görevlerinde GERÇEK yer adları kullan.
+- weekly_hours bütçesine saygı duy: günlük toplam görev süresi bu bütçeyi aşmasın.
 - Günde 1-{max_tasks} görev; zorluk yavaş artsın (1. gün en kolay).
 - Her görevin tiny_version'ı ZORUNLU (2 dakika kuralı).
 - Kategori adlarını AYNEN verilen 6'dan seç, yenisini uydurma.
+- image_keyword MUTLAKA İngilizce, küçük harfli, somut ve 2-4 kelime olsun.
+  Fotoğrafta görülebilecek eylem/ortamı tarif et; "motivation", "success",
+  "health", "life" gibi soyut/genel tek kelimeler kullanma.
+  Örnekler: yer → "city park walk"; alışkanlık → "morning yoga mat";
+  sosyal → "friends coffee cafe"; kişisel_gelişim → "reading book desk".
 - JSON dışında hiçbir şey yazma.
 
 NİYET BİLGİSİ:
@@ -113,9 +167,19 @@ NİYET BİLGİSİ:
 # ============================================================
 # 4) KANIT DOĞRULAMA — Gemini Vision talimatı
 # ============================================================
-PROOF_VALIDATION_PROMPT = """Bu fotoğraf şu görevi kanıtlıyor mu: "{task_title}"?
-Fotoğrafın görevle ilgili olup olmadığını değerlendir. Katı olma; makul bir
-bağlantı yeterli (örn. "20 dk yürü" için dışarıda çekilmiş herhangi bir kare olur).
+PROOF_VALIDATION_PROMPT = """Görev kanıtı değerlendirmesi.
+
+GÖREV: {task_title}
+En küçük halka: {tiny_version}
+Kategoriler: {categories}
+Görev tipi: {task_type}
+
+Bu fotoğraf yukarıdaki görevi makul şekilde kanıtlıyor mu?
+- tiny_version varsa onu da dikkate al (kullanıcı küçük adımı yapmış olabilir).
+- Kategoriye uygun görsel ipuçlarına bak (ör. İrade → çaba, İstikrar → rutin).
+- Katı olma ama alakasız selfie/ekran görüntüsü/eve ait olmayan kareyi reddet.
+- Makul bağlantı yeterli (örn. "20 dk yürü" için dışarıda çekilmiş kare).
+
 SADECE şu JSON'u döndür:
 {{"matches": <true|false>, "confidence": <0-100 tam sayı>, "reason": "<tek cümle Türkçe>"}}"""
 
@@ -134,11 +198,32 @@ CRISIS_RESPONSE = (
     "Şu an anlattığın şey bir görev listesinden çok daha önemli ve bunu tek "
     "başına taşımak zorunda değilsin. Ben bir uygulamayım ve bu noktada sana "
     "gerçek bir insanın iyi gelmesini isterim: güvendiğin biriyle konuşmanı ve "
-    "profesyonel destek almanı öneririm. Yanındayım; hazır olduğunda burada "
-    "olacağım. 🌙"
+    "profesyonel destek almanı öneririm. Kendine zarar verme tehlikesi yakınsa "
+    "yalnız kalma; Türkiye'de 112'yi ara veya en yakın acil servise git. "
+    "Yanındayım; hazır olduğunda burada olacağım. 🌙"
 )
 
 
 def contains_crisis_signal(text: str) -> bool:
     t = (text or "").lower()
     return any(k in t for k in CRISIS_KEYWORDS)
+
+
+OUT_OF_SCOPE_MARKERS = (
+    "ödevimi yap", "matematik sorusu", "denklem çöz", "kod yaz",
+    "python kodu", "hava durumu", "son dakika haber", "ürün öner",
+)
+
+SCOPE_REDIRECT_RESPONSE = (
+    "Ben genel bilgi ya da ödev asistanı değil, niyetinin rehberiyim. "
+    "Onu çözmem ama bugün kendine verdiğin söz için atacağın en küçük adımı "
+    "birlikte seçebiliriz. 🌙"
+)
+
+
+def contains_out_of_scope_signal(text: str) -> bool:
+    t = (text or "").casefold()
+    if any(marker in t for marker in OUT_OF_SCOPE_MARKERS):
+        return True
+    compact = t.replace(" ", "")
+    return any(op in compact for op in ("1+1", "2+2", "3*3", "10/2"))

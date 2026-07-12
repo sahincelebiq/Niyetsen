@@ -12,9 +12,11 @@ import jwt
 import pytest
 from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi.testclient import TestClient
+from starlette.requests import Request
 
 import app.api.routes as routes
 from app.config import settings
+from app.core.rate_limit import _identity
 from app.main import app
 
 client = TestClient(app)
@@ -71,3 +73,25 @@ def test_x_user_id_header_alone_is_not_enough_when_auth_enabled():
 def test_valid_token_authenticates():
     resp = client.get("/me/state", headers={"Authorization": f"Bearer {_token('user-abc')}"})
     assert resp.status_code == 200
+
+
+def test_rate_limit_identity_survives_jwt_refresh_for_same_user():
+    first = _token("stable-user")
+    second = jwt.encode(
+        {"sub": "stable-user", "aud": "authenticated", "nonce": "refreshed"},
+        _PRIVATE_KEY,
+        algorithm="RS256",
+    )
+
+    def request_for(token: str) -> Request:
+        return Request({
+            "type": "http",
+            "method": "GET",
+            "path": "/",
+            "headers": [
+                (b"authorization", f"Bearer {token}".encode()),
+            ],
+        })
+
+    assert _identity(request_for(first)) == "user:stable-user"
+    assert _identity(request_for(second)) == "user:stable-user"

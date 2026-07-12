@@ -27,11 +27,23 @@ Bu bölüm bağlayıcıdır. Cursor bu kararları sorgulamadan uygular.
 ### 1.1 Ücretsiz katman (ÇELİŞKİ ÇÖZÜLDÜ)
 Eski belgelerde iki farklı tanım vardı ("3 sohbet + 1 kullanım" vs "ilk plan +
 birkaç gün"). **Geçerli kural:**
-- Ücretsiz: onboarding sohbeti + **ilk gerçek plan tam görünür** + **3 gün görev
+- Ücretsiz: onboarding sohbeti + **ilk gerçek plan tam görünür** + **7 gün görev
   deneme** + günde 1 tarot çekimi.
-- 3. günün sonunda paywall: aylık 450 TL veya yıllık 3.600 TL (aylık ~300 TL eşdeğeri).
-- Gerekçe: "aha anı" yaşanmadan 450 TL ödenmez; kaybetme korkusu (3 günlük zincir +
+- 7. günün sonunda paywall: aylık 450 TL veya yıllık 3.600 TL (aylık ~300 TL eşdeğeri).
+- Gerekçe: "aha anı" yaşanmadan 450 TL ödenmez; kaybetme korkusu (7 günlük zincir +
   görünen plan) satışı yapar.
+
+### 1.1.1 Çoklu plan projeleri (YENİ — 2026-07-12)
+- **Free / deneme:** kullanıcı **yalnızca 1 plan** oluşturabilir — 7 günlük deneme
+  süresinde bile ikinci plan yok. İkinci plan için **ödenmiş abonelik** (450 TL) gerekir.
+- **Abone:** sınırsız yeni niyet başlatabilir; her niyet ayrı **plan slotu** (Plan 1,
+  Plan 2…) olarak saklanır; kullanıcı isimlendirebilir.
+- Sohbet geçmişi ve niyet toplama **aktif plan slotuna** bağlıdır (`plan_id`).
+- Mobil: sohbet ekranında sol **geçmiş sohbet** ikonu → proje listesi + "Yeni Niyet
+  Başlat"; Planım başlığına tıklayınca plan seçici + isimlendirme.
+- Bugün ekranı: tüm planlardan bugünün görevleri plan adı etiketiyle listelenir.
+- API: `GET /projects`, `POST /projects/new`, `PUT /projects/{id}/activate`,
+  `PATCH /projects/{id}`, `GET /tasks/daily`.
 
 ### 1.2 Ceza katlanması (AÇIK KAPATILDI)
 Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerli kural:**
@@ -95,15 +107,23 @@ Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerl
   yapar (chat_system_prompt.md'deki kural + kod tarafında test).
 
 ### 1.9 AI dayanıklılık & maliyet (EKSİKTİ)
-- Gemini çağrıları: timeout 30 sn, 2 kez exponential backoff retry, sonra kullanıcıya
-  nazik hata ("Şu an yıldızlara ulaşamıyorum, birazdan tekrar dene ✨").
+- Gemini çağrıları: chat için timeout 30 sn, 1 retry + `max_output_tokens=768`
+  (gecikmeyi düşürür); plan üretimi için timeout 90 sn, `gemini-2.5-pro`,
+  `max_output_tokens=8192`. Retry tükenince nazik hata ("Şu an yıldızlara
+  ulaşamıyorum, birazdan tekrar dene ✨").
+- **Çift model (2026-07-12):** `gemini-2.5-flash` = sohbet, araç çağrısı, kanıt
+  vision; `gemini-2.5-pro` = yalnızca plan üretimi (`GEMINI_MODEL_PLAN`).
 - Rate limit: kullanıcı başına dakikada 10 chat isteği (slowapi).
 - Store yayını ÖNCESİ Gemini ücretli katmana geç (free tier 1.500 istek/gün canlıda
-  yetmez). Model: `gemini-2.5-flash` (dev + prod başlangıç); pahalı işler
-  (plan üretimi) için gerekirse Pro'ya yükselt.
+  yetmez).
 - Prompt injection: kullanıcı mesajı asla system rolüne karışmaz; RAG içeriği
   CONTEXT bloğunda etiketli gider; model çıktısında function-call dışı araç
   denemesi reddedilir.
+- Sohbet tonu: gereksiz övgü yok; mantıklı, önceki cevaba dayalı sorular.
+- Kanıt vision: görev başlığı + `tiny_version` + kategoriler + `task_type` bağlamı
+  prompt'a gider.
+- Yeni/boş sohbet: `GET /chat/greeting` — kullanıcı timezone'una göre
+  Günaydın / İyi günler / İyi akşamlar + isim.
 
 ### 1.10 Analitik (EKSİKTİ, YATIRIMCI İÇİN KRİTİK)
 - Gün 1'den itibaren **PostHog** (ücretsiz katman yeter).
@@ -115,6 +135,18 @@ Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerl
 ### 1.11 Görsel kaynak
 - MVP + v1: Unsplash (lisans temiz). Pinterest v2'ye ertelendi (API onayı yavaş +
   app içinde gösterim ToS riski — v2'de hukuki kontrol yapılacak).
+- Atıf UI (2026-07-12): görev kartında görsel üzerinde küçük ⓘ rozeti; uzun basınca
+  fotoğrafçı metni + Unsplash linki. Metin DB'de kalır, ekranda gizlenir.
+
+### 1.13 Sohbet UX (2026-07-12)
+- Sabit üst header: ☰ menü her zaman erişilebilir (sohbet uzasa da kaydırma gerekmez).
+- Sol kenardan sağa kaydırma: Niyetlerim paneli açılır (☰ ile aynı).
+- Sohbet/plan senkronu: her niyet `plan_id` ile ayrı chat + intent; yeni niyet başlatınca
+  temiz oturum + boş intent. Planı olan niyette "Planını Oluştur" gizlenir.
+- Asistan balonu: zincir logosu (kutucuksuz metin); bekleme metni **düşünüyor…** +
+  hafif zincir animasyonu.
+- Dosya eki (v1): PDF/DOCX metin çıkarımı, PNG/JPEG kısa özet — `POST /chat/attachment`;
+  mesaja `[Ek dosya: …]` olarak eklenir (max 5 MB).
 
 ### 1.12 İrade Modu — alarm kilidi (YENİ KARAR, 2026-07-07)
 - Teknik gerçek: iOS/Android 3. parti uygulamaların sistem Saat/Alarm uygulamasına
@@ -155,13 +187,15 @@ Supabase (Postgres). Dev'de lokal SQLite ile başlanabilir ama şema aynı kalı
 ```
 users        id (uuid, supabase auth), name, birth_date, zodiac_sign,
              timezone, notif_hour, created_at, subscription_status,
-             excuse_count, freeze_tokens, irade_modu_active (bool, def. false)
+             excuse_count, freeze_tokens, irade_modu_active (bool, def. false),
+             kvkk_consent_at (timestamptz, onboarding'de zorunlu)
 intents      id, user_id, text, duration_days, status(active/done/abandoned),
              created_at
 plans        id, intent_id, generated_json, created_at
 tasks        id, plan_id, day_no, date, title, categories[], image_url,
-             image_keyword, status(pending/done/missed_silent/missed_excused),
-             proof_id?
+             image_keyword, image_source, image_attribution,
+             image_attribution_url,
+             status(pending/done/missed_silent/missed_excused), proof_id?
 proofs       id, task_id, photo_url, location?, confidence_score,
              attempt_no, created_at
 points       user_id, category (6 sabit kategori), value  -- floor 0
@@ -223,7 +257,9 @@ Backend:
       eklendi) + `POST /plan/next` (partili üretim): her görev 6 kategoriden
       etiketleniyor
 - [x] `services/image_service.py`: image_keyword → Unsplash URL; bulunamazsa
-      kategori bazlı yedek görsel
+      kategori bazlı ikinci Unsplash sorgusu; İngilizce/somut prompt kuralı,
+      güvenli içerik filtresi, deterministik ilgili sonuç, 800×600 crop ve
+      fotoğrafçı attribution alanları (2026-07-10 kalite iyileştirmesi)
 - [x] `services/plan_service.py`: plan JSON + görselleri birleştir, `Task.date`
       hesaplaması dahil
 
@@ -243,9 +279,10 @@ smoke test'le doğrulandı.
   uyumlu). Fiziksel cihaz testi (özellikle kanıt fotoğrafı akışı için native
   kamera) hâlâ AÇIK — bir sonraki fırsatta tekrar denenecek, UI/UX çalışmasını
   bloklamıyor.
-- Unsplash API key'i henüz `.env`'e eklenmedi → plan görselleri şu an kategori
-  bazlı yedek görsellerle geliyor, konuyla alakalı gerçek görseller değil. Bu
-  ayrı bir iyileştirme maddesi olarak açık (bkz. FAZ 2/3 notları).
+- Unsplash API key'i `.env`'e eklendi ve doğrulandı (2026-07-07) — canlı arama
+  testleri (`gym workout`, `yoga`, `reading book` vb.) gerçek Unsplash görseli
+  döndürüyor. `image_service.py` yalnızca sonuç bulunamayan/anahtar eksik
+  durumlarda `picsum.photos` yedeğine düşüyor.
 
 > 🔴 DUR NOKTASI: Bu kapıyı geçince planı Belinay'a veya 2–3 arkadaşa Expo Go'dan
 > göster, "vay be" tepkisi ölç. Aha anı zayıfsa plan kalitesi prompt'unu burada
@@ -259,97 +296,147 @@ smoke test'le doğrulandı.
       gerçek projede çalıştırıldı (`users/streaks/points/plans/tasks`, RLS açık,
       backend service_role ile bypass ediyor); `SupabaseRepository` round-trip
       smoke-test'i geçti
+- [x] **Supabase kalıcılığı gerçekten aktif** (2026-07-10): `.env`'de
+      `USE_SUPABASE_DB=true` + `SUPABASE_SERVICE_KEY` dolduruldu. Önceden bu
+      bayrak kapalıydı — smoke test geçmiş olsa da CANLI uygulama hâlâ
+      `InMemoryRepository` kullanıyordu (bug/gap olarak tespit edildi ve
+      kapatıldı).
 - [ ] Supabase Auth: e-posta + Google + **Apple ile Giriş** (Expo:
-      `expo-apple-authentication`, `expo-auth-session`) — mobil hâlâ anonim
-      `X-User-Id` (AsyncStorage) kullanıyor, gerçek login YOK
+      `expo-apple-authentication`, `expo-auth-session`) — üç akışın mobil kodu,
+      SecureStore oturumu ve Bearer JWT bağlantısı tamamlandı (2026-07-10).
+      E-posta gerçek Supabase hesabıyla uçtan uca geçti. Supabase Auth ayarlarında
+      Google/Apple hâlâ `external=false`; ilgili geliştirici client ID/secret
+      girilip gerçek cihaz testi yapılmadan bu kutu kapanmaz.
 - [x] FastAPI JWT middleware yazıldı (`get_current_user`) — JWKS tabanlı
       doğrulamaya (`SUPABASE_URL/auth/v1/.well-known/jwks.json`, RS256/ES256)
       taşındı; `SUPABASE_JWT_SECRET`/HS256 kaldırıldı. Testler sahte JWKS
-      client ile 29/29 geçiyor. `AUTH_DISABLED=true` kaldığı sürece devrede
-      değil — Apple/Google login akışı bağlanınca sadece bunu `false` yapmak
-      yeterli.
-- [ ] Chat geçmişi + intent DB'ye yazılır (plan/görevler/puan zaten Supabase'de
-      kalıcı ama sohbet mesajları hâlâ sadece mobil local state'te — uygulama
-      kapanınca sohbet geçmişi kaybolur, plan kaybolmaz)
-- [ ] Onboarding akışı: isim → doğum tarihi (burç otomatik) → bildirim saati →
-      KVKK açık rıza onayı → niyet sohbeti
-- [ ] Ayarlar ekranı: profil, bildirim saati, **Hesabımı Sil** (tam silme:
-      DB + Storage + auth kaydı)
+      client ile doğrulanıyor. Bearer gönderildiğinde dev'de de doğrulanıyor;
+      `AUTH_DISABLED=false` ayrı süreçte test edildi ve JWT'siz istek 401 döndü.
+- [x] Chat geçmişi + intent DB'ye yazılır (2026-07-10): yeni `chat_msgs` +
+      `intents` tabloları (migration `20260710000000_chat_and_intent.sql`);
+      `/chat` client_message_id unique constraint ile idempotent yazar; retry ve
+      eşzamanlı istek çift kayıt oluşturmaz. `GET /chat/session` mesajlar +
+      collected intent + ready_for_plan durumunu birlikte hydrate eder;
+      `/plan/generate` aktif intent'i done yapar. Gerçek Supabase'e karşı iki
+      bağımsız oturum ve Gemini dahil elle doğrulandı.
+- [x] Onboarding akışı: isim → doğum tarihi (burç otomatik) → bildirim saati →
+      KVKK açık rıza onayı → niyet sohbeti. `kvkk_consent_at` DB'de tutuluyor.
+- [x] Ayarlar ekranı: profil, bildirim saati, çıkış ve iki aşamalı
+      **Hesabımı Sil**. Gerçek test hesabında DB cascade + Auth silme doğrulandı;
+      Faz 3'te proofs bucket açılınca Storage temizliği aynı akışta devreye girer.
 
 **KAPI 2:** İki farklı cihazda aynı hesapla giriş → aynı plan görünüyor.
 Hesap sil → tüm veri gerçekten siliniyor (DB'de kontrol et). JWT'siz istek 401.
+✅ Teknik kriterler e-posta hesabı ve iki bağımsız oturumla geçti (2026-07-10):
+aynı chat + aynı plan okundu, hesap sonrası DB/Auth boş, JWT'siz istek 401.
+Google/Apple sağlayıcı aktivasyonu yukarıdaki açık auth maddesi olarak kalır.
 
 ---
 
 ### FAZ 3 — Görev Motoru: Kanıt + Puan + Zincir (5–7 gün)
 
-- [ ] Günlük görev ekranı: bugünün görevleri, tamamla/ertele aksiyonları
-- [ ] Uygulama içi kamera (expo-camera) — galeri kapalı (§1.5)
-- [ ] `POST /task/proof`: foto yükle (5MB limit) → Supabase Storage →
-      Gemini Vision güven skoru → ≥60 onay / <60 tekrar dene (maks 3)
-- [ ] `services/scoring_service.py`: +50 görev; sessiz kaçırma −25×2^n tavan 200;
-      mazeret yolu −25 sabit + sayaç sıfırla; 10 mazerette ×0.5; **taban 0**;
-      her hareket `point_log`'a
-- [ ] Mazeret akışı: chat'te "bugün yapamayacağım çünkü…" → model mazereti tanır →
-      `gorev_ertele_mazeretli` function call
-- [ ] Zincir: günlük iş (§1.3) — gün sonu cron (backend scheduler / Railway cron):
-      tamamlanmayanları işaretle, cezaları uygula, jeton kontrolü, streak güncelle
-- [ ] Rank ekranı: 6 kategori + kademe (Bronz III → Usta) + genel rütbe + zincir
-      sayacı büyük ve görünür
-- [ ] Function calling seti (`core/tools.py`): `gorev_olustur`, `kanit_dogrula`,
-      `puan_guncelle`, `gorev_ertele_mazeretli`, `alarm_kur`, `takvime_ekle`
-      (alarm/takvim mobilde expo-calendar + local notification ile)
-- [ ] **İrade Modu** (§1.12): Ayarlar'da opt-in toggle; açıkken İrade/Disiplin
-      görevlerine `alarm_kur` ile yerel tekrarlı bildirim; onaylanmazsa mevcut
-      sessiz kaçırma ceza akışı (yeni mekanizma icat etme, var olanı tetikle)
+> ✅ Bağımsız doğrulandı (2026-07-12, Claude Code): backend test suite 86/86 yeşil
+> + Şahin Expo Go'da gerçek cihazda foto→puan→rank akışını uçtan uca test etti.
+> Git commit "faz3: görev ve kanıt döngüsünü tamamla" (2026-07-11) ile bu
+> checkbox'lar arasındaki senkron kopukluğu bu güncellemeyle kapatıldı.
 
-**KAPI 3:** Bir görevi fotola → puan işlendi → rank ekranında görünüyor.
-Bir görevi sessiz kaçır → gece cron'u cezayı katlayarak işledi (log'da doğrula).
-Mazeret yaz → sabit 25 kesildi, katlanma sıfırlandı. Puan 0'ın altına inmiyor.
+- [x] Günlük görev ekranı: bugünün görevleri, tamamla/ertele aksiyonları
+      (`mobile/src/app/daily.tsx`) — Şahin tarafından Expo Go'da gerçek cihazda
+      test edildi (2026-07-12).
+- [x] Uygulama içi kamera (expo-camera) — galeri kapalı (§1.5): mobilde sadece
+      `expo-camera` kullanılıyor, `ImagePicker`/`MediaLibrary` referansı yok —
+      galeri gerçekten kapalı. Şahin gerçek cihazda kamerayla çekip gönderdi.
+- [x] `POST /task/{task_id}/proof`: foto yükle (5MB limit, jpeg/png imza
+      doğrulaması `proof_service.py`) → **Supabase Storage** (`proofs` bucket,
+      `storage://proofs/{user_id}/...` — Railway DEĞİL, Railway sadece backend
+      compute'u çalıştırıyor) → Gemini Vision güven skoru → ≥60 onay / <60
+      tekrar dene (maks 3, 3.'de beyanla kabul). Kod + testler doğrulandı.
+- [x] `services/scoring_service.py`: kurallar MASTER_PLAN §1.2 ile birebir
+      eşleşiyor (+50 görev; sessiz kaçırma −25×2^n tavan 200; mazeret −25 sabit
+      + sayaç sıfırla; 10 mazerette ×0.5; taban 0); test suite'te doğrulandı.
+- [x] Mazeret akışı: `POST /task/{task_id}/excuse` + `gorev_ertele_mazeretli`
+      function call — kod + test doğrulandı.
+- [x] Zincir: `task_lifecycle_service.close_user_day` / `close_due_users` —
+      Railway cron ile tetikleniyor; sessiz kaçırma/jeton/streak testleri geçti.
+- [x] Rank ekranı: backend `overall_rank`/`rank_for` wired (`routes.py`); test
+      doğrulandı.
+- [x] Function calling seti (`core/tools.py`): 6 aracın tamamı (`gorev_olustur`,
+      `kanit_dogrula`, `puan_guncelle`, `gorev_ertele_mazeretli`, `alarm_kur`,
+      `takvime_ekle`) tanımlı; `tool_service.py` dispatch ediyor, `is_allowed()`
+      kapalı liste enforcement'ı var.
+- [ ] **İrade Modu** (§1.12) — KISMEN: `users.irade_modu_active` toggle alanı
+      DB'de saklanıyor (`profile_service.py`) AMA açıkken İrade/Disiplin
+      görevlerine OTOMATİK `alarm_kur` tetikleme mantığı henüz YOK — sadece
+      genel `alarm_kur` aracı chat üzerinden (modelin kendi kararıyla)
+      çağrılabiliyor. §1.12'deki otomatik linkaj eksik kalan tek madde.
+
+**KAPI 3:** ✅ Fiilen KAPANDI (2026-07-12) — foto→puan→rank zinciri Şahin
+tarafından gerçek cihazda elle doğrulandı; sessiz kaçırma/mazeret/cron akışları
+backend'in 86/86 testiyle doğrulandı. Açık kalan tek madde: İrade Modu'nun
+otomatik tetikleme mantığı (yukarı bakınız) — bu KAPI 3'ü bloklamıyor, Faz 3'ün
+küçük bir artığı olarak kaydedildi.
 
 ---
 
 ### FAZ 4 — Bildirim + Rehber Kişiliği (3–4 gün)
 
-- [ ] Expo Push + FCM kurulumu; izin akışları (iOS + Android 13+)
-- [ ] Zamanlanmış bildirimler: kullanıcının seçtiği saat → görev bildirimi;
-      +1 dk → Günlük Tarot bildirimi (v2'ye kadar tarot bildirimi "yakında" ekranına
-      gider — YA DA bu bildirimi v2'ye kadar kapalı tut, karar: KAPALI TUT)
-- [ ] Puan düşünce duygusal bildirim — ton: kayıp hissi + kimlik, ASLA suçlama
-      ("23 günlük zincirin seni bekliyor" ✅ / "yine yapmadın" ❌)
-- [ ] `core/prompt_builder.py`: SYSTEM + CONTEXT (KULLANICI BELLEĞİ bloğu: niyet,
-      zincir, son görevler, rank, burç, son ruh hali) + USER — README.md'deki
-      şablonla birebir
-- [ ] Kriz kelime filtresi (§1.8): tetiklenince güvenli mod yanıtı
-- [ ] Scope guardrail testi: matematik sorusu → model reddedip niyete döner
-- [ ] **Motivasyon Bonus-Görev Hub'ı** (§1.13): sabit ~20-30 maddelik havuzdan
-      rastgele push → chat'te "yaptım" onayı → `point_log`'a +10 bonus (foto
-      kanıtı istemez, ana plana dahil değil)
+> ✅ Bağımsız doğrulandı (2026-07-12, Claude Code): backend kodu + otomatik
+> testler (86/86) tamam. Git commit "faz4: KVKK, bildirim ve bonus akışlarını
+> tamamla" (2026-07-11) ile checkbox senkron kopukluğu kapatıldı. AÇIK KALAN:
+> KAPI 4'ün elle doğrulama şartları (aşağıya bakınız) henüz yapılmadı.
 
-**KAPI 4:** Bildirim seçilen saatte geliyor, tıklayınca uygulama doğru ekranda
-açılıyor. Chat, kullanıcının zincirini ve geçmişini bilerek konuşuyor
-(3 örnek diyalogla elle doğrula). Kriz mesajına güvenli yanıt veriyor.
+- [x] Statik, responsive **Mistik Keşif** yuvası hazırlandı (2026-07-10):
+      Astroloji/Fal/Tarot yalnız “Yakında · v2” ekranı + zorunlu eğlence
+      disclaimer'ı; Gemini/RAG/kamera/fortune_log işlevi YOK.
+- [x] Expo Push kurulumu: `push_service.py` Expo Push API (`exp.host/--/api/v2/
+      push/send`) üzerinden gönderiyor — Expo bu katmanda FCM/APNs'i
+      soyutluyor; kod + test doğrulandı. ⚠️ İzin akışlarının iki platformda da
+      (iOS + Android 13+) gerçek cihazda elle test edilmesi HENÜZ yapılmadı.
+- [x] Zamanlanmış bildirimler: `notification_service.run_due_notifications`
+      (Railway cron ile tetikleniyor) — kullanıcının seçtiği saat → görev
+      bildirimi; Günlük Tarot bildirimi kararlaştırıldığı gibi KAPALI. Kod +
+      test doğrulandı. ⚠️ Gerçek cihazda seçilen saatte bildirimin gelip doğru
+      ekranı açtığı HENÜZ elle doğrulanmadı.
+- [x] Puan düşünce duygusal bildirim: `push_service.emotional_penalty_body()`
+      — ton kuralına uygun ("N günlük zincirin seni bekliyor", suçlama yok).
+- [x] `core/prompt_builder.py` mevcut ve kullanılıyor.
+- [x] Kriz kelime filtresi (§1.8): `prompts.py` `CRISIS_KEYWORDS` +
+      `contains_crisis_signal()`, `intent_service.py`'de her şeyden ÖNCE
+      kontrol ediliyor; `test_chat_guardrails.py::test_crisis_message_short_
+      circuits_model` geçiyor.
+- [x] Scope guardrail testi: `test_chat_guardrails.py::test_math_question_
+      redirects_to_user_intent` geçiyor.
+- [x] **Motivasyon Bonus-Görev Hub'ı** (§1.13): `bonus_service.py` + testler
+      (`test_bonus_completion_awards_ten_points_once`, `test_chat_yaptim_
+      completes_active_bonus_without_model`) geçiyor.
+
+**KAPI 4:** ⚠️ KISMEN KAPANDI — kriz mesajına güvenli yanıt kod+testle
+doğrulandı. AÇIK KALAN iki elle-doğrulama maddesi: (1) bildirimin gerçek
+cihazda seçilen saatte gelip doğru ekranı açtığının test edilmesi, (2) "chat,
+zinciri/geçmişi bilerek konuşuyor" iddiasının 3 örnek diyalogla elle
+doğrulanması. Bu ikisi yapılmadan KAPI 4 resmen KAPANMIŞ sayılmaz.
 
 ---
 
 ### FAZ 5 — Paywall + Analitik + Uyum (3–4 gün)
 
-- [ ] RevenueCat kur: aylık 450 TL + yıllık 3.600 TL ürünleri (App Store Connect +
-      Play Console'da IAP ürünleri oluştur)
-- [ ] Deneme mantığı: ilk plan + 3 gün görev ücretsiz (§1.1) → 3. gün sonunda
-      paywall; deneme durumu backend'de (`users.subscription_status`)
-- [ ] Paywall ekranı: değer anlatımı ("planın hazır, zincirin başladı — devam et"),
-      fiyatlar, Geri Yükle butonu, koşul linkleri (§1.7)
-- [ ] RevenueCat webhook → `subscription_status` güncelle; abonelik bitince
-      nazik kilit ekranı (veri silinmez, erişim kilitlenir)
-- [ ] PostHog entegrasyonu + §1.10'daki tüm event'ler
-- [ ] Gizlilik Politikası + Kullanım Koşulları sayfaları yayında (domain al)
-- [ ] Fal disclaimer metinleri hazır (v2 modülü için şimdiden — store açıklamasında
-      da kullanılacak)
+> 🚧 BAŞLADI (2026-07-12): backend deneme/abonelik servisi + paywall ekranı +
+> PostHog HTTP iskeleti tamamlandı. RevenueCat SDK ve mağaza IAP ürünleri AÇIK.
+
+- [x] Deneme mantığı backend'de: ilk plan → `trial_started_at` + 7 gün (`subscription_service.py`);
+      süre bitince `402 paywall_required` kilidi (chat/kanıt/bonus).
+- [x] `GET /me/subscription` + `POST /webhooks/revenuecat` (webhook sırrı `.env`).
+- [x] Paywall ekranı mobilde (`paywall.tsx`): fiyatlar, geri yükle, koşul linkleri.
+- [x] PostHog HTTP capture iskeleti (`analytics.ts`) — `EXPO_PUBLIC_POSTHOG_KEY` ile.
+- [ ] RevenueCat SDK (`react-native-purchases`) + App Store / Play IAP ürünleri
+      (aylık 450 TL, yıllık 3.600 TL) — Expo Go'da test edilemez, EAS build gerekir.
+- [ ] Sandbox satın alma → webhook → `subscription_status=active` uçtan uca doğrulama.
+- [ ] Gizlilik/Koşullar sayfaları app içinde hazır; **statik web domain** henüz yok.
+- [x] Fal disclaimer metinleri app içinde (mistik yuva + legal belgeler).
 
 **KAPI 5:** Sandbox'ta satın alma → abonelik aktif → kilitler açılıyor →
 Geri Yükle çalışıyor → iptal edince kilit ekranı geliyor. PostHog'da funnel
-event'leri akıyor.
+event'leri akıyor. **Henüz KAPANMADI** — mağaza IAP + RevenueCat SDK eksik.
 
 ---
 

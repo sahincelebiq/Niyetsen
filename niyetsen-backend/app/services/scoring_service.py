@@ -17,6 +17,7 @@ from datetime import date
 
 from app.config import (
     BASE_PENALTY,
+    BONUS_POINTS,
     CATEGORIES,
     EXCUSE_LIMIT,
     EXCUSE_PENALTY,
@@ -71,6 +72,13 @@ def complete_task(state: GameState, categories: list[str]) -> list[ScoreEvent]:
     for c in categories:
         _apply(state, c, POINTS_PER_TASK, "görev tamamlandı", events)
     state.silent_miss_streak = 0
+    return events
+
+
+def complete_bonus(state: GameState, category: str) -> list[ScoreEvent]:
+    """FAZ 4 micro-task: one category gets +10; it is not a plan completion."""
+    events: list[ScoreEvent] = []
+    _apply(state, category, BONUS_POINTS, "motivasyon bonus görevi", events)
     return events
 
 

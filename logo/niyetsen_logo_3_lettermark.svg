@@ -1,0 +1,36 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg3" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#F1ECDD"/>
+      <stop offset="1" stop-color="#E4DBC6"/>
+    </linearGradient>
+    <linearGradient id="stroke3" x1="0" y1="1" x2="1" y2="0">
+      <stop offset="0" stop-color="#6E5539"/>
+      <stop offset="0.55" stop-color="#8A7052"/>
+      <stop offset="1" stop-color="#7FA877"/>
+    </linearGradient>
+    <linearGradient id="leaf3" x1="0" y1="1" x2="0" y2="0">
+      <stop offset="0" stop-color="#A7C4A0"/>
+      <stop offset="1" stop-color="#7FA877"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="1024" rx="230" fill="url(#bg3)"/>
+
+  <!-- circular frame -->
+  <circle cx="512" cy="470" r="250" fill="none" stroke="#C9B79C" stroke-width="10" opacity="0.6"/>
+
+  <!-- lettermark N as one continuous polyline path -->
+  <path d="M398 602 L398 348 L626 602 L626 348"
+        fill="none" stroke="url(#stroke3)" stroke-width="50"
+        stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- leaf budding from the top of the right stem -->
+  <path d="M626 348 C626 300 660 262 714 256 C714 306 680 344 626 348 Z"
+        fill="url(#leaf3)"/>
+
+  <!-- wordmark -->
+  <text x="512" y="812" text-anchor="middle"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-size="118" fill="#6E5539" letter-spacing="4">niyetsen</text>
+</svg>
