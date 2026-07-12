@@ -17,9 +17,11 @@ from app.services import scoring_service
 def build_memory_block(
     state: Optional[GameState],
     name: str = "",
+    birth_date: str = "",
     zodiac: str = "",
     active_intent: str = "",
     today_status: str = "",
+    recent_tasks: str = "",
     mood_notes: str = "",
 ) -> str:
     """
@@ -30,6 +32,8 @@ def build_memory_block(
     lines: list[str] = ["--- KULLANICI BELLEĞİ ---"]
     if name:
         lines.append(f"İsim: {name}")
+    if birth_date:
+        lines.append(f"Doğum tarihi: {birth_date}")
     if zodiac:
         lines.append(f"Burç: {zodiac}")
     if active_intent:
@@ -44,6 +48,8 @@ def build_memory_block(
         lines.append(f"Kalan zincir koruma jetonu: {state.freeze_tokens}")
     if today_status:
         lines.append(f"Bugün durumu: {today_status}")
+    if recent_tasks:
+        lines.append(f"Son görevler: {recent_tasks}")
     if mood_notes:
         lines.append(f"Son ruh hali notları: {mood_notes}")
     lines.append("--- ---")

@@ -10,16 +10,16 @@ Konum verilmişse skora +10 bonus güven.
 """
 from __future__ import annotations
 
-import logging
-
 from app.config import settings
 from app.core import prompts
-from app.core.gemini_client import GeminiUnavailable, generate_json_with_image
+from app.core.gemini_client import generate_json_with_image
 from app.models.schemas import ProofResult
 
-log = logging.getLogger("niyetsen.proof")
-
 ALLOWED_MIME = {"image/jpeg", "image/png"}
+FILE_SIGNATURES = {
+    "image/jpeg": (b"\xff\xd8\xff",),
+    "image/png": (b"\x89PNG\r\n\x1a\n",),
+}
 
 
 class ProofRejected(ValueError):
@@ -33,6 +33,8 @@ def validate_upload(image_bytes: bytes, mime_type: str) -> None:
         raise ProofRejected("Fotoğraf 5 MB'den büyük olamaz.")
     if len(image_bytes) < 100:
         raise ProofRejected("Fotoğraf okunamadı.")
+    if not any(image_bytes.startswith(signature) for signature in FILE_SIGNATURES[mime_type]):
+        raise ProofRejected("Dosya içeriği bildirilen JPEG/PNG türüyle eşleşmiyor.")
 
 
 async def evaluate_proof(
@@ -41,6 +43,10 @@ async def evaluate_proof(
     mime_type: str,
     attempt_no: int,
     has_location: bool = False,
+    *,
+    tiny_version: str = "",
+    categories: list[str] | None = None,
+    task_type: str = "alışkanlık",
 ) -> ProofResult:
     validate_upload(image_bytes, mime_type)
 
@@ -52,22 +58,21 @@ async def evaluate_proof(
             attempt_no=attempt_no, accepted_by_declaration=True,
         )
 
-    try:
-        data = await generate_json_with_image(
-            prompt=prompts.PROOF_VALIDATION_PROMPT.format(task_title=task_title),
-            image_bytes=image_bytes,
-            mime_type=mime_type,
-        )
-    except GeminiUnavailable:
-        # AI çöktü diye kullanıcının emeği yanmaz: kanıt kabul edilir, loglanır.
-        log.warning("Vision erişilemedi — kanıt iyi niyetle kabul edildi: %s", task_title)
-        return ProofResult(
-            approved=True, confidence=settings.PROOF_MIN_CONFIDENCE,
-            reason="Doğrulama servisi meşguldü; emeğin kabul edildi.",
-            attempt_no=attempt_no, accepted_by_declaration=True,
-        )
+    data = await generate_json_with_image(
+        prompt=prompts.PROOF_VALIDATION_PROMPT.format(
+            task_title=task_title,
+            tiny_version=tiny_version or "belirtilmedi",
+            categories=", ".join(categories or []) or "belirtilmedi",
+            task_type=task_type,
+        ),
+        image_bytes=image_bytes,
+        mime_type=mime_type,
+    )
 
-    confidence = int(data.get("confidence") or 0)
+    try:
+        confidence = max(0, min(100, int(data.get("confidence") or 0)))
+    except (TypeError, ValueError):
+        confidence = 0
     if has_location:
         confidence = min(100, confidence + 10)
 

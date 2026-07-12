@@ -12,12 +12,25 @@ def _bool(name: str, default: str = "false") -> bool:
     return os.environ.get(name, default).strip().lower() in ("1", "true", "yes")
 
 
+def _csv(name: str) -> list[str]:
+    return [
+        value.strip().rstrip("/")
+        for value in os.environ.get(name, "").split(",")
+        if value.strip()
+    ]
+
+
 class Settings:
     # --- AI ---
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
     GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
+    GEMINI_MODEL_PLAN: str = os.environ.get("GEMINI_MODEL_PLAN", "gemini-2.5-pro")
     GEMINI_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_TIMEOUT_SEC", "30"))
+    GEMINI_PLAN_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_PLAN_TIMEOUT_SEC", "90"))
     GEMINI_MAX_RETRIES: int = int(os.environ.get("GEMINI_MAX_RETRIES", "2"))
+    GEMINI_CHAT_MAX_OUTPUT_TOKENS: int = int(
+        os.environ.get("GEMINI_CHAT_MAX_OUTPUT_TOKENS", "2048")
+    )
 
     # --- Görsel ---
     UNSPLASH_ACCESS_KEY: str = os.environ.get("UNSPLASH_ACCESS_KEY", "")
@@ -32,6 +45,11 @@ class Settings:
     # false: InMemoryRepository (MVP varsayılanı, testler bunu kullanır).
     # true: SupabaseRepository — gerçek DB kalıcılığı (Faz 2).
     USE_SUPABASE_DB: bool = _bool("USE_SUPABASE_DB", "false")
+    # Railway/Render cron'unun X-Cron-Secret başlığında gönderdiği sunucu sırrı.
+    CRON_SECRET: str = os.environ.get("CRON_SECRET", "")
+    # Web istemcilerinin tam origin listesi (virgülle ayrılmış). Native Expo
+    # istekleri CORS'a tabi değildir. Dev'de boşsa wildcard kullanılır.
+    CORS_ALLOWED_ORIGINS: list[str] = _csv("CORS_ALLOWED_ORIGINS")
 
     # --- MVP plan sınırları ---
     # 365 günü TEK istekte üretme (maliyet + timeout). Haftalık partiler halinde
@@ -47,6 +65,33 @@ class Settings:
 
     # --- Rate limit (kullanıcı başına) ---
     CHAT_RATE_LIMIT_PER_MIN: int = int(os.environ.get("CHAT_RATE_LIMIT_PER_MIN", "10"))
+    PROOF_RATE_LIMIT_PER_MIN: int = int(os.environ.get("PROOF_RATE_LIMIT_PER_MIN", "5"))
+
+    # --- Hukuki metin metadata'sı (metin değişince sürümü değiştir) ---
+    PRIVACY_POLICY_VERSION: str = os.environ.get(
+        "PRIVACY_POLICY_VERSION", "2026-07-11"
+    )
+    KVKK_CONSENT_VERSION: str = os.environ.get(
+        "KVKK_CONSENT_VERSION", "2026-07-11"
+    )
+    AI_CHAT_CONSENT_VERSION: str = os.environ.get(
+        "AI_CHAT_CONSENT_VERSION", "2026-07-11"
+    )
+    PROOF_PHOTO_CONSENT_VERSION: str = os.environ.get(
+        "PROOF_PHOTO_CONSENT_VERSION", "2026-07-11"
+    )
+    MARKETING_CONSENT_VERSION: str = os.environ.get(
+        "MARKETING_CONSENT_VERSION", "2026-07-11"
+    )
+    LEGAL_DATA_CONTROLLER: str = os.environ.get(
+        "LEGAL_DATA_CONTROLLER", "Şahin Çelebi"
+    )
+    LEGAL_CONTACT_EMAIL: str = os.environ.get(
+        "LEGAL_CONTACT_EMAIL", "ai@niyetsen.com"
+    )
+
+    # --- Abonelik (FAZ 5) ---
+    REVENUECAT_WEBHOOK_SECRET: str = os.environ.get("REVENUECAT_WEBHOOK_SECRET", "")
 
 
 settings = Settings()
@@ -58,6 +103,7 @@ settings = Settings()
 CATEGORIES = ["İrade", "İstikrar", "Disiplin", "Özgüven", "Sosyallik", "Özsaygı"]
 
 POINTS_PER_TASK = 50          # görev tamamlama: etiketli her kategoriye +50
+BONUS_POINTS = 10             # fotoğrafsız motivasyon bonus görevi
 BASE_PENALTY = 25             # ceza tabanı
 SILENT_PENALTY_CAP = 200      # sessiz kaçırma katlanma TAVANI (25→50→100→200)
 EXCUSE_PENALTY = 25           # mazeret yolu: sabit, katlanmaz
