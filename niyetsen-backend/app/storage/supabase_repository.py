@@ -581,6 +581,29 @@ class SupabaseRepository(Repository):
         }).execute().data
         return bool(result)
 
+    def get_subscription_row(self, user_id: str) -> dict:
+        self._ensure_user(user_id)
+        row = self._db.table("users").select(
+            "subscription_status,trial_started_at,timezone"
+        ).eq("id", user_id).single().execute().data
+        return row
+
+    def update_subscription(
+        self,
+        user_id: str,
+        *,
+        subscription_status: str | None = None,
+        trial_started_at: datetime | None = None,
+    ) -> None:
+        self._ensure_user(user_id)
+        payload: dict = {}
+        if subscription_status is not None:
+            payload["subscription_status"] = subscription_status
+        if trial_started_at is not None:
+            payload["trial_started_at"] = trial_started_at.isoformat()
+        if payload:
+            self._db.table("users").update(payload).eq("id", user_id).execute()
+
     def delete_account(self, user_id: str) -> None:
         # Storage önce: DB/Auth silinirse sahipliği sonradan bulmak zorlaşır.
         try:

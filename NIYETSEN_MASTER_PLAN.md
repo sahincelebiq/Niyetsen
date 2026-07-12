@@ -388,22 +388,23 @@ doğrulanması. Bu ikisi yapılmadan KAPI 4 resmen KAPANMIŞ sayılmaz.
 
 ### FAZ 5 — Paywall + Analitik + Uyum (3–4 gün)
 
-- [ ] RevenueCat kur: aylık 450 TL + yıllık 3.600 TL ürünleri (App Store Connect +
-      Play Console'da IAP ürünleri oluştur)
-- [ ] Deneme mantığı: ilk plan + 3 gün görev ücretsiz (§1.1) → 3. gün sonunda
-      paywall; deneme durumu backend'de (`users.subscription_status`)
-- [ ] Paywall ekranı: değer anlatımı ("planın hazır, zincirin başladı — devam et"),
-      fiyatlar, Geri Yükle butonu, koşul linkleri (§1.7)
-- [ ] RevenueCat webhook → `subscription_status` güncelle; abonelik bitince
-      nazik kilit ekranı (veri silinmez, erişim kilitlenir)
-- [ ] PostHog entegrasyonu + §1.10'daki tüm event'ler
-- [ ] Gizlilik Politikası + Kullanım Koşulları sayfaları yayında (domain al)
-- [ ] Fal disclaimer metinleri hazır (v2 modülü için şimdiden — store açıklamasında
-      da kullanılacak)
+> 🚧 BAŞLADI (2026-07-12): backend deneme/abonelik servisi + paywall ekranı +
+> PostHog HTTP iskeleti tamamlandı. RevenueCat SDK ve mağaza IAP ürünleri AÇIK.
+
+- [x] Deneme mantığı backend'de: ilk plan → `trial_started_at` + 3 gün (`subscription_service.py`);
+      süre bitince `402 paywall_required` kilidi (chat/kanıt/bonus).
+- [x] `GET /me/subscription` + `POST /webhooks/revenuecat` (webhook sırrı `.env`).
+- [x] Paywall ekranı mobilde (`paywall.tsx`): fiyatlar, geri yükle, koşul linkleri.
+- [x] PostHog HTTP capture iskeleti (`analytics.ts`) — `EXPO_PUBLIC_POSTHOG_KEY` ile.
+- [ ] RevenueCat SDK (`react-native-purchases`) + App Store / Play IAP ürünleri
+      (aylık 450 TL, yıllık 3.600 TL) — Expo Go'da test edilemez, EAS build gerekir.
+- [ ] Sandbox satın alma → webhook → `subscription_status=active` uçtan uca doğrulama.
+- [ ] Gizlilik/Koşullar sayfaları app içinde hazır; **statik web domain** henüz yok.
+- [x] Fal disclaimer metinleri app içinde (mistik yuva + legal belgeler).
 
 **KAPI 5:** Sandbox'ta satın alma → abonelik aktif → kilitler açılıyor →
 Geri Yükle çalışıyor → iptal edince kilit ekranı geliyor. PostHog'da funnel
-event'leri akıyor.
+event'leri akıyor. **Henüz KAPANMADI** — mağaza IAP + RevenueCat SDK eksik.
 
 ---
 

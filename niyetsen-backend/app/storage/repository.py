@@ -40,6 +40,7 @@ class InMemoryRepository(Repository):
         self._consents: dict[str, dict[tuple[str, str], ConsentRecord]] = {}
         self._push_tokens: dict[str, PushTokenRecord] = {}
         self._bonus_offers: dict[str, BonusOffer] = {}
+        self._subscriptions: dict[str, dict] = {}
 
     def get_state(self, user_id: str) -> GameState:
         if user_id not in self._states:
@@ -379,6 +380,33 @@ class InMemoryRepository(Repository):
         self._attempts = {
             key: value for key, value in self._attempts.items() if key[0] != user_id
         }
+        self._subscriptions.pop(user_id, None)
+
+    def get_subscription_row(self, user_id: str) -> dict:
+        profile = self._profiles.get(user_id, UserProfile())
+        row = self._subscriptions.setdefault(
+            user_id,
+            {
+                "subscription_status": "free",
+                "trial_started_at": None,
+                "timezone": profile.timezone,
+            },
+        )
+        row["timezone"] = profile.timezone
+        return row
+
+    def update_subscription(
+        self,
+        user_id: str,
+        *,
+        subscription_status: str | None = None,
+        trial_started_at: datetime | None = None,
+    ) -> None:
+        row = self.get_subscription_row(user_id)
+        if subscription_status is not None:
+            row["subscription_status"] = subscription_status
+        if trial_started_at is not None:
+            row["trial_started_at"] = trial_started_at
 
 
 def _build_repo() -> Repository:

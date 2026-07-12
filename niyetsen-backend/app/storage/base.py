@@ -154,4 +154,16 @@ class Repository(ABC):
     ) -> bool: ...
 
     @abstractmethod
+    def get_subscription_row(self, user_id: str) -> dict: ...
+
+    @abstractmethod
+    def update_subscription(
+        self,
+        user_id: str,
+        *,
+        subscription_status: str | None = None,
+        trial_started_at: datetime | None = None,
+    ) -> None: ...
+
+    @abstractmethod
     def delete_account(self, user_id: str) -> None: ...

@@ -26,12 +26,13 @@ from app.models.schemas import (
     BonusCompletionRequest, BonusOfferResponse, ChatMessage, ChatRequest,
     ChatResponse, ChatSessionResponse, ConsentStatus, ConsentUpdate, Plan,
     PlanGenerateRequest, ProfileUpdate, ProofRecord, ProofResult,
-    PushTokenRecord, PushTokenRegistration, StateResponse, UserProfile,
+    PushTokenRecord, PushTokenRegistration, RevenueCatWebhookPayload,
+    StateResponse, SubscriptionInfo, UserProfile,
 )
 from app.services import (
     bonus_service, consent_service, intent_service, notification_service,
     plan_service, profile_service, proof_service, push_service, scoring_service,
-    task_lifecycle_service, tool_service,
+    subscription_service, task_lifecycle_service, tool_service,
 )
 from app.services.bonus_pool import is_completion_message
 from app.storage.repository import repo
@@ -44,6 +45,10 @@ CONSENT_REQUIRED = {
     "chat": "Sohbet için güncel gizlilik, KVKK ve AI işleme onayları gerekli.",
     "proof": "Kanıt için güncel gizlilik, KVKK ve fotoğraf işleme onayları gerekli.",
 }
+PAYWALL_DETAIL = {
+    "code": "paywall_required",
+    "message": "3 günlük denemen sona erdi. Zincirini korumak için devam et.",
+}
 
 
 def _require_consent(user_id: str, purpose: str) -> None:
@@ -52,6 +57,14 @@ def _require_consent(user_id: str, purpose: str) -> None:
             status_code=403,
             detail={"code": "consent_required", "message": CONSENT_REQUIRED[purpose]},
         )
+
+
+def _require_premium(user_id: str) -> SubscriptionInfo:
+    subscription_service.sync_expired_trials(repo, user_id)
+    info = subscription_service.get_subscription(repo, user_id)
+    if not info.has_premium_access:
+        raise HTTPException(status_code=402, detail=PAYWALL_DETAIL)
+    return info
 
 
 def _legacy_message_id(user_id: str, index: int, role: str, content: str) -> str:
@@ -181,6 +194,7 @@ async def chat(
 ) -> ChatResponse:
     """Çekirdek halka 1/2: niyet toplama sohbeti."""
     _require_consent(user_id, "chat")
+    _require_premium(user_id)
     state = repo.get_state(user_id)
     profile = repo.get_profile(user_id)
     active = repo.get_active_intent(user_id)
@@ -298,6 +312,8 @@ def get_plan(user_id: str = Depends(get_current_user)) -> Plan:
 @router.post("/plan/generate", response_model=Plan)
 async def generate_plan(req: PlanGenerateRequest, user_id: str = Depends(get_current_user)) -> Plan:
     """Çekirdek halka 2/2: görselli plan (ilk parti). Sonraki partiler /plan/next."""
+    if repo.get_plan(user_id) is not None:
+        _require_premium(user_id)
     try:
         plan = await plan_service.generate_batch(
             req.collected, duration_days=req.duration_days, start_date=date.today(),
@@ -308,12 +324,14 @@ async def generate_plan(req: PlanGenerateRequest, user_id: str = Depends(get_cur
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
     repo.save_plan(user_id, plan)
     repo.complete_active_intent(user_id)
+    subscription_service.start_trial_if_needed(repo, user_id)
     return plan
 
 
 @router.post("/plan/next", response_model=Plan)
 async def next_batch(req: PlanGenerateRequest, user_id: str = Depends(get_current_user)) -> Plan:
     """Partili üretim: mevcut planın kaldığı günden sonraki bölümü ekler."""
+    _require_premium(user_id)
     current = repo.get_plan(user_id)
     if not current:
         raise HTTPException(status_code=404, detail="Önce /plan/generate ile plan oluştur.")
@@ -348,6 +366,7 @@ async def upload_proof(
 ) -> ProofResult:
     """Foto kanıt: Vision skoru → onay → puan. In-app kamera zorunluluğu mobilde."""
     _require_consent(user_id, "proof")
+    _require_premium(user_id)
     task = repo.get_task(user_id, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Görev bulunamadı.")
@@ -436,6 +455,7 @@ async def upload_proof(
 @router.post("/task/{task_id}/excuse")
 def excuse_task(task_id: str, user_id: str = Depends(get_current_user)) -> dict:
     """Mazeret yolu: chat'teki gorev_ertele_mazeretli aracı da buraya düşer."""
+    _require_premium(user_id)
     try:
         events = task_lifecycle_service.excuse_task(repo, user_id, task_id)
     except task_lifecycle_service.TaskNotFound as exc:
@@ -518,6 +538,7 @@ def unregister_push_token(
 def offer_bonus(
     user_id: str = Depends(get_current_user),
 ) -> BonusOfferResponse:
+    _require_premium(user_id)
     profile = repo.get_profile(user_id)
     return bonus_service.offer_for_day(
         repo, user_id, _user_today(profile.timezone)
@@ -528,6 +549,7 @@ def offer_bonus(
 def get_active_bonus(
     user_id: str = Depends(get_current_user),
 ) -> BonusOfferResponse | None:
+    _require_premium(user_id)
     return bonus_service.active_offer(repo, user_id)
 
 
@@ -537,6 +559,7 @@ def complete_bonus(
     completion: BonusCompletionRequest,
     user_id: str = Depends(get_current_user),
 ) -> dict:
+    _require_premium(user_id)
     if not bonus_service.complete(
         repo, user_id, offer_id, completion.completion_id
     ):
@@ -584,6 +607,39 @@ def update_profile(
             repo, user_id, profile.kvkk_consent_at
         )
     return profile
+
+
+@router.get("/me/subscription", response_model=SubscriptionInfo)
+def my_subscription(user_id: str = Depends(get_current_user)) -> SubscriptionInfo:
+    return subscription_service.sync_expired_trials(repo, user_id)
+
+
+@router.post("/webhooks/revenuecat", response_model=SubscriptionInfo)
+async def revenuecat_webhook(
+    payload: RevenueCatWebhookPayload,
+    authorization: str | None = Header(default=None),
+) -> SubscriptionInfo:
+    secret = settings.REVENUECAT_WEBHOOK_SECRET
+    if secret:
+        expected = f"Bearer {secret}"
+        if authorization != expected:
+            raise HTTPException(status_code=401, detail="Geçersiz webhook sırrı.")
+    event = payload.event or {}
+    app_user_id = event.get("app_user_id")
+    event_type = event.get("type", "")
+    if not app_user_id:
+        raise HTTPException(status_code=422, detail="app_user_id gerekli.")
+    expiration_ms = event.get("expiration_at_ms")
+    expiration_at = (
+        datetime.fromtimestamp(expiration_ms / 1000, tz=timezone.utc)
+        if expiration_ms else None
+    )
+    return subscription_service.apply_revenuecat_event(
+        repo,
+        app_user_id=app_user_id,
+        event_type=event_type,
+        expiration_at=expiration_at,
+    )
 
 
 @router.get("/me/consent", response_model=ConsentStatus)

@@ -85,6 +85,9 @@ class Settings:
         "LEGAL_CONTACT_EMAIL", "ai@niyetsen.com"
     )
 
+    # --- Abonelik (FAZ 5) ---
+    REVENUECAT_WEBHOOK_SECRET: str = os.environ.get("REVENUECAT_WEBHOOK_SECRET", "")
+
 
 settings = Settings()
 

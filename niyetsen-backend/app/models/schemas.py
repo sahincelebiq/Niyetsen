@@ -192,6 +192,23 @@ class ProfileUpdate(BaseModel):
     irade_modu_active: bool = False
 
 
+# ---------- Abonelik / Deneme (FAZ 5) ----------
+SubscriptionStatus = Literal["free", "trial", "active", "expired", "cancelled"]
+
+
+class SubscriptionInfo(BaseModel):
+    status: SubscriptionStatus = "free"
+    trial_started_at: Optional[datetime] = None
+    trial_days_remaining: int = 0
+    has_premium_access: bool = True
+    show_paywall: bool = False
+
+
+class RevenueCatWebhookPayload(BaseModel):
+    """RevenueCat webhook gövdesinin minimal alt kümesi."""
+    event: dict = Field(default_factory=dict)
+
+
 # ---------- Versioned legal consent ----------
 ConsentKind = Literal[
     "privacy_policy",
