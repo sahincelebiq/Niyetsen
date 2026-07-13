@@ -59,7 +59,6 @@ def _allow_proof(user_id: str) -> None:
 @pytest.mark.parametrize(
     ("content", "mime_type"),
     [
-        (_image(), "image/gif"),
         (b"not-a-real-png" + b"\0" * 200, "image/png"),
         (b"\x89PNG\r\n\x1a\n", "image/png"),
     ],
@@ -75,6 +74,30 @@ def test_proof_upload_rejects_type_signature_and_tiny_files(content, mime_type):
     )
     assert response.status_code == 400
     assert repo.get_proof_attempts(user_id, f"task-{user_id}") == 0
+
+
+def test_proof_upload_sniffs_png_when_declared_mime_wrong(monkeypatch):
+    user_id = "proof-sniff-mime"
+    repo.save_plan(user_id, _plan(f"task-{user_id}", date.today()))
+    _allow_proof(user_id)
+
+    async def fake_evaluate_proof(**kwargs):
+        assert kwargs["mime_type"] == "image/png"
+        from app.models.schemas import ProofResult
+        return ProofResult(
+            approved=True,
+            confidence=88,
+            reason="ok",
+            attempt_no=1,
+        )
+
+    monkeypatch.setattr("app.api.routes.proof_service.evaluate_proof", fake_evaluate_proof)
+    response = client.post(
+        f"/task/task-{user_id}/proof",
+        files={"photo": ("proof.png", _image(), "image/gif")},
+        headers={"X-User-Id": user_id},
+    )
+    assert response.status_code == 200
 
 
 def test_proof_route_is_ownership_safe():
@@ -344,6 +367,50 @@ def test_multi_user_close_day_uses_each_timezone_and_logs_floor():
     assert len(repository.get_point_log("new-york")) == 1
 
 
+def test_close_due_users_continues_when_one_user_fails(monkeypatch):
+    repository = InMemoryRepository()
+    repository.save_profile("good-user", UserProfile(timezone="Europe/Istanbul"))
+    repository.save_profile("bad-user", UserProfile(timezone="Europe/Istanbul"))
+    day = date(2026, 7, 10)
+    for user_id in ("good-user", "bad-user"):
+        repository.save_plan(
+            user_id,
+            Plan(
+                id=f"plan-{user_id}",
+                duration_days=1,
+                batch_generated_until=1,
+                start_date=day,
+                days=[PlanDay(day=1, tasks=[Task(
+                    id=f"{user_id}-task",
+                    day=1,
+                    title="Görev",
+                    categories=["İrade"],
+                    date=day,
+                )])],
+            ),
+        )
+        state = GameState(user_id=user_id)
+        state.points["İrade"] = 10
+        repository.save_state(state)
+
+    original = task_lifecycle_service.close_user_day
+
+    def flaky_close(repo, user_id, close_day):
+        if user_id == "bad-user":
+            raise RuntimeError("simüle DB hatası")
+        return original(repo, user_id, close_day)
+
+    monkeypatch.setattr(task_lifecycle_service, "close_user_day", flaky_close)
+    result = task_lifecycle_service.close_due_users(
+        repository,
+        datetime(2026, 7, 10, 20, 59, tzinfo=timezone.utc),
+    )
+    assert result["processed_users"] == 1
+    assert result["failed_users"] == 1
+    assert result["user_errors"][0]["user_id"] == "bad-user"
+    assert repository.get_task("good-user", "good-user-task").status == "missed_silent"
+
+
 def test_same_day_multiple_silent_misses_each_advance_master_streak():
     """MASTER §1.2 says every silent task miss advances n; it is not once/day."""
     repository = InMemoryRepository()
@@ -378,3 +445,68 @@ def test_same_day_multiple_silent_misses_each_advance_master_streak():
     assert [event.delta for event in repository.get_point_log(user_id)] == [
         -25, -50, -100,
     ]
+
+
+def test_close_user_day_penalizes_tasks_from_all_plans():
+    """Gün kapanışı yalnızca aktif planı değil, içerikli tüm planları işler."""
+    repository = InMemoryRepository()
+    user_id = "multi-plan-close"
+    day = date(2026, 7, 11)
+
+    plan_a = Plan(
+        id="plan-a",
+        duration_days=1,
+        batch_generated_until=1,
+        start_date=day,
+        name="Plan A",
+        slot_no=1,
+        days=[
+            PlanDay(
+                day=1,
+                tasks=[
+                    Task(
+                        id="plan-a-task",
+                        day=1,
+                        title="A görevi",
+                        categories=["İrade"],
+                        date=day,
+                    )
+                ],
+            )
+        ],
+    )
+    plan_b = Plan(
+        id="plan-b",
+        duration_days=1,
+        batch_generated_until=1,
+        start_date=day,
+        name="Plan B",
+        slot_no=2,
+        days=[
+            PlanDay(
+                day=1,
+                tasks=[
+                    Task(
+                        id="plan-b-task",
+                        day=1,
+                        title="B görevi",
+                        categories=["İstikrar"],
+                        date=day,
+                    )
+                ],
+            )
+        ],
+    )
+    repository.save_plan(user_id, plan_a)
+    repository.save_plan(user_id, plan_b)
+    repository.set_active_plan(user_id, "plan-a")
+    state = GameState(user_id=user_id)
+    state.points["İrade"] = 200
+    state.points["İstikrar"] = 200
+    repository.save_state(state)
+
+    result = task_lifecycle_service.close_user_day(repository, user_id, day)
+
+    assert result["penalized_tasks"] == 2
+    assert repository.get_task(user_id, "plan-a-task").status == "missed_silent"
+    assert repository.get_task(user_id, "plan-b-task").status == "missed_silent"

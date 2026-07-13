@@ -34,12 +34,22 @@ def _maybe_single(builder) -> Optional[dict]:
 
 
 def _task_from_row(row: dict) -> Task:
+    raw_categories = row.get("categories")
+    categories = raw_categories if isinstance(raw_categories, list) else []
+    raw_date = row.get("date")
+    task_date: dt_date | None
+    if raw_date is None or raw_date == "":
+        task_date = None
+    elif isinstance(raw_date, dt_date):
+        task_date = raw_date
+    else:
+        task_date = dt_date.fromisoformat(str(raw_date))
     return Task(
         id=row["id"],
         day=row["day_no"],
         title=row["title"],
         task_type=row["task_type"],
-        categories=row["categories"],
+        categories=categories,
         image_keyword=row["image_keyword"],
         image_url=row["image_url"],
         image_source=row.get("image_source", "placeholder"),
@@ -48,7 +58,7 @@ def _task_from_row(row: dict) -> Task:
         duration_min=row["duration_min"],
         tiny_version=row["tiny_version"],
         status=row["status"],
-        date=row["date"],
+        date=task_date,
         proof_id=row.get("proof_id"),
     )
 
@@ -101,18 +111,22 @@ class SupabaseRepository(Repository):
         user_row = (
             self._db.table("users").select("excuse_count,freeze_tokens,freeze_last_grant")
             .eq("id", user_id).single().execute().data
-        )
+        ) or {}
+
+        last_active = streak_row.get("last_active_date")
+        if last_active is not None and not isinstance(last_active, dt_date):
+            last_active = dt_date.fromisoformat(str(last_active))
 
         return GameState(
             user_id=user_id,
             points=points,
             silent_miss_streak=streak_row.get("silent_miss_streak", 0),
-            excuse_count=user_row["excuse_count"],
+            excuse_count=user_row.get("excuse_count") or 0,
             streak_len=streak_row.get("current_len", 0),
             best_streak=streak_row.get("best_len", 0),
-            last_active_date=streak_row.get("last_active_date"),
-            freeze_tokens=user_row["freeze_tokens"],
-            freeze_last_grant=user_row["freeze_last_grant"],
+            last_active_date=last_active,
+            freeze_tokens=user_row.get("freeze_tokens") or 0,
+            freeze_last_grant=user_row.get("freeze_last_grant"),
         )
 
     def save_state(self, state: GameState) -> None:
@@ -476,31 +490,78 @@ class SupabaseRepository(Repository):
     # ------------------------------------------------------------------
     # Sohbet geçmişi + niyet (Faz 2)
     # ------------------------------------------------------------------
-    def append_chat_message(self, user_id: str, message: ChatMessage) -> None:
-        self._ensure_user(user_id)
+    def _chat_plan_id(self, user_id: str) -> str:
+        """Aktif plan; yoksa taslak oluşturur (sohbet geçmişi plan_id ile bağlı)."""
+        active_id = self._active_plan_id(user_id)
+        if active_id:
+            return active_id
         summaries = self.list_plan_summaries(user_id)
         plan_id = next((item.id for item in summaries if item.is_active), None)
-        if not plan_id:
-            plan_id = self.create_draft_plan(user_id, name="Plan 1", slot_no=1)
-        row = {
-            "user_id": user_id,
-            "client_message_id": message.id,
-            "role": message.role,
-            "content": message.content,
-            "plan_id": plan_id,
-        }
-        if message.id:
+        if plan_id:
+            return plan_id
+        return self.create_draft_plan(user_id, name="Plan 1", slot_no=1)
+
+    def append_chat_message(self, user_id: str, message: ChatMessage) -> None:
+        self.append_chat_messages(user_id, [message])
+
+    def append_chat_messages(self, user_id: str, messages: list[ChatMessage]) -> None:
+        if not messages:
+            return
+        self._ensure_user(user_id)
+        plan_id = self._chat_plan_id(user_id)
+
+        with_ids = [message for message in messages if message.id]
+        without_ids = [message for message in messages if not message.id]
+        existing_ids: set[str] = set()
+        if with_ids:
+            candidate_ids = [message.id for message in with_ids]
+            rows = (
+                self._db.table("chat_msgs")
+                .select("client_message_id")
+                .eq("user_id", user_id)
+                .eq("plan_id", plan_id)
+                .in_("client_message_id", candidate_ids)
+                .execute()
+                .data
+            )
+            existing_ids = {
+                row["client_message_id"]
+                for row in rows
+                if row.get("client_message_id")
+            }
+
+        new_rows: list[dict] = []
+        for message in with_ids:
+            if message.id in existing_ids:
+                continue
+            new_rows.append({
+                "user_id": user_id,
+                "client_message_id": message.id,
+                "role": message.role,
+                "content": message.content,
+                "plan_id": plan_id,
+            })
+
+        if new_rows:
             self._db.table("chat_msgs").upsert(
-                row,
+                new_rows,
                 on_conflict="user_id,client_message_id",
                 ignore_duplicates=True,
             ).execute()
-        else:
-            self._db.table("chat_msgs").insert(row).execute()
+
+        for message in without_ids:
+            self._db.table("chat_msgs").insert({
+                "user_id": user_id,
+                "role": message.role,
+                "content": message.content,
+                "plan_id": plan_id,
+            }).execute()
 
     def get_chat_history(self, user_id: str) -> list[ChatMessage]:
-        summaries = self.list_plan_summaries(user_id)
-        plan_id = next((item.id for item in summaries if item.is_active), None)
+        plan_id = self._active_plan_id(user_id)
+        if not plan_id:
+            summaries = self.list_plan_summaries(user_id)
+            plan_id = next((item.id for item in summaries if item.is_active), None)
         if not plan_id:
             return []
         rows = (
@@ -730,7 +791,7 @@ class SupabaseRepository(Repository):
     def get_subscription_row(self, user_id: str) -> dict:
         self._ensure_user(user_id)
         row = self._db.table("users").select(
-            "subscription_status,trial_started_at,timezone"
+            "subscription_status,trial_started_at,subscription_expires_at,timezone"
         ).eq("id", user_id).single().execute().data
         return row
 
@@ -740,6 +801,8 @@ class SupabaseRepository(Repository):
         *,
         subscription_status: str | None = None,
         trial_started_at: datetime | None = None,
+        subscription_expires_at: datetime | None = None,
+        clear_subscription_expires: bool = False,
     ) -> None:
         self._ensure_user(user_id)
         payload: dict = {}
@@ -747,6 +810,10 @@ class SupabaseRepository(Repository):
             payload["subscription_status"] = subscription_status
         if trial_started_at is not None:
             payload["trial_started_at"] = trial_started_at.isoformat()
+        if clear_subscription_expires:
+            payload["subscription_expires_at"] = None
+        elif subscription_expires_at is not None:
+            payload["subscription_expires_at"] = subscription_expires_at.isoformat()
         if payload:
             self._db.table("users").update(payload).eq("id", user_id).execute()
 

@@ -22,7 +22,30 @@ def _user_timezone(name: str) -> ZoneInfo:
 
 
 def _local_today(timezone_name: str) -> date:
-    return datetime.now(timezone.utc).astimezone(_user_timezone(timezone_name)).date()
+    return datetime.now(_user_timezone(timezone_name)).date()
+
+
+def local_today(timezone_name: str) -> date:
+    """Kullanıcı timezone'unda bugünün tarihi (görev listesi + deneme süresi)."""
+    return _local_today(timezone_name)
+
+
+def _premium_until(
+    status: str,
+    subscription_expires_at: Optional[datetime],
+    *,
+    now: Optional[datetime] = None,
+) -> bool:
+    """Aktif veya iptal edilmiş ama dönemi bitmemiş abonelik."""
+    now = now or datetime.now(timezone.utc)
+    if status == "active":
+        return True
+    if status == "cancelled" and subscription_expires_at is not None:
+        expires = subscription_expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        return expires > now
+    return False
 
 
 def trial_days_remaining(
@@ -56,12 +79,13 @@ def build_subscription_info(
     trial_started_at: Optional[datetime],
     timezone_name: str,
     has_plan: bool,
+    subscription_expires_at: Optional[datetime] = None,
     today: Optional[date] = None,
 ) -> SubscriptionInfo:
     normalized = status if status in {"free", "trial", "active", "expired", "cancelled"} else "free"
     days_left = trial_days_remaining(trial_started_at, timezone_name, today=today)
 
-    if normalized == "active":
+    if _premium_until(normalized, subscription_expires_at):
         has_access = True
         show_paywall = False
     elif normalized == "trial":
@@ -98,6 +122,7 @@ def get_subscription(repo: Repository, user_id: str) -> SubscriptionInfo:
         trial_started_at=row.get("trial_started_at"),
         timezone_name=row.get("timezone", "Europe/Istanbul"),
         has_plan=has_plan,
+        subscription_expires_at=row.get("subscription_expires_at"),
     )
 
 
@@ -117,9 +142,13 @@ def require_paid_subscription(repo: Repository, user_id: str) -> SubscriptionInf
     """İkinci+ plan yalnızca ödenmiş abonelikle (trial yetmez)."""
     info = get_subscription(repo, user_id)
     row = repo.get_subscription_row(user_id)
-    if row.get("subscription_status") != "active":
-        raise PermissionError("paywall")
-    return info
+    status = row.get("subscription_status")
+    if _premium_until(status, row.get("subscription_expires_at")) and status in {
+        "active",
+        "cancelled",
+    }:
+        return info
+    raise PermissionError("paywall")
 
 
 def require_premium_access(repo: Repository, user_id: str) -> SubscriptionInfo:
@@ -143,15 +172,15 @@ def apply_revenuecat_event(
         "PRODUCT_CHANGE",
         "SUBSCRIPTION_EXTENDED",
     }
-    inactive_events = {
-        "CANCELLATION",
-        "EXPIRATION",
-        "BILLING_ISSUE",
-    }
+    lock_events = {"EXPIRATION", "BILLING_ISSUE"}
 
     if event_type in active_events:
-        repo.update_subscription(app_user_id, subscription_status="active")
-    elif event_type in inactive_events:
+        repo.update_subscription(
+            app_user_id,
+            subscription_status="active",
+            subscription_expires_at=expiration_at,
+        )
+    elif event_type == "CANCELLATION":
         row = repo.get_subscription_row(app_user_id)
         if trial_is_active(
             row.get("trial_started_at"),
@@ -159,10 +188,30 @@ def apply_revenuecat_event(
         ):
             repo.update_subscription(app_user_id, subscription_status="trial")
         else:
-            status = "cancelled" if event_type == "CANCELLATION" else "expired"
-            repo.update_subscription(app_user_id, subscription_status=status)
+            repo.update_subscription(
+                app_user_id,
+                subscription_status="cancelled",
+                subscription_expires_at=expiration_at or row.get("subscription_expires_at"),
+            )
+    elif event_type in lock_events:
+        row = repo.get_subscription_row(app_user_id)
+        if trial_is_active(
+            row.get("trial_started_at"),
+            row.get("timezone", "Europe/Istanbul"),
+        ):
+            repo.update_subscription(app_user_id, subscription_status="trial")
+        else:
+            repo.update_subscription(
+                app_user_id,
+                subscription_status="expired",
+                clear_subscription_expires=True,
+            )
     elif expiration_at and expiration_at > datetime.now(timezone.utc):
-        repo.update_subscription(app_user_id, subscription_status="active")
+        repo.update_subscription(
+            app_user_id,
+            subscription_status="active",
+            subscription_expires_at=expiration_at,
+        )
 
     return get_subscription(repo, app_user_id)
 

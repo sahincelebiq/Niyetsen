@@ -96,3 +96,36 @@ def test_sync_expired_trials_updates_status(repo: InMemoryRepository) -> None:
     assert info.show_paywall is True
     synced = subscription_service.sync_expired_trials(repo, "user-1")
     assert synced.status == "expired"
+
+
+def test_cancellation_keeps_access_until_period_end(repo: InMemoryRepository) -> None:
+    expires = datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc)
+    repo.update_subscription("user-1", subscription_status="active")
+    info = subscription_service.apply_revenuecat_event(
+        repo,
+        app_user_id="user-1",
+        event_type="CANCELLATION",
+        expiration_at=expires,
+    )
+    assert info.status == "cancelled"
+    assert info.has_premium_access is True
+
+    subscription_service.apply_revenuecat_event(
+        repo,
+        app_user_id="user-1",
+        event_type="EXPIRATION",
+    )
+    locked = subscription_service.get_subscription(repo, "user-1")
+    assert locked.status == "expired"
+    assert locked.has_premium_access is False
+
+
+def test_require_paid_allows_cancelled_grace_period(repo: InMemoryRepository) -> None:
+    expires = datetime(2026, 12, 31, 23, 59, tzinfo=timezone.utc)
+    repo.update_subscription(
+        "user-1",
+        subscription_status="cancelled",
+        subscription_expires_at=expires,
+    )
+    info = subscription_service.require_paid_subscription(repo, "user-1")
+    assert info.has_premium_access is True

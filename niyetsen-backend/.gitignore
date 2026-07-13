@@ -1,4 +1,5 @@
 .env
+.railway-revenuecat-secret
 .venv/
 venv/
 __pycache__/

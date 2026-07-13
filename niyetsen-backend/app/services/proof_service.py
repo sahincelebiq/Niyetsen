@@ -26,15 +26,33 @@ class ProofRejected(ValueError):
     """Dosya kurallara uymuyor (boyut/tip) — 400 döner."""
 
 
-def validate_upload(image_bytes: bytes, mime_type: str) -> None:
-    if mime_type not in ALLOWED_MIME:
-        raise ProofRejected("Sadece JPEG veya PNG kabul edilir.")
+def sniff_image_mime(image_bytes: bytes) -> str | None:
+    if image_bytes.startswith(b"\xff\xd8\xff"):
+        return "image/jpeg"
+    if image_bytes.startswith(b"\x89PNG\r\n\x1a\n"):
+        return "image/png"
+    return None
+
+
+def resolve_mime_type(image_bytes: bytes, declared_mime: str) -> str:
+    normalized = (declared_mime or "").split(";")[0].strip().lower()
+    if normalized in ALLOWED_MIME:
+        return normalized
+    sniffed = sniff_image_mime(image_bytes)
+    if sniffed:
+        return sniffed
+    raise ProofRejected("Sadece JPEG veya PNG kabul edilir.")
+
+
+def validate_upload(image_bytes: bytes, mime_type: str) -> str:
+    resolved = resolve_mime_type(image_bytes, mime_type)
     if len(image_bytes) > settings.PROOF_MAX_BYTES:
         raise ProofRejected("Fotoğraf 5 MB'den büyük olamaz.")
     if len(image_bytes) < 100:
         raise ProofRejected("Fotoğraf okunamadı.")
-    if not any(image_bytes.startswith(signature) for signature in FILE_SIGNATURES[mime_type]):
+    if not any(image_bytes.startswith(signature) for signature in FILE_SIGNATURES[resolved]):
         raise ProofRejected("Dosya içeriği bildirilen JPEG/PNG türüyle eşleşmiyor.")
+    return resolved
 
 
 async def evaluate_proof(
@@ -48,7 +66,7 @@ async def evaluate_proof(
     categories: list[str] | None = None,
     task_type: str = "alışkanlık",
 ) -> ProofResult:
-    validate_upload(image_bytes, mime_type)
+    resolved_mime = validate_upload(image_bytes, mime_type)
 
     # 3. deneme: beyanla kabul — Vision'a hiç gitmeden onayla, maliyet de tasarruf.
     if attempt_no >= settings.PROOF_MAX_ATTEMPTS:
@@ -66,7 +84,7 @@ async def evaluate_proof(
             task_type=task_type,
         ),
         image_bytes=image_bytes,
-        mime_type=mime_type,
+        mime_type=resolved_mime,
     )
 
     try:

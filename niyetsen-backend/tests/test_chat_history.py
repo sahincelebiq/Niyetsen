@@ -11,7 +11,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.models.schemas import CollectedIntent, ConsentChoice, ConsentUpdate
+from app.models.schemas import CollectedIntent, ConsentChoice, ConsentUpdate, ChatMessage
 from app.services import consent_service, intent_service
 from app.storage.repository import repo
 
@@ -117,6 +117,54 @@ def test_same_client_message_id_is_idempotent():
         "/chat/history", headers={"X-User-Id": user_id}
     ).json()
     assert [message["id"] for message in saved].count("user-fixed") == 1
+
+
+def test_chat_persists_via_single_batch_append(monkeypatch):
+    """Her mesaj için ayrı repo çağrısı yerine tek batch yazımı kullanılır."""
+    user_id = "chat_hist_batch"
+    _allow_chat(user_id)
+    calls: list[int] = []
+    original = repo.append_chat_messages
+
+    def track_batch(_user_id: str, messages: list) -> None:
+        calls.append(len(messages))
+        original(_user_id, messages)
+
+    monkeypatch.setattr(repo, "append_chat_messages", track_batch)
+
+    messages = [
+        {"id": "welcome-batch", "role": "assistant", "content": "Merhaba 🌙"},
+        {"id": "user-batch", "role": "user", "content": "Bursa'dayım"},
+    ]
+    resp = client.post(
+        "/chat",
+        json={"messages": messages, "collected": {}},
+        headers={"X-User-Id": user_id},
+    )
+    assert resp.status_code == 200
+    assert calls == [3]  # 2 istemci + 1 asistan cevabı
+
+
+def test_append_chat_messages_skips_known_ids():
+    user_id = "chat_hist_skip_known"
+    repo._ensure_active_plan_id(user_id)
+    repo.append_chat_messages(
+        user_id,
+        [
+            ChatMessage(id="known-1", role="user", content="İlk"),
+            ChatMessage(id="known-2", role="assistant", content="Cevap"),
+        ],
+    )
+    repo.append_chat_messages(
+        user_id,
+        [
+            ChatMessage(id="known-1", role="user", content="İlk"),
+            ChatMessage(id="known-2", role="assistant", content="Cevap"),
+            ChatMessage(id="known-3", role="user", content="Yeni"),
+        ],
+    )
+    history = repo.get_chat_history(user_id)
+    assert [message.id for message in history] == ["known-1", "known-2", "known-3"]
 
 
 def test_chat_session_restores_collected_and_ready_state():

@@ -36,6 +36,12 @@ if settings.ENV == "prod" and not settings.CRON_SECRET:
         "bir cron sırrı yapılandır."
     )
 
+if settings.ENV == "prod" and not settings.REVENUECAT_WEBHOOK_SECRET:
+    raise RuntimeError(
+        "ENV=prod iken REVENUECAT_WEBHOOK_SECRET boş olamaz. RevenueCat webhook "
+        "doğrulaması zorunludur."
+    )
+
 app = FastAPI(
     title="Niyetsen API",
     version="0.1.0",

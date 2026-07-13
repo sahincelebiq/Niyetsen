@@ -9,7 +9,7 @@ Niyetsen uses two Railway services from the same repository and backend root.
 - Required variables: `ENV=prod`, `AUTH_DISABLED=false`,
   `USE_SUPABASE_DB=true`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`,
   `GEMINI_API_KEY`, `UNSPLASH_ACCESS_KEY`, `CRON_SECRET`,
-  `CORS_ALLOWED_ORIGINS`
+  `REVENUECAT_WEBHOOK_SECRET`, `CORS_ALLOWED_ORIGINS`
 - `CORS_ALLOWED_ORIGINS` is a comma-separated exact-origin allowlist for web
   clients (for example `https://app.niyetsen.com,http://localhost:8082`).
   Native Expo clients do not need a CORS entry.

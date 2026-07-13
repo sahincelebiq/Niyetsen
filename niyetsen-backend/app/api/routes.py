@@ -270,6 +270,7 @@ async def chat(
     # İstemci bugün tüm geçmişi gönderiyor. Her mesajın kalıcı kimliği sayesinde
     # retry/eşzamanlı istekler ikinci kayıt oluşturmaz. Eski istemciler için
     # rol+metin+sıra tabanlı deterministik bir kimlik üretilir.
+    messages_to_save: list[ChatMessage] = []
     for index, message in enumerate(req.messages):
         if not message.id:
             message = message.model_copy(update={
@@ -277,16 +278,16 @@ async def chat(
                     user_id, index, message.role, message.content
                 )
             })
-        repo.append_chat_message(user_id, message)
+        messages_to_save.append(message)
 
     assistant_id = _legacy_message_id(
         user_id, len(req.messages), "assistant", response.reply
     )
     response.message_id = assistant_id
-    repo.append_chat_message(
-        user_id,
-        ChatMessage(id=assistant_id, role="assistant", content=response.reply),
+    messages_to_save.append(
+        ChatMessage(id=assistant_id, role="assistant", content=response.reply)
     )
+    repo.append_chat_messages(user_id, messages_to_save)
     repo.save_intent(
         user_id,
         response.collected,
@@ -378,8 +379,6 @@ def start_new_project(user_id: str = Depends(get_current_user)) -> PlanSummary:
         raise HTTPException(status_code=400, detail=str(exc))
     except Exception:
         log.exception("start_new_project failed user_id=%s", user_id)
-        if repo.count_completed_plans(user_id) >= 1:
-            raise HTTPException(status_code=402, detail=MULTI_PLAN_PAYWALL)
         raise HTTPException(
             status_code=500,
             detail="Yeni niyet başlatılamadı. Birazdan tekrar dener misin?",
@@ -509,9 +508,8 @@ async def upload_proof(
         raise HTTPException(status_code=404, detail="Görev bulunamadı.")
 
     image_bytes = await photo.read()
-    mime_type = photo.content_type or ""
     try:
-        proof_service.validate_upload(image_bytes, mime_type)
+        mime_type = proof_service.validate_upload(image_bytes, photo.content_type or "")
     except proof_service.ProofRejected as e:
         # Geçersiz dosya (yanlış tip/boyut) bir "deneme hakkı" yakmaz.
         raise HTTPException(status_code=400, detail=str(e))
@@ -632,11 +630,18 @@ def close_day(
     if at is not None and at.tzinfo is None:
         at = at.replace(tzinfo=timezone.utc)
     result = task_lifecycle_service.close_due_users(repo, at)
-    result["penalty_notifications_sent"] = (
-        notification_service.send_penalty_notifications(
-            repo, result.get("results", [])
+    try:
+        result["penalty_notifications_sent"] = (
+            notification_service.send_penalty_notifications(
+                repo, result.get("results", [])
+            )
         )
-    )
+    except Exception as exc:
+        logging.getLogger("niyetsen.api").exception(
+            "Ceza bildirimleri gönderilemedi"
+        )
+        result["penalty_notifications_sent"] = 0
+        result["penalty_notification_error"] = str(exc)[:300]
     return result
 
 

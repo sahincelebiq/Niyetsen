@@ -200,16 +200,17 @@ Tam rapor: `docs/NIYETSEN_BULGULAR_VE_HATALAR.md` · Uygulanan yamalar:
 1. Türkçe büyük harf — kriz/kapsam/araç tespiti (`normalize_tr`)
 2. Gemini timeout — `asyncio.wait_for` ile chat 30 sn / plan 90 sn
 3. Plan görselleri — async paralel Unsplash (`get_image_async`)
+4. RevenueCat webhook sırrı prod'da zorunlu (`main.py` kilidi) ✅ (2026-07-13)
+5. Abonelik iptali → dönem sonuna kadar erişim (`subscription_expires_at`) ✅ (2026-07-13)
+6. ~~`/plan/generate` rate limit + rıza kontrolü~~ ✅ (2026-07-13)
+7. `get_today_tasks` kullanıcı timezone'u ✅ (2026-07-13)
+8. Gün kapanışı tüm plan slotlarını işlemeli (çoklu plan) ✅ (2026-07-13)
+9. Chat mesaj kaydı N+1 optimizasyonu (`append_chat_messages` batch) ✅ (2026-07-13)
+11. ~~Mobil `api.ts` fetch timeout (`AbortController`)~~ ✅ (2026-07-13)
 
 **Sıradaki (⏳, Faz 4 kapanmadan önce):**
-4. RevenueCat webhook sırrı prod'da zorunlu (`main.py` kilidi)
-5. Abonelik iptali → dönem sonuna kadar erişim (`CANCELLATION` ≠ `EXPIRATION`)
-6. ~~`/plan/generate` rate limit + rıza kontrolü~~ ✅ (2026-07-13)
-7. `get_today_tasks` kullanıcı timezone'u
-8. Gün kapanışı tüm plan slotlarını işlemeli (çoklu plan)
-9. Chat mesaj kaydı N+1 optimizasyonu
-10. Mobil `/projects/new` 409 kullanıcı mesajı
-11. ~~Mobil `api.ts` fetch timeout (`AbortController`)~~ ✅ (2026-07-13)
+~~9. Chat mesaj kaydı N+1 optimizasyonu~~ ✅ (2026-07-13)
+10. Mobil plan oluştur 409 kullanıcı mesajı ✅ (2026-07-13)
 
 ---
 
@@ -461,8 +462,9 @@ doğrulanması. Bu ikisi yapılmadan KAPI 4 resmen KAPANMIŞ sayılmaz.
 - [x] `GET /me/subscription` + `POST /webhooks/revenuecat` (webhook sırrı `.env`).
 - [x] Paywall ekranı mobilde (`paywall.tsx`): fiyatlar, geri yükle, koşul linkleri.
 - [x] PostHog HTTP capture iskeleti (`analytics.ts`) — `EXPO_PUBLIC_POSTHOG_KEY` ile.
-- [ ] RevenueCat SDK (`react-native-purchases`) + App Store / Play IAP ürünleri
-      (aylık 450 TL, yıllık 3.600 TL) — Expo Go'da test edilemez, EAS build gerekir.
+- [x] RevenueCat SDK (`react-native-purchases`) + `purchases.ts` entegrasyonu (2026-07-13)
+      — EAS/dev build + mağaza IAP ürünleri sandbox testi bekliyor.
+- [ ] App Store / Play IAP ürünleri (aylık 450 TL, yıllık 3.600 TL) mağazada oluştur
 - [ ] Sandbox satın alma → webhook → `subscription_status=active` uçtan uca doğrulama.
 - [ ] Gizlilik/Koşullar sayfaları app içinde hazır; **statik web domain** henüz yok.
 - [x] Fal disclaimer metinleri app içinde (mistik yuva + legal belgeler).

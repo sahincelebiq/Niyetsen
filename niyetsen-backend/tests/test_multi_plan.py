@@ -1,12 +1,14 @@
 """Çoklu plan projeleri — free=1 plan, abonelikle yeni niyet."""
 from __future__ import annotations
 
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
 from app.models.schemas import ConsentChoice, ConsentUpdate
-from app.services import consent_service, plan_service
+from app.services import consent_service, plan_service, project_service
 from app.storage.repository import repo
 
 client = TestClient(app)
@@ -135,3 +137,39 @@ def test_rename_and_activate_project():
     assert activated.json()["id"] == plan_id
     assert activated.json()["is_active"] is True
     assert second["id"] != plan_id
+
+
+def test_get_today_tasks_returns_tasks_from_all_plans():
+    user_id = "multi-plan-daily"
+    _ensure_consent(user_id)
+    client.post("/projects/new", headers=_headers(user_id))
+    collected = {
+        "city": "İzmir",
+        "interests": ["yürüyüş"],
+        "weekly_hours": 3,
+        "duration_days": 7,
+    }
+    client.post(
+        "/plan/generate",
+        headers=_headers(user_id),
+        json={"collected": collected, "duration_days": 7},
+    )
+
+    repo.update_subscription(user_id, subscription_status="active")
+    client.post("/projects/new", headers=_headers(user_id))
+    second_collected = {
+        "city": "Bursa",
+        "interests": ["okuma"],
+        "weekly_hours": 2,
+        "duration_days": 7,
+    }
+    client.post(
+        "/plan/generate",
+        headers=_headers(user_id),
+        json={"collected": second_collected, "duration_days": 7},
+    )
+
+    today = date.today()
+    items = project_service.get_today_tasks(repo, user_id, today=today)
+    plan_ids = {item.plan_id for item in items}
+    assert len(plan_ids) == 2

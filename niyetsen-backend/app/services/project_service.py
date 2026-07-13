@@ -52,7 +52,10 @@ def start_new_project(repo: Repository, user_id: str) -> PlanSummary:
 
 
 def get_today_tasks(repo: Repository, user_id: str, *, today: date | None = None) -> list[DailyTaskItem]:
-    current = today or date.today()
+    row = repo.get_subscription_row(user_id)
+    current = today or subscription_service.local_today(
+        row.get("timezone", "Europe/Istanbul")
+    )
     items: list[DailyTaskItem] = []
     for summary in repo.list_plan_summaries(user_id):
         if not summary.has_content:

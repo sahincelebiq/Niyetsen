@@ -210,6 +210,8 @@ async def generate_json_with_image(
         parts,
         model=model,
         max_output_tokens=256,
-        json_retries=1,
-        max_retries=1,
+        json_retries=2,
+        max_retries=settings.GEMINI_MAX_RETRIES,
+        disable_thinking=True,
+        timeout_sec=settings.GEMINI_TIMEOUT_SEC,
     )

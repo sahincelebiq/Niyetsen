@@ -317,11 +317,20 @@ class InMemoryRepository(Repository):
         ]
 
     def append_chat_message(self, user_id: str, message: ChatMessage) -> None:
+        self.append_chat_messages(user_id, [message])
+
+    def append_chat_messages(self, user_id: str, messages: list[ChatMessage]) -> None:
+        if not messages:
+            return
         plan_id = self._ensure_active_plan_id(user_id)
         history = self._chat_history.setdefault((user_id, plan_id), [])
-        if message.id and any(existing.id == message.id for existing in history):
-            return
-        history.append(message)
+        known_ids = {existing.id for existing in history if existing.id}
+        for message in messages:
+            if message.id and message.id in known_ids:
+                continue
+            history.append(message)
+            if message.id:
+                known_ids.add(message.id)
 
     def get_chat_history(self, user_id: str) -> list[ChatMessage]:
         plan_id = self._ensure_active_plan_id(user_id)
@@ -516,6 +525,7 @@ class InMemoryRepository(Repository):
             {
                 "subscription_status": "free",
                 "trial_started_at": None,
+                "subscription_expires_at": None,
                 "timezone": profile.timezone,
             },
         )
@@ -528,12 +538,18 @@ class InMemoryRepository(Repository):
         *,
         subscription_status: str | None = None,
         trial_started_at: datetime | None = None,
+        subscription_expires_at: datetime | None = None,
+        clear_subscription_expires: bool = False,
     ) -> None:
         row = self.get_subscription_row(user_id)
         if subscription_status is not None:
             row["subscription_status"] = subscription_status
         if trial_started_at is not None:
             row["trial_started_at"] = trial_started_at
+        if clear_subscription_expires:
+            row["subscription_expires_at"] = None
+        elif subscription_expires_at is not None:
+            row["subscription_expires_at"] = subscription_expires_at
 
 
 def _build_repo() -> Repository:

@@ -8,7 +8,7 @@ Repository'nin burada, iki yönlü bağımlılık yaratmayan bir yerde durması 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import date as dt_date
+from datetime import date as dt_date, datetime
 from typing import Optional
 
 from app.models.schemas import (
@@ -115,6 +115,9 @@ class Repository(ABC):
     def append_chat_message(self, user_id: str, message: ChatMessage) -> None: ...
 
     @abstractmethod
+    def append_chat_messages(self, user_id: str, messages: list[ChatMessage]) -> None: ...
+
+    @abstractmethod
     def get_chat_history(self, user_id: str) -> list[ChatMessage]: ...
 
     @abstractmethod
@@ -187,6 +190,8 @@ class Repository(ABC):
         *,
         subscription_status: str | None = None,
         trial_started_at: datetime | None = None,
+        subscription_expires_at: datetime | None = None,
+        clear_subscription_expires: bool = False,
     ) -> None: ...
 
     @abstractmethod
