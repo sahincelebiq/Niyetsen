@@ -1,7 +1,15 @@
--- Supabase SQL Editor'da çalıştırılacak migration.
--- NOT: Python test dosyası DEĞİL — yalnızca bu SQL'i yapıştır.
--- FAZ 5+: çoklu plan projeleri (abonelikle 2+ plan; free/trial = 1 plan)
+-- =============================================================================
+-- NİYETSEN — Supabase SQL Editor (PROD güncelleme)
+-- =============================================================================
+-- ÖNEMLİ: Dosya yolunu DEĞİL, bu dosyanın İÇERİĞİNİ yapıştır.
+-- Yanlış: niyetsen-backend/supabase/migrations/RUN_IN_SUPABASE_SQL_EDITOR.sql
+-- Doğru:  Aşağıdaki SQL satırlarının tamamı
+--
+-- "Destructive operations" uyarısı normaldir (constraint drop + veri onarımı).
+-- Uygulama verisini silmez; yalnızca şema tamamlar ve bozuk satırları düzeltir.
+-- =============================================================================
 
+-- FAZ 5+: çoklu plan projeleri (abonelikle 2+ plan; free/trial = 1 plan)
 alter table public.plans drop constraint if exists plans_user_id_key;
 
 alter table public.plans
