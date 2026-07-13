@@ -126,7 +126,58 @@
 
     <section class="section-spaced">
       <span class="section-label">Web sitesi</span>
-      <h2>Ana sayfa yenilemesi — niyetsen.com</h2>
+      <h2>Son güncellemeler — niyetsen.com</h2>
+      <p class="lead">
+        13–14 Temmuz 2026 arasında tamamlanan web çalışmaları. Uygulama tarafına dokunulmadı;
+        yalnızca site, blog ve erken erişim altyapısı güncellendi.
+      </p>
+      <div class="grid-2">
+        <article class="card">
+          <h3>Erken erişim formu</h3>
+          <p><span class="status-tag done">Tamamlandı</span> Ana sayfa + geliştirme sayfasında form; FormSubmit ile <code>ai@niyetsen.com</code>'a otomatik iletim. FormSubmit aktivasyonu tamamlandı — talepler gelen kutusuna düşüyor.</p>
+        </article>
+        <article class="card">
+          <h3>Altı kategori blog serisi</h3>
+          <p><span class="status-tag done">Tamamlandı</span> İrade, İstikrar, Disiplin, Özgüven, Sosyallik, Özsaygı — felsefi-psikolojik makaleler, çapraz link ağı. <a href="/blog/">Blog'da</a> canlı.</p>
+        </article>
+        <article class="card">
+          <h3>Özel illüstrasyonlar</h3>
+          <p><span class="status-tag done">Tamamlandı</span> Her kategori yazısı için pastel editoryal kapak (800×450 WebP + OG 1200×630).</p>
+        </article>
+        <article class="card">
+          <h3>Performans optimizasyonu</h3>
+          <p><span class="status-tag done">Tamamlandı</span> Font render-blocking kaldırıldı, script defer, blog kapakları WebP (LCP ~809 KB → ~33 KB). Mobil Lighthouse Performance 62 → 75.</p>
+        </article>
+        <article class="card">
+          <h3>SEO tamamlama</h3>
+          <p><span class="status-tag done">Tamamlandı</span> Sitemap düzeltildi (14 URL), BreadcrumbList, WebPage JSON-LD, breadcrumb eksikleri giderildi.</p>
+        </article>
+        <article class="card">
+          <h3>UX iyileştirmeleri</h3>
+          <p><span class="status-tag done">Tamamlandı</span> Erken erişim linklerinde URL hash kaldırıldı (<code>niyetsen.com</code> temiz kalır). Mobil dokunma hedefleri 44px, yatay scroll önlendi.</p>
+        </article>
+      </div>
+
+      <p class="phase-summary" style="margin-top: 2rem;"><strong>Web sitesi — sırada</strong></p>
+      <ul class="phase-checklist">
+        <li>
+          <span class="check progress" aria-hidden="true">…</span>
+          <span><strong>GA4:</strong> Measurement ID gelince <code>site-config.js</code>'e eklenecek.</span>
+        </li>
+        <li>
+          <span class="check progress" aria-hidden="true">…</span>
+          <span><strong>Font self-hosting:</strong> Google Fonts yerine yerel barındırma — mobil LCP iyileştirmesi.</span>
+        </li>
+        <li>
+          <span class="check progress" aria-hidden="true">…</span>
+          <span><strong>FormSubmit hash ID:</strong> E-posta yerine güvenli endpoint hash'i (spam koruması).</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="section-spaced">
+      <span class="section-label">Web sitesi</span>
+      <h2>Ana sayfa yenilemesi — temel yapı</h2>
       <p class="lead">
         Uygulama tanıtım sayfası sıfırdan yeniden kurgulandı. Aşağıdaki bölümler
         <a href="/">ana sayfada</a> canlı:
@@ -150,7 +201,7 @@
         </article>
         <article class="card">
           <h3>Blog entegrasyonu</h3>
-          <p>Ana sayfadan üç makaleye önizleme; tam liste <a href="/blog/">/blog/</a> altında.</p>
+          <p>9 makale: 6 kategori serisi + 3 teknoloji yazısı. Ana sayfadan önizleme; tam liste <a href="/blog/">/blog/</a> altında.</p>
         </article>
         <article class="card">
           <h3>Marka & hukuk</h3>
@@ -251,7 +302,7 @@
             <tr>
               <td>Erken erişim e-posta</td>
               <td><code>ai@niyetsen.com</code> <span class="status-active">Aktif</span></td>
-              <td>FormSubmit AJAX endpoint ile otomatik iletim. İlk gönderimde mailbox aktivasyon maili gelir.</td>
+              <td>FormSubmit AJAX — aktivasyon tamamlandı, talepler gelen kutusuna iletiliyor.</td>
             </tr>
             <tr>
               <td>Site içi reklam</td>
@@ -307,7 +358,28 @@
 
     <div class="timeline">
       <article class="timeline-entry">
-        <div class="timeline-date">13 Temmuz 2026</div>
+        <div class="timeline-date">14 Temmuz 2026 — gece</div>
+        <h3>Web optimizasyonu & FormSubmit aktivasyonu</h3>
+        <p><span class="status-tag done">Tamamlandı</span></p>
+        <ul>
+          <li><strong>Performans:</strong> Font defer, script defer, blog WebP kapaklar, mobil touch hedefleri — Lighthouse mobil 75.</li>
+          <li><strong>SEO:</strong> Sitemap 14 URL, BreadcrumbList, WebPage schema, yapay-zeka-guven URL düzeltmesi.</li>
+          <li><strong>Erken erişim:</strong> FormSubmit aktivasyonu tamamlandı; form canlı ve çalışıyor.</li>
+          <li><strong>UX:</strong> <code>#erken-erisim</code> hash URL'den kaldırıldı.</li>
+        </ul>
+      </article>
+      <article class="timeline-entry">
+        <div class="timeline-date">13 Temmuz 2026 — gece</div>
+        <h3>Altı kategori blog serisi & illüstrasyonlar</h3>
+        <p><span class="status-tag done">Tamamlandı</span></p>
+        <ul>
+          <li><strong>6 makale:</strong> İrade, İstikrar, Disiplin, Özgüven, Sosyallik, Özsaygı — felsefi-psikolojik içerik, Niyetsen mantığına organik bağlantılar.</li>
+          <li><strong>İllüstrasyonlar:</strong> Her kategori için özel pastel kapak görseli (blog + OG).</li>
+          <li><strong>İç link ağı:</strong> Makaleler birbirine ve ana sayfaya çapraz bağlı — SEO ve keşfedilebilirlik.</li>
+        </ul>
+      </article>
+      <article class="timeline-entry">
+        <div class="timeline-date">13 Temmuz 2026 — akşam</div>
         <h3>Erken erişim formu & SEO/reklam dokümantasyonu</h3>
         <p><span class="status-tag done">Tamamlandı</span></p>
         <ul>
@@ -425,8 +497,35 @@
 
     <section class="section-spaced">
       <span class="section-label">İlgili okumalar</span>
-      <h2>Blog'dan</h2>
+      <h2>Blog'dan — altı kategori serisi</h2>
       <div class="grid-3">
+        <article class="card">
+          <h3><a href="/blog/irade-neden-tukeniyor.html">İrade neden tükeniyor?</a></h3>
+          <p>Seçim yorgunluğu ve dikkat ekonomisi.</p>
+        </article>
+        <article class="card">
+          <h3><a href="/blog/istikrar-kucuk-adimlar.html">İstikrar: Küçük adımlar</a></h3>
+          <p>Bileşik etki ve sürdürülebilir alışkanlık.</p>
+        </article>
+        <article class="card">
+          <h3><a href="/blog/disiplin-ozgurluk-ile-karsilasir.html">Disiplin ve özgürlük</a></h3>
+          <p>Potansiyelini ortaya çıkartan disiplin.</p>
+        </article>
+        <article class="card">
+          <h3><a href="/blog/ozguven-kanit-ve-potansiel.html">Özgüven kanıt ister</a></h3>
+          <p>Öz-yeterlilik ve kanıt temelli güven.</p>
+        </article>
+        <article class="card">
+          <h3><a href="/blog/sosyallik-yalnizlik-epidemisi.html">Sosyallik krizi</a></h3>
+          <p>Yalnızlık epidemisi ve aidiyet.</p>
+        </article>
+        <article class="card">
+          <h3><a href="/blog/ozsaygi-kimlik-ve-eylem.html">Özsaygı ve kimlik</a></h3>
+          <p>Kimlik ve eylem arasında denge.</p>
+        </article>
+      </div>
+      <h2 style="margin-top: 2rem; font-size: 1.35rem;">Teknoloji yazıları</h2>
+      <div class="grid-3" style="margin-top: 1rem;">
         <article class="card">
           <h3><a href="/blog/yapay-zeka-guven-dogrulama.html">AI güven & doğrulama</a></h3>
           <p>Fotoğraf kanıtında Gemini Vision nasıl kullanılıyor?</p>
