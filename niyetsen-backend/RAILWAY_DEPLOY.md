@@ -35,3 +35,17 @@ does so and returns a non-zero exit code if a job fails.
 3. Confirm `/cron/close-day` returns 200 in the cron logs.
 4. Confirm only tasks whose local day has closed are changed and `point_log`
    contains the resulting penalty.
+5. Response body may include `failed_users` and `user_errors` — ideal is `0`.
+6. Run `RUN_IN_SUPABASE_SQL_EDITOR.sql` in Supabase SQL Editor after deploy
+   (adds `subscription_expires_at`, repairs empty `categories`, backfills `streaks`).
+
+## After git push
+
+If Railway is GitHub-connected, API and cron redeploy automatically. Otherwise:
+
+1. Railway → **api** service → Deploy → **Redeploy**
+2. Railway → **cron** service → Deploy → **Redeploy**
+3. Cron variables: `API_BASE_URL=https://api-production-86f1.up.railway.app`,
+   `CRON_SECRET` must match the API service value.
+4. Double-check health: `curl -sS https://api-production-86f1.up.railway.app/health`
+5. Cron logs should show `close-day: 200` and `notifications: 200`.
