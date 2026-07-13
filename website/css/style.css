@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap");
+/* Fonts loaded via <link> in HTML for non-blocking fetch — see page head */
 
 :root {
   --bg: #faf8f5;
@@ -29,7 +29,10 @@
 
 * { box-sizing: border-box; }
 
-html { scroll-behavior: smooth; }
+html {
+  scroll-behavior: smooth;
+  overflow-x: clip;
+}
 
 body {
   margin: 0;
@@ -1420,6 +1423,15 @@ footer {
 
 @media (max-width: 640px) {
   .nav { flex-direction: column; align-items: flex-start; }
+  .nav-links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0.35rem 0;
+  }
+  .button, .cookie-consent-btn {
+    min-height: 44px;
+  }
   .vision-orbit { width: min(330px, 94vw); height: min(330px, 94vw); }
   .orbit-ring { inset: 8px; }
   .orbit-word { font-size: 0.85rem; padding: 0.3rem 0.65rem; }
