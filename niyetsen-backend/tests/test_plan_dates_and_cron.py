@@ -13,7 +13,8 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.config import settings
-from app.services import plan_service
+from app.models.schemas import ConsentChoice, ConsentUpdate
+from app.services import consent_service, plan_service
 from app.storage.repository import repo
 
 client = TestClient(app)
@@ -48,7 +49,20 @@ def _mock_gemini(monkeypatch):
     monkeypatch.setattr(settings, "CRON_SECRET", "test-cron-secret")
 
 
+def _ensure_consent(user_id: str) -> None:
+    consent_service.update(
+        repo,
+        user_id,
+        ConsentUpdate(
+            privacy_policy=ConsentChoice(accepted=True),
+            kvkk_explicit_consent=ConsentChoice(accepted=True),
+            ai_chat_processing=ConsentChoice(accepted=True),
+        ),
+    )
+
+
 def _generate_plan(user_id: str) -> dict:
+    _ensure_consent(user_id)
     resp = client.post(
         "/plan/generate",
         json={"collected": COLLECTED, "duration_days": 3},

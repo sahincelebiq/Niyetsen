@@ -421,8 +421,14 @@ def get_plan(user_id: str = Depends(get_current_user)) -> Plan:
 
 
 @router.post("/plan/generate", response_model=Plan)
-async def generate_plan(req: PlanGenerateRequest, user_id: str = Depends(get_current_user)) -> Plan:
+@limiter.limit(f"{settings.PLAN_RATE_LIMIT_PER_MIN}/minute")
+async def generate_plan(
+    request: Request,
+    req: PlanGenerateRequest,
+    user_id: str = Depends(get_current_user),
+) -> Plan:
     """Çekirdek halka 2/2: görselli plan (ilk parti). Sonraki partiler /plan/next."""
+    _require_consent(user_id, "chat")
     summaries = repo.list_plan_summaries(user_id)
     active = next((item for item in summaries if item.is_active), None)
     if active and active.has_content:
@@ -454,9 +460,15 @@ async def generate_plan(req: PlanGenerateRequest, user_id: str = Depends(get_cur
 
 
 @router.post("/plan/next", response_model=Plan)
-async def next_batch(req: PlanGenerateRequest, user_id: str = Depends(get_current_user)) -> Plan:
+@limiter.limit(f"{settings.PLAN_RATE_LIMIT_PER_MIN}/minute")
+async def next_batch(
+    request: Request,
+    req: PlanGenerateRequest,
+    user_id: str = Depends(get_current_user),
+) -> Plan:
     """Partili üretim: mevcut planın kaldığı günden sonraki bölümü ekler."""
     _require_premium(user_id)
+    _require_consent(user_id, "chat")
     current = repo.get_plan(user_id)
     if not current:
         raise HTTPException(status_code=404, detail="Önce /plan/generate ile plan oluştur.")

@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  input { font-family: inherit; }
+  input::placeholder { color: #B3A48F; }
+  a { color: #B4623C; text-decoration: none; }
+  a:hover { color: #9A4E2E; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  @keyframes messageIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes typingDot { 0%, 60%, 100% { opacity: .25; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:44px 20px; background:radial-gradient(130% 120% at 28% 18%, #EDDDC8 0%, #E1CDB2 52%, #CDB597 100%); font-family:'Hanken Grotesk', system-ui, sans-serif;">
+
+  <div style="display:flex; align-items:baseline; gap:12px;">
+    <span style="font-family:'Newsreader', serif; font-size:26px; font-weight:500; letter-spacing:-.3px; color:#4A3B2C;">niyetsen</span>
+    <span style="font-size:11.5px; letter-spacing:2.5px; text-transform:uppercase; color:#8A755C;">niyetini yaşa</span>
+  </div>
+
+  <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+
+    <div style="height:100%; display:flex; flex-direction:column; background:#F1E7D9; color:#2C241C; font-family:'Hanken Grotesk', system-ui, sans-serif; -webkit-font-smoothing:antialiased;">
+
+      <!-- ══════════════ SOHBET ══════════════ -->
+      <sc-if value="{{ isSohbet }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1 1 auto; min-height:0; display:flex; flex-direction:column;">
+        <div style="padding:60px 20px 14px; background:rgba(241,231,217,0.92); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid rgba(74,59,44,0.10); position:relative; z-index:5; display:flex; align-items:flex-end; justify-content:space-between;">
+          <div>
+            <div style="font-family:'Newsreader', serif; font-size:25px; font-weight:600; line-height:1; color:#2C241C;">Niyet Rehberi</div>
+            <div style="font-size:12.5px; color:#9C8B72; margin-top:5px;">Utandırmayan disiplin</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; background:#EBD9C6; border:1px solid rgba(180,98,60,0.18); padding:6px 11px; border-radius:999px;">
+            <span style="width:7px; height:7px; border-radius:50%; background:#6E7856;"></span>
+            <span style="font-size:12.5px; font-weight:600; color:#6B5D4E;">{{ streak }} gün</span>
+          </div>
+        </div>
+
+        <div ref="{{ chatRef }}" style="flex:1; overflow-y:auto; padding:18px 16px 10px; display:flex; flex-direction:column; gap:11px;">
+          <sc-for list="{{ messages }}" as="m" hint-placeholder-count="2">
+            <sc-if value="{{ m.isUser }}">
+              <div style="align-self:flex-end; max-width:80%; background:#B4623C; color:#FCF4EA; border-radius:19px 19px 6px 19px; padding:11px 15px; font-size:14.5px; line-height:1.5; box-shadow:0 2px 8px rgba(154,78,46,0.18); animation:messageIn .32s ease both;">{{ m.text }}</div>
+            </sc-if>
+            <sc-if value="{{ m.isText }}">
+              <div style="align-self:flex-start; max-width:82%; background:#FBF6EF; color:#3A3126; border:1px solid rgba(74,59,44,0.09); border-radius:19px 19px 19px 6px; padding:11px 15px; font-size:14.5px; line-height:1.55; box-shadow:0 1px 4px rgba(74,59,44,0.05); animation:messageIn .32s ease both;">{{ m.text }}</div>
+            </sc-if>
+            <sc-if value="{{ m.isTask }}">
+              <div style="align-self:flex-start; max-width:90%; width:90%; background:#FFFDF8; border:1px solid rgba(180,98,60,0.22); border-radius:16px; padding:15px; box-shadow:0 4px 14px rgba(154,78,46,0.10); animation:messageIn .32s ease both;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span style="font-size:11.5px; font-weight:600; letter-spacing:.3px; color:#56603F; background:#E5E8D4; padding:4px 10px; border-radius:999px;">{{ m.tCat }}</span>
+                  <span style="font-size:12px; font-weight:600; color:#9A4E2E; background:#F1DECF; padding:4px 10px; border-radius:999px;">{{ m.tPts }}</span>
+                </div>
+                <div style="font-family:'Newsreader', serif; font-size:17px; font-weight:600; color:#2C241C; margin-top:11px;">{{ m.tTitle }}</div>
+                <div style="font-size:13px; line-height:1.5; color:#8A7A66; margin-top:5px;">{{ m.tDesc }}</div>
+              </div>
+            </sc-if>
+          </sc-for>
+
+          <sc-if value="{{ typing }}">
+            <div style="align-self:flex-start; background:#FBF6EF; border:1px solid rgba(74,59,44,0.09); border-radius:19px 19px 19px 6px; padding:13px 16px; display:flex; gap:5px; align-items:center;">
+              <span style="width:6px; height:6px; border-radius:50%; background:#C3B29C; animation:typingDot 1s infinite;"></span>
+              <span style="width:6px; height:6px; border-radius:50%; background:#C3B29C; animation:typingDot 1s infinite .15s;"></span>
+              <span style="width:6px; height:6px; border-radius:50%; background:#C3B29C; animation:typingDot 1s infinite .3s;"></span>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ hasChips }}">
+          <div style="padding:2px 16px 8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <sc-for list="{{ chips }}" as="c" hint-placeholder-count="3">
+              <button onClick="{{ c.onClick }}" style="border:1px solid rgba(180,98,60,0.35); background:#F7EEE2; color:#9A4E2E; border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:500; cursor:pointer;" style-hover="background:#F1DECF;">{{ c.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <div style="padding:10px 14px 14px; border-top:1px solid rgba(74,59,44,0.10); background:#F1E7D9; display:flex; gap:10px; align-items:center;">
+          <input value="{{ input }}" onChange="{{ onInput }}" onKeyDown="{{ onKey }}" placeholder="Niyetini yaz…" style="flex:1; border:1px solid rgba(74,59,44,0.14); border-radius:22px; padding:11px 16px; font-size:15px; background:#FBF6EF; color:#2C241C; outline:none;" />
+          <button onClick="{{ send }}" style="width:44px; height:44px; flex-shrink:0; border-radius:50%; border:none; background:#B4623C; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(154,78,46,0.28);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FCF4EA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>
+          </button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══════════════ PLAN ══════════════ -->
+      <sc-if value="{{ isPlan }}">
+      <div style="flex:1 1 auto; min-height:0; display:flex; flex-direction:column;">
+        <div style="padding:60px 20px 14px; background:rgba(241,231,217,0.92); backdrop-filter:blur(10px); border-bottom:1px solid rgba(74,59,44,0.10); position:relative; z-index:5; display:flex; align-items:flex-end; justify-content:space-between;">
+          <div>
+            <div style="font-family:'Newsreader', serif; font-size:25px; font-weight:600; line-height:1; color:#2C241C;">Bugün</div>
+            <div style="font-size:12.5px; color:#9C8B72; margin-top:5px;">Küçük adımlar, kırılmayan zincir</div>
+          </div>
+          <span style="font-size:12.5px; font-weight:600; color:#6B5D4E; background:#EBD9C6; padding:6px 11px; border-radius:999px;">{{ progressLabel }}</span>
+        </div>
+
+        <div style="flex:1; overflow-y:auto; padding:16px 16px 22px; display:flex; flex-direction:column; gap:12px;">
+          <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="3">
+            <div style="background:#FBF6EF; border:1px solid rgba(74,59,44,0.09); border-radius:18px; padding:16px; box-shadow:0 2px 8px rgba(74,59,44,0.05);">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <span style="font-size:11.5px; font-weight:600; letter-spacing:.3px; color:#56603F; background:#E5E8D4; padding:4px 10px; border-radius:999px;">{{ t.cat }}</span>
+                <sc-if value="{{ t.notDone }}">
+                  <span style="font-size:12px; font-weight:600; color:#9A4E2E; background:#F1DECF; padding:4px 10px; border-radius:999px;">{{ t.ptsLabel }}</span>
+                </sc-if>
+                <sc-if value="{{ t.done }}">
+                  <span style="font-size:12px; font-weight:600; color:#56603F; background:#DCE2C8; padding:4px 10px; border-radius:999px;">✓ Tamamlandı</span>
+                </sc-if>
+              </div>
+              <div style="font-family:'Newsreader', serif; font-size:17px; font-weight:600; color:#2C241C; margin-top:11px;">{{ t.title }}</div>
+              <div style="font-size:13.5px; line-height:1.5; color:#8A7A66; margin-top:5px;">{{ t.desc }}</div>
+              <sc-if value="{{ t.notDone }}">
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                  <button onClick="{{ t.onToggle }}" style="flex:1; border:none; background:#B4623C; color:#FCF4EA; border-radius:12px; padding:11px; font-size:14px; font-weight:600; cursor:pointer; box-shadow:0 3px 9px rgba(154,78,46,0.22);">Tamamla</button>
+                  <button style="border:1px solid rgba(74,59,44,0.16); background:transparent; color:#6B5D4E; border-radius:12px; padding:11px 15px; font-size:14px; font-weight:500; cursor:pointer;" style-hover="background:#F1DECF;">Kanıt ekle</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ t.done }}">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-top:14px; padding-top:13px; border-top:1px solid rgba(74,59,44,0.08);">
+                  <span style="font-size:13px; color:#8A7A66;">Zincire eklendi · {{ t.ptsLabel }} puan</span>
+                  <button onClick="{{ t.onToggle }}" style="border:none; background:none; color:#9A4E2E; font-size:13px; font-weight:600; cursor:pointer; padding:0;">Geri al</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══════════════ ZINCIR ══════════════ -->
+      <sc-if value="{{ isZincir }}">
+      <div style="flex:1 1 auto; min-height:0; display:flex; flex-direction:column;">
+        <div style="padding:60px 20px 14px; background:rgba(241,231,217,0.92); backdrop-filter:blur(10px); border-bottom:1px solid rgba(74,59,44,0.10); position:relative; z-index:5;">
+          <div style="font-family:'Newsreader', serif; font-size:25px; font-weight:600; line-height:1; color:#2C241C;">Zincir</div>
+          <div style="font-size:12.5px; color:#9C8B72; margin-top:5px;">Bıraktığın izler burada birikir</div>
+        </div>
+
+        <div style="flex:1; overflow-y:auto; padding:16px 16px 24px; display:flex; flex-direction:column; gap:14px;">
+
+          <div style="position:relative; overflow:hidden; background:#B4623C; border-radius:20px; padding:22px; color:#FCF4EA; box-shadow:0 8px 22px rgba(154,78,46,0.24);">
+            <div style="position:absolute; top:-40px; right:-30px; width:150px; height:150px; border-radius:50%; background:radial-gradient(circle, rgba(255,240,220,0.22), transparent 70%);"></div>
+            <div style="position:relative;">
+              <div style="font-size:12.5px; letter-spacing:1.5px; text-transform:uppercase; opacity:.8;">Güncel zincir</div>
+              <div style="display:flex; align-items:baseline; gap:8px; margin-top:6px;">
+                <span style="font-family:'Newsreader', serif; font-size:62px; font-weight:500; line-height:.9;">{{ streak }}</span>
+                <span style="font-family:'Newsreader', serif; font-size:22px; font-weight:400; opacity:.85;">gün</span>
+              </div>
+              <div style="font-size:13.5px; opacity:.85; margin-top:8px; line-height:1.5;">Bugünkü görevlerini de bitirirsen zincir uzamaya devam eder.</div>
+            </div>
+          </div>
+
+          <div style="background:#FBF6EF; border:1px solid rgba(74,59,44,0.09); border-radius:18px; padding:16px;">
+            <div style="font-size:13px; font-weight:600; color:#6B5D4E; margin-bottom:13px;">Bu hafta</div>
+            <div style="display:flex; justify-content:space-between;">
+              <sc-for list="{{ week }}" as="w" hint-placeholder-count="7">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                  <span style="font-size:11px; color:#9C8B72;">{{ w.d }}</span>
+                  <sc-if value="{{ w.on }}">
+                    <span style="width:15px; height:15px; border-radius:50%; background:#6E7856;"></span>
+                  </sc-if>
+                  <sc-if value="{{ w.off }}">
+                    <span style="width:15px; height:15px; border-radius:50%; border:1.5px solid rgba(74,59,44,0.18); background:transparent;"></span>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#FBF6EF; border:1px solid rgba(74,59,44,0.09); border-radius:18px; padding:16px;">
+            <div style="font-size:13px; font-weight:600; color:#6B5D4E; margin-bottom:15px;">Gelişim alanların</div>
+            <div style="display:flex; flex-direction:column; gap:15px;">
+              <sc-for list="{{ cats }}" as="c" hint-placeholder-count="6">
+                <div>
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:7px;">
+                    <span style="font-size:14.5px; color:#2C241C;">{{ c.name }}</span>
+                    <span style="font-size:11.5px; font-weight:600; color:#56603F; background:#E5E8D4; padding:2px 9px; border-radius:999px;">{{ c.levelLabel }}</span>
+                  </div>
+                  <div style="height:7px; border-radius:999px; background:#E7DCCB; overflow:hidden;">
+                    <div style="height:100%; width:{{ c.pctStr }}; border-radius:999px; background:#B4623C;"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; background:#FBF6EF; border:1px solid rgba(74,59,44,0.09); border-radius:18px; padding:16px 18px;">
+            <span style="font-size:14.5px; color:#6B5D4E;">Toplam puan</span>
+            <span style="font-family:'Newsreader', serif; font-size:26px; font-weight:600; color:#B4623C;">1.240</span>
+          </div>
+
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══════════════ TAB BAR ══════════════ -->
+      <div style="display:flex; border-top:1px solid rgba(74,59,44,0.10); background:rgba(241,231,217,0.97); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:10px 0 26px;">
+        <button onClick="{{ goSohbet }}" style="flex:1; background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; color:{{ cSohbet }};">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a7.5 7.5 0 0 1-10.8 6.7L4 20l1.3-4.1A7.5 7.5 0 1 1 20 12z"/></svg>
+          <span style="font-size:11px; font-weight:600;">Sohbet</span>
+        </button>
+        <button onClick="{{ goPlan }}" style="flex:1; background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; color:{{ cPlan }};">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M8.5 12.2l2.4 2.4 4.6-5"/></svg>
+          <span style="font-size:11px; font-weight:600;">Plan</span>
+        </button>
+        <button onClick="{{ goZincir }}" style="flex:1; background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; color:{{ cZincir }};">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8.5" width="12" height="7" rx="3.5"/><rect x="9.5" y="8.5" width="12" height="7" rx="3.5"/></svg>
+          <span style="font-size:11px; font-weight:600;">Zincir</span>
+        </button>
+      </div>
+
+    </div>
+
+  </x-import>
+
+  <span style="font-size:12px; letter-spacing:1px; color:#8A755C;">Niyetsen · MVP</span>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 860, &quot;height&quot;: 980}, &quot;startScreen&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;Sohbet&quot;, &quot;Plan&quot;, &quot;Zincir&quot;], &quot;default&quot;: &quot;Sohbet&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Uygulama&quot;}, &quot;streakDays&quot;: {&quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 12, &quot;min&quot;: 0, &quot;max&quot;: 365, &quot;unit&quot;: &quot;gün&quot;, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Uygulama&quot;}}">
+class Component extends DCLogic {
+  chatRef = React.createRef();
+  _uid = 100;
+
+  state = {
+    tab: (this.props.startScreen ? this.props.startScreen.toLowerCase() : 'sohbet'),
+    input: '',
+    typing: false,
+    step: 0,
+    messages: [
+      { id: 1, role: 'assistant', text: 'Günaydın. Zincirini dün de kırmadın — güzel gidiyor. Bugün için küçük bir niyet seçelim mi?' },
+    ],
+    chips: ['Birini arayacağım', 'Erken yatacağım', 'Kitap okuyacağım'],
+    tasks: [
+      { id: 't1', cat: 'Sosyallik', title: 'Annemi ara', desc: '5 dakika, sadece hâl hatır sormak için.', pts: 50, done: false },
+      { id: 't2', cat: 'Disiplin', title: '22:00’de telefonu bırak', desc: 'Yatmadan önce 30 dakika ekransız kal.', pts: 40, done: false },
+      { id: 't3', cat: 'İrade', title: 'Sabah 2 bardak su', desc: 'Kahveden önce, gün açılışında.', pts: 30, done: true },
+    ],
+    cats: [
+      { name: 'İrade', lvl: 3, pct: 62 },
+      { name: 'İstikrar', lvl: 2, pct: 45 },
+      { name: 'Disiplin', lvl: 4, pct: 78 },
+      { name: 'Özgüven', lvl: 2, pct: 34 },
+      { name: 'Sosyallik', lvl: 3, pct: 55 },
+      { name: 'Özsaygı', lvl: 3, pct: 50 },
+    ],
+    week: [
+      { d: 'Pzt', on: true }, { d: 'Sal', on: true }, { d: 'Çar', on: true },
+      { d: 'Per', on: true }, { d: 'Cum', on: true }, { d: 'Cmt', on: false }, { d: 'Paz', on: false },
+    ],
+  };
+
+  push(msgs) {
+    this.setState(s => ({ messages: s.messages.concat(msgs.map(m => ({ id: ++this._uid, ...m }))) }));
+  }
+
+  send(textArg) {
+    const text = (textArg != null ? textArg : this.state.input).trim();
+    if (!text || this.state.typing) return;
+    this.push([{ role: 'user', text }]);
+    this.setState({ input: '', chips: [], typing: true });
+    const step = this.state.step;
+    setTimeout(() => this.reply(step, text), 800);
+  }
+
+  reply(step, text) {
+    let msgs = [], chips = [];
+    if (step === 0) {
+      msgs = [{ role: 'assistant', text: 'Güzel bir niyet. Bunu Sosyallik zincirine bağladım. Kimi arayacaksın — bir isim yeter.' }];
+      chips = ['Annem', 'Kardeşim', 'Eski bir dost'];
+    } else if (step === 1) {
+      const name = text;
+      const task = { id: 'u' + (++this._uid), cat: 'Sosyallik', title: name + ' ile 5 dk konuş', desc: 'Mesaj değil — sesini duyur. Niyetin: bağı canlı tutmak.', pts: 50, done: false };
+      msgs = [
+        { role: 'assistant', text: 'Not ettim. Bugünün görevi hazır:' },
+        { role: 'assistant', type: 'task', task },
+        { role: 'assistant', text: 'Bittiğinde küçük bir kanıt bırak — bir not ya da fotoğraf. Kimseye göstermek zorunda değilsin. Zorlanırsan “bugün olmadı” de; zincir kırılmaz.' },
+      ];
+      chips = ['Planı aç', 'Teşekkürler'];
+      this.setState(s => ({ tasks: [task, ...s.tasks] }));
+    } else {
+      const generics = [
+        'Kaydettim. Küçük ve sürdürülebilir tut — acelesi yok.',
+        'Güzel. Yarın tam buradan devam ederiz.',
+        'Not aldım. Plan sekmesinden bugünkü görevlerini görebilirsin.',
+      ];
+      msgs = [{ role: 'assistant', text: generics[(step - 2) % generics.length] }];
+      chips = [];
+    }
+    this.push(msgs);
+    this.setState(s => ({ typing: false, step: s.step + 1, chips }));
+  }
+
+  toggle(id) {
+    this.setState(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, done: !t.done } : t) }));
+  }
+
+  componentDidMount() {
+    const el = this.chatRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }
+  componentDidUpdate() {
+    const el = this.chatRef.current;
+    if (el && this.state.tab === 'sohbet') el.scrollTop = el.scrollHeight;
+  }
+
+  renderVals() {
+    const { tab } = this.state;
+    const clay = '#B4623C';
+    const mutC = '#A28F76';
+    const streak = this.props.streakDays ?? 12;
+
+    const messages = this.state.messages.map(m => ({
+      ...m,
+      isUser: m.role === 'user',
+      isText: m.role === 'assistant' && m.type !== 'task',
+      isTask: m.type === 'task',
+      tCat: m.task && m.task.cat,
+      tTitle: m.task && m.task.title,
+      tDesc: m.task && m.task.desc,
+      tPts: m.task ? '+' + m.task.pts + ' puan' : '',
+    }));
+
+    const chips = this.state.chips.map(c => ({
+      label: c,
+      onClick: c === 'Planı aç' ? () => this.setState({ tab: 'plan' }) : () => this.send(c),
+    }));
+
+    const tasks = this.state.tasks.map(t => ({
+      ...t,
+      ptsLabel: '+' + t.pts,
+      notDone: !t.done,
+      onToggle: () => this.toggle(t.id),
+    }));
+
+    const cats = this.state.cats.map(c => ({
+      ...c,
+      pctStr: c.pct + '%',
+      levelLabel: 'Sv. ' + c.lvl,
+    }));
+
+    const week = this.state.week.map(w => ({ ...w, off: !w.on }));
+
+    const doneCount = this.state.tasks.filter(t => t.done).length;
+    const totalTasks = this.state.tasks.length;
+
+    return {
+      isSohbet: tab === 'sohbet', isPlan: tab === 'plan', isZincir: tab === 'zincir',
+      cSohbet: tab === 'sohbet' ? clay : mutC,
+      cPlan: tab === 'plan' ? clay : mutC,
+      cZincir: tab === 'zincir' ? clay : mutC,
+      goSohbet: () => this.setState({ tab: 'sohbet' }),
+      goPlan: () => this.setState({ tab: 'plan' }),
+      goZincir: () => this.setState({ tab: 'zincir' }),
+      messages, chips, tasks, cats, week,
+      typing: this.state.typing,
+      hasChips: chips.length > 0,
+      input: this.state.input,
+      onInput: e => this.setState({ input: e.target.value }),
+      onKey: e => { if (e.key === 'Enter') { e.preventDefault(); this.send(); } },
+      chatRef: this.chatRef,
+      send: () => this.send(),
+      streak,
+      progressLabel: doneCount + '/' + totalTasks + ' tamamlandı',
+    };
+  }
+}
+</script>
+</body>
+</html>

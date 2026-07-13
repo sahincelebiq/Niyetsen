@@ -203,10 +203,29 @@ CRISIS_RESPONSE = (
     "Yanındayım; hazır olduğunda burada olacağım. 🌙"
 )
 
+# Türkçe'ye duyarlı küçük harfe çevirme. Python'un lower()/casefold()'u
+# "İ" harfini "i̇" (i + birleşen nokta U+0307) yapar; bu yüzden
+# "İNTİHAR".lower() içinde "intihar" ARANAMAZ ve kriz filtresi büyük harfli
+# mesajı kaçırırdı (2026-07-12'de tespit edilen güvenlik açığı).
+_TR_LOWER_MAP = str.maketrans({"İ": "i", "I": "ı"})
+
+
+def normalize_tr(text: str) -> str:
+    """Kriz/kapsam/araç tespiti için güvenli Türkçe normalizasyon."""
+    import unicodedata
+
+    lowered = (text or "").translate(_TR_LOWER_MAP).casefold()
+    decomposed = unicodedata.normalize("NFD", lowered)
+    stripped = "".join(ch for ch in decomposed if not unicodedata.combining(ch))
+    return unicodedata.normalize("NFC", stripped)
+
+
+_CRISIS_KEYWORDS_NORMALIZED = tuple(normalize_tr(k) for k in CRISIS_KEYWORDS)
+
 
 def contains_crisis_signal(text: str) -> bool:
-    t = (text or "").lower()
-    return any(k in t for k in CRISIS_KEYWORDS)
+    t = normalize_tr(text)
+    return any(k in t for k in _CRISIS_KEYWORDS_NORMALIZED)
 
 
 OUT_OF_SCOPE_MARKERS = (
@@ -221,9 +240,12 @@ SCOPE_REDIRECT_RESPONSE = (
 )
 
 
+_OUT_OF_SCOPE_NORMALIZED = tuple(normalize_tr(m) for m in OUT_OF_SCOPE_MARKERS)
+
+
 def contains_out_of_scope_signal(text: str) -> bool:
-    t = (text or "").casefold()
-    if any(marker in t for marker in OUT_OF_SCOPE_MARKERS):
+    t = normalize_tr(text)
+    if any(marker in t for marker in _OUT_OF_SCOPE_NORMALIZED):
         return True
     compact = t.replace(" ", "")
     return any(op in compact for op in ("1+1", "2+2", "3*3", "10/2"))

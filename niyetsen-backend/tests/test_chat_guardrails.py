@@ -22,6 +22,23 @@ def test_crisis_message_short_circuits_model(monkeypatch):
     assert "gerçek bir insan" in response.reply
 
 
+def test_crisis_message_detects_uppercase_turkish(monkeypatch):
+    async def should_not_run(*args, **kwargs):
+        raise AssertionError("Kriz mesajında model çağrılmamalı")
+
+    monkeypatch.setattr(intent_service, "generate_json", should_not_run)
+    response = asyncio.run(
+        intent_service.handle_chat(
+            ChatRequest(
+                messages=[
+                    ChatMessage(role="user", content="İNTİHAR etmeyi düşünüyorum.")
+                ]
+            )
+        )
+    )
+    assert response.crisis is True
+
+
 def test_math_question_redirects_to_user_intent(monkeypatch):
     async def should_not_run(*args, **kwargs):
         raise AssertionError("Açık kapsam dışı soruda model çağrılmamalı")

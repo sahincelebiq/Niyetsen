@@ -47,9 +47,21 @@ def pick_bonus(user_id: str, day: date) -> BonusDefinition:
     return BONUS_POOL[int.from_bytes(digest[:4], "big") % len(BONUS_POOL)]
 
 
+_COMPLETION_PHRASES = (
+    "yaptım",
+    "tamamladım",
+    "bonus görevi yaptım",
+)
+
+
 def is_completion_message(text: str) -> bool:
-    normalized = " ".join((text or "").casefold().split())
-    return normalized in {
-        "yaptım", "yaptim", "tamamladım", "tamamladim",
-        "bonus görevi yaptım", "bonus gorevi yaptim",
-    }
+    from app.core.prompts import normalize_tr
+
+    normalized = " ".join(normalize_tr(text).split())
+    ascii_form = normalized.replace("ı", "i")
+    accepted = set()
+    for phrase in _COMPLETION_PHRASES:
+        base = " ".join(normalize_tr(phrase).split())
+        accepted.add(base)
+        accepted.add(base.replace("ı", "i"))
+    return normalized in accepted or ascii_form in accepted

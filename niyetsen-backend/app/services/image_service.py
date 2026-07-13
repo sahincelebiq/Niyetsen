@@ -67,14 +67,35 @@ def _search(query: str) -> list[dict]:
         return []
     resp = httpx.get(
         _UNSPLASH_SEARCH,
-        params={
-            "query": query,
-            "per_page": 10,
-            "orientation": "landscape",
-            "order_by": "relevant",
-            "content_filter": "high",
-        },
-        headers={"Authorization": f"Client-ID {settings.UNSPLASH_ACCESS_KEY}"},
+        params=_search_params(query),
+        headers=_search_headers(),
+        timeout=10,
+    )
+    resp.raise_for_status()
+    return resp.json().get("results", [])
+
+
+def _search_params(query: str) -> dict:
+    return {
+        "query": query,
+        "per_page": 10,
+        "orientation": "landscape",
+        "order_by": "relevant",
+        "content_filter": "high",
+    }
+
+
+def _search_headers() -> dict:
+    return {"Authorization": f"Client-ID {settings.UNSPLASH_ACCESS_KEY}"}
+
+
+async def _search_async(client: httpx.AsyncClient, query: str) -> list[dict]:
+    if not settings.UNSPLASH_ACCESS_KEY:
+        return []
+    resp = await client.get(
+        _UNSPLASH_SEARCH,
+        params=_search_params(query),
+        headers=_search_headers(),
         timeout=10,
     )
     resp.raise_for_status()
@@ -85,6 +106,29 @@ def _pick_result(results: list[dict], keyword: str) -> dict:
     candidates = results[:5]
     digest = int(hashlib.sha256(keyword.encode()).hexdigest(), 16)
     return candidates[digest % len(candidates)]
+
+
+def _build_result(results: list[dict], used_query: str, source: str) -> ImageResult:
+    result = _pick_result(results, used_query)
+    base_url = result["urls"]["regular"]
+    separator = "&" if "?" in base_url else "?"
+    user = result.get("user") or {}
+    links = result.get("links") or {}
+    attribution_url = links.get("html", "")
+    if attribution_url:
+        joiner = "&" if "?" in attribution_url else "?"
+        attribution_url = (
+            f"{attribution_url}{joiner}utm_source=niyetsen&utm_medium=referral"
+        )
+    return ImageResult(
+        url=f"{base_url}{separator}w=800&h=600&fit=crop&q=82",
+        source=source,
+        attribution=(
+            f"Photo by {user.get('name')} on Unsplash"
+            if user.get("name") else "Photo on Unsplash"
+        ),
+        attribution_url=attribution_url,
+    )
 
 
 def get_image(keyword: str, *, categories: list[str] | None = None) -> ImageResult:
@@ -99,26 +143,35 @@ def get_image(keyword: str, *, categories: list[str] | None = None) -> ImageResu
             source = "category_fallback"
             used_query = fallback_query
         if results:
-            result = _pick_result(results, used_query)
-            base_url = result["urls"]["regular"]
-            separator = "&" if "?" in base_url else "?"
-            user = result.get("user") or {}
-            links = result.get("links") or {}
-            attribution_url = links.get("html", "")
-            if attribution_url:
-                joiner = "&" if "?" in attribution_url else "?"
-                attribution_url = (
-                    f"{attribution_url}{joiner}utm_source=niyetsen&utm_medium=referral"
-                )
-            return ImageResult(
-                url=f"{base_url}{separator}w=800&h=600&fit=crop&q=82",
-                source=source,
-                attribution=(
-                    f"Photo by {user.get('name')} on Unsplash"
-                    if user.get("name") else "Photo on Unsplash"
-                ),
-                attribution_url=attribution_url,
-            )
+            return _build_result(results, used_query, source)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Unsplash hatası (%s): %s — yer tutucuya düşülüyor", query, e)
+
+    return ImageResult(
+        url=_placeholder(query or fallback_query),
+        source="placeholder",
+    )
+
+
+async def get_image_async(
+    client: httpx.AsyncClient,
+    keyword: str,
+    *,
+    categories: list[str] | None = None,
+) -> ImageResult:
+    """Async sürüm: plan üretimi görselleri paralel çeker (event loop'u bloklamaz)."""
+    query = normalize_image_query(keyword)
+    fallback_query = category_fallback_query(categories)
+    try:
+        results = await _search_async(client, query) if query else []
+        source = "unsplash"
+        used_query = query
+        if not results and fallback_query != query:
+            results = await _search_async(client, fallback_query)
+            source = "category_fallback"
+            used_query = fallback_query
+        if results:
+            return _build_result(results, used_query, source)
     except Exception as e:  # noqa: BLE001
         log.warning("Unsplash hatası (%s): %s — yer tutucuya düşülüyor", query, e)
 

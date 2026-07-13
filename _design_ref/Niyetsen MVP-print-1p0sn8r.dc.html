@@ -1,0 +1,816 @@
+<!DOCTYPE html>
+<html>
+<head>
+<style data-omelette-print-defaults>
+@media print {
+  @page { margin: 0.5in; }
+  h1, h2, h3, h4, h5, h6 { break-after: avoid; }
+  figure, table, pre, blockquote, img, svg, tr, [class~="card" i] { break-inside: avoid; }
+  img, svg { max-width: 100%; }
+  p { orphans: 3; widows: 3; }
+}
+</style>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; }
+  button { font-family: inherit; -webkit-tap-highlight-color: transparent; }
+  input { font-family: inherit; }
+  input::placeholder { color: #B3A48F; }
+  a { color: #B4623C; text-decoration: none; }
+  a:hover { color: #9A4E2E; }
+  ::-webkit-scrollbar { width: 0; height: 0; }
+  @keyframes messageIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes typingDot { 0%, 60%, 100% { opacity: .25; transform: translateY(0); } 30% { opacity: 1; transform: translateY(-3px); } }
+</style>
+</helmet>
+
+<div style="min-height:100vh; width:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:20px; padding:44px 20px; background:radial-gradient(130% 120% at 28% 18%, #EDDDC8 0%, #E1CDB2 52%, #CDB597 100%); font-family:'Hanken Grotesk', system-ui, sans-serif;">
+
+  <div style="display:flex; align-items:baseline; gap:12px;">
+    <span style="font-family:'Newsreader', serif; font-size:26px; font-weight:500; letter-spacing:-.3px; color:#4A3B2C;">niyetsen</span>
+    <span style="font-size:11.5px; letter-spacing:2.5px; text-transform:uppercase; color:#8A755C;">niyetini yaşa</span>
+  </div>
+
+  <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" hint-size="402px,874px">
+
+    <div style="height:100%; display:flex; flex-direction:column; background:#F1E7D9; color:#2C241C; font-family:'Hanken Grotesk', system-ui, sans-serif; -webkit-font-smoothing:antialiased;">
+
+      <!-- ══════════════ SOHBET ══════════════ -->
+      <sc-if value="{{ isSohbet }}" hint-placeholder-val="{{ true }}">
+      <div style="flex:1 1 auto; min-height:0; display:flex; flex-direction:column;">
+        <div style="padding:60px 20px 14px; background:rgba(241,231,217,0.92); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); border-bottom:1px solid rgba(74,59,44,0.10); position:relative; z-index:5; display:flex; align-items:flex-end; justify-content:space-between;">
+          <div>
+            <div style="font-family:'Newsreader', serif; font-size:25px; font-weight:600; line-height:1; color:#2C241C;">Niyet Rehberi</div>
+            <div style="font-size:12.5px; color:#9C8B72; margin-top:5px;">Utandırmayan disiplin</div>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px; background:#EBD9C6; border:1px solid rgba(180,98,60,0.18); padding:6px 11px; border-radius:999px;">
+            <span style="width:7px; height:7px; border-radius:50%; background:#6E7856;"></span>
+            <span style="font-size:12.5px; font-weight:600; color:#6B5D4E;">{{ streak }} gün</span>
+          </div>
+        </div>
+
+        <div ref="{{ chatRef }}" style="flex:1; overflow-y:auto; padding:18px 16px 10px; display:flex; flex-direction:column; gap:11px;">
+          <sc-for list="{{ messages }}" as="m" hint-placeholder-count="2">
+            <sc-if value="{{ m.isUser }}">
+              <div style="align-self:flex-end; max-width:80%; background:#B4623C; color:#FCF4EA; border-radius:19px 19px 6px 19px; padding:11px 15px; font-size:14.5px; line-height:1.5; box-shadow:0 2px 8px rgba(154,78,46,0.18); animation:messageIn .32s ease both;">{{ m.text }}</div>
+            </sc-if>
+            <sc-if value="{{ m.isText }}">
+              <div style="align-self:flex-start; max-width:82%; background:#FBF6EF; color:#3A3126; border:1px solid rgba(74,59,44,0.09); border-radius:19px 19px 19px 6px; padding:11px 15px; font-size:14.5px; line-height:1.55; box-shadow:0 1px 4px rgba(74,59,44,0.05); animation:messageIn .32s ease both;">{{ m.text }}</div>
+            </sc-if>
+            <sc-if value="{{ m.isTask }}">
+              <div style="align-self:flex-start; max-width:90%; width:90%; background:#FFFDF8; border:1px solid rgba(180,98,60,0.22); border-radius:16px; padding:15px; box-shadow:0 4px 14px rgba(154,78,46,0.10); animation:messageIn .32s ease both;">
+                <div style="display:flex; align-items:center; justify-content:space-between;">
+                  <span style="font-size:11.5px; font-weight:600; letter-spacing:.3px; color:#56603F; background:#E5E8D4; padding:4px 10px; border-radius:999px;">{{ m.tCat }}</span>
+                  <span style="font-size:12px; font-weight:600; color:#9A4E2E; background:#F1DECF; padding:4px 10px; border-radius:999px;">{{ m.tPts }}</span>
+                </div>
+                <div style="font-family:'Newsreader', serif; font-size:17px; font-weight:600; color:#2C241C; margin-top:11px;">{{ m.tTitle }}</div>
+                <div style="font-size:13px; line-height:1.5; color:#8A7A66; margin-top:5px;">{{ m.tDesc }}</div>
+              </div>
+            </sc-if>
+          </sc-for>
+
+          <sc-if value="{{ typing }}">
+            <div style="align-self:flex-start; background:#FBF6EF; border:1px solid rgba(74,59,44,0.09); border-radius:19px 19px 19px 6px; padding:13px 16px; display:flex; gap:5px; align-items:center;">
+              <span style="width:6px; height:6px; border-radius:50%; background:#C3B29C; animation:typingDot 1s infinite;"></span>
+              <span style="width:6px; height:6px; border-radius:50%; background:#C3B29C; animation:typingDot 1s infinite .15s;"></span>
+              <span style="width:6px; height:6px; border-radius:50%; background:#C3B29C; animation:typingDot 1s infinite .3s;"></span>
+            </div>
+          </sc-if>
+        </div>
+
+        <sc-if value="{{ hasChips }}">
+          <div style="padding:2px 16px 8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <sc-for list="{{ chips }}" as="c" hint-placeholder-count="3">
+              <button onClick="{{ c.onClick }}" style="border:1px solid rgba(180,98,60,0.35); background:#F7EEE2; color:#9A4E2E; border-radius:999px; padding:8px 14px; font-size:13.5px; font-weight:500; cursor:pointer;" style-hover="background:#F1DECF;">{{ c.label }}</button>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <div style="padding:10px 14px 14px; border-top:1px solid rgba(74,59,44,0.10); background:#F1E7D9; display:flex; gap:10px; align-items:center;">
+          <input value="{{ input }}" onChange="{{ onInput }}" onKeyDown="{{ onKey }}" placeholder="Niyetini yaz…" style="flex:1; border:1px solid rgba(74,59,44,0.14); border-radius:22px; padding:11px 16px; font-size:15px; background:#FBF6EF; color:#2C241C; outline:none;" />
+          <button onClick="{{ send }}" style="width:44px; height:44px; flex-shrink:0; border-radius:50%; border:none; background:#B4623C; cursor:pointer; display:flex; align-items:center; justify-content:center; box-shadow:0 3px 10px rgba(154,78,46,0.28);">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#FCF4EA" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5"/><path d="M6 11l6-6 6 6"/></svg>
+          </button>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══════════════ PLAN ══════════════ -->
+      <sc-if value="{{ isPlan }}">
+      <div style="flex:1 1 auto; min-height:0; display:flex; flex-direction:column;">
+        <div style="padding:60px 20px 14px; background:rgba(241,231,217,0.92); backdrop-filter:blur(10px); border-bottom:1px solid rgba(74,59,44,0.10); position:relative; z-index:5; display:flex; align-items:flex-end; justify-content:space-between;">
+          <div>
+            <div style="font-family:'Newsreader', serif; font-size:25px; font-weight:600; line-height:1; color:#2C241C;">Bugün</div>
+            <div style="font-size:12.5px; color:#9C8B72; margin-top:5px;">Küçük adımlar, kırılmayan zincir</div>
+          </div>
+          <span style="font-size:12.5px; font-weight:600; color:#6B5D4E; background:#EBD9C6; padding:6px 11px; border-radius:999px;">{{ progressLabel }}</span>
+        </div>
+
+        <div style="flex:1; overflow-y:auto; padding:16px 16px 22px; display:flex; flex-direction:column; gap:12px;">
+          <sc-for list="{{ tasks }}" as="t" hint-placeholder-count="3">
+            <div style="background:#FBF6EF; border:1px solid rgba(74,59,44,0.09); border-radius:18px; padding:16px; box-shadow:0 2px 8px rgba(74,59,44,0.05);">
+              <div style="display:flex; align-items:center; justify-content:space-between;">
+                <span style="font-size:11.5px; font-weight:600; letter-spacing:.3px; color:#56603F; background:#E5E8D4; padding:4px 10px; border-radius:999px;">{{ t.cat }}</span>
+                <sc-if value="{{ t.notDone }}">
+                  <span style="font-size:12px; font-weight:600; color:#9A4E2E; background:#F1DECF; padding:4px 10px; border-radius:999px;">{{ t.ptsLabel }}</span>
+                </sc-if>
+                <sc-if value="{{ t.done }}">
+                  <span style="font-size:12px; font-weight:600; color:#56603F; background:#DCE2C8; padding:4px 10px; border-radius:999px;">✓ Tamamlandı</span>
+                </sc-if>
+              </div>
+              <div style="font-family:'Newsreader', serif; font-size:17px; font-weight:600; color:#2C241C; margin-top:11px;">{{ t.title }}</div>
+              <div style="font-size:13.5px; line-height:1.5; color:#8A7A66; margin-top:5px;">{{ t.desc }}</div>
+              <sc-if value="{{ t.notDone }}">
+                <div style="display:flex; gap:10px; margin-top:15px;">
+                  <button onClick="{{ t.onToggle }}" style="flex:1; border:none; background:#B4623C; color:#FCF4EA; border-radius:12px; padding:11px; font-size:14px; font-weight:600; cursor:pointer; box-shadow:0 3px 9px rgba(154,78,46,0.22);">Tamamla</button>
+                  <button style="border:1px solid rgba(74,59,44,0.16); background:transparent; color:#6B5D4E; border-radius:12px; padding:11px 15px; font-size:14px; font-weight:500; cursor:pointer;" style-hover="background:#F1DECF;">Kanıt ekle</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ t.done }}">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-top:14px; padding-top:13px; border-top:1px solid rgba(74,59,44,0.08);">
+                  <span style="font-size:13px; color:#8A7A66;">Zincire eklendi · {{ t.ptsLabel }} puan</span>
+                  <button onClick="{{ t.onToggle }}" style="border:none; background:none; color:#9A4E2E; font-size:13px; font-weight:600; cursor:pointer; padding:0;">Geri al</button>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══════════════ ZINCIR ══════════════ -->
+      <sc-if value="{{ isZincir }}">
+      <div style="flex:1 1 auto; min-height:0; display:flex; flex-direction:column;">
+        <div style="padding:60px 20px 14px; background:rgba(241,231,217,0.92); backdrop-filter:blur(10px); border-bottom:1px solid rgba(74,59,44,0.10); position:relative; z-index:5;">
+          <div style="font-family:'Newsreader', serif; font-size:25px; font-weight:600; line-height:1; color:#2C241C;">Zincir</div>
+          <div style="font-size:12.5px; color:#9C8B72; margin-top:5px;">Bıraktığın izler burada birikir</div>
+        </div>
+
+        <div style="flex:1; overflow-y:auto; padding:16px 16px 24px; display:flex; flex-direction:column; gap:14px;">
+
+          <div style="position:relative; overflow:hidden; background:#B4623C; border-radius:20px; padding:22px; color:#FCF4EA; box-shadow:0 8px 22px rgba(154,78,46,0.24);">
+            <div style="position:absolute; top:-40px; right:-30px; width:150px; height:150px; border-radius:50%; background:radial-gradient(circle, rgba(255,240,220,0.22), transparent 70%);"></div>
+            <div style="position:relative;">
+              <div style="font-size:12.5px; letter-spacing:1.5px; text-transform:uppercase; opacity:.8;">Güncel zincir</div>
+              <div style="display:flex; align-items:baseline; gap:8px; margin-top:6px;">
+                <span style="font-family:'Newsreader', serif; font-size:62px; font-weight:500; line-height:.9;">{{ streak }}</span>
+                <span style="font-family:'Newsreader', serif; font-size:22px; font-weight:400; opacity:.85;">gün</span>
+              </div>
+              <div style="font-size:13.5px; opacity:.85; margin-top:8px; line-height:1.5;">Bugünkü görevlerini de bitirirsen zincir uzamaya devam eder.</div>
+            </div>
+          </div>
+
+          <div style="background:#FBF6EF; border:1px solid rgba(74,59,44,0.09); border-radius:18px; padding:16px;">
+            <div style="font-size:13px; font-weight:600; color:#6B5D4E; margin-bottom:13px;">Bu hafta</div>
+            <div style="display:flex; justify-content:space-between;">
+              <sc-for list="{{ week }}" as="w" hint-placeholder-count="7">
+                <div style="display:flex; flex-direction:column; align-items:center; gap:8px;">
+                  <span style="font-size:11px; color:#9C8B72;">{{ w.d }}</span>
+                  <sc-if value="{{ w.on }}">
+                    <span style="width:15px; height:15px; border-radius:50%; background:#6E7856;"></span>
+                  </sc-if>
+                  <sc-if value="{{ w.off }}">
+                    <span style="width:15px; height:15px; border-radius:50%; border:1.5px solid rgba(74,59,44,0.18); background:transparent;"></span>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="background:#FBF6EF; border:1px solid rgba(74,59,44,0.09); border-radius:18px; padding:16px;">
+            <div style="font-size:13px; font-weight:600; color:#6B5D4E; margin-bottom:15px;">Gelişim alanların</div>
+            <div style="display:flex; flex-direction:column; gap:15px;">
+              <sc-for list="{{ cats }}" as="c" hint-placeholder-count="6">
+                <div>
+                  <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:7px;">
+                    <span style="font-size:14.5px; color:#2C241C;">{{ c.name }}</span>
+                    <span style="font-size:11.5px; font-weight:600; color:#56603F; background:#E5E8D4; padding:2px 9px; border-radius:999px;">{{ c.levelLabel }}</span>
+                  </div>
+                  <div style="height:7px; border-radius:999px; background:#E7DCCB; overflow:hidden;">
+                    <div style="height:100%; width:{{ c.pctStr }}; border-radius:999px; background:#B4623C;"></div>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:space-between; background:#FBF6EF; border:1px solid rgba(74,59,44,0.09); border-radius:18px; padding:16px 18px;">
+            <span style="font-size:14.5px; color:#6B5D4E;">Toplam puan</span>
+            <span style="font-family:'Newsreader', serif; font-size:26px; font-weight:600; color:#B4623C;">1.240</span>
+          </div>
+
+        </div>
+      </div>
+      </sc-if>
+
+      <!-- ══════════════ TAB BAR ══════════════ -->
+      <div style="display:flex; border-top:1px solid rgba(74,59,44,0.10); background:rgba(241,231,217,0.97); backdrop-filter:blur(12px); -webkit-backdrop-filter:blur(12px); padding:10px 0 26px;">
+        <button onClick="{{ goSohbet }}" style="flex:1; background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; color:{{ cSohbet }};">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a7.5 7.5 0 0 1-10.8 6.7L4 20l1.3-4.1A7.5 7.5 0 1 1 20 12z"/></svg>
+          <span style="font-size:11px; font-weight:600;">Sohbet</span>
+        </button>
+        <button onClick="{{ goPlan }}" style="flex:1; background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; color:{{ cPlan }};">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="4.5"/><path d="M8.5 12.2l2.4 2.4 4.6-5"/></svg>
+          <span style="font-size:11px; font-weight:600;">Plan</span>
+        </button>
+        <button onClick="{{ goZincir }}" style="flex:1; background:none; border:none; cursor:pointer; display:flex; flex-direction:column; align-items:center; gap:4px; color:{{ cZincir }};">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="8.5" width="12" height="7" rx="3.5"/><rect x="9.5" y="8.5" width="12" height="7" rx="3.5"/></svg>
+          <span style="font-size:11px; font-weight:600;">Zincir</span>
+        </button>
+      </div>
+
+    </div>
+
+  </x-import>
+
+  <span style="font-size:12px; letter-spacing:1px; color:#8A755C;">Niyetsen · MVP</span>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;: {&quot;width&quot;: 860, &quot;height&quot;: 980}, &quot;startScreen&quot;: {&quot;editor&quot;: &quot;enum&quot;, &quot;options&quot;: [&quot;Sohbet&quot;, &quot;Plan&quot;, &quot;Zincir&quot;], &quot;default&quot;: &quot;Sohbet&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;section&quot;: &quot;Uygulama&quot;}, &quot;streakDays&quot;: {&quot;editor&quot;: &quot;int&quot;, &quot;default&quot;: 12, &quot;min&quot;: 0, &quot;max&quot;: 365, &quot;unit&quot;: &quot;gün&quot;, &quot;tsType&quot;: &quot;number&quot;, &quot;section&quot;: &quot;Uygulama&quot;}}">
+class Component extends DCLogic {
+  chatRef = React.createRef();
+  _uid = 100;
+
+  state = {
+    tab: (this.props.startScreen ? this.props.startScreen.toLowerCase() : 'sohbet'),
+    input: '',
+    typing: false,
+    step: 0,
+    messages: [
+      { id: 1, role: 'assistant', text: 'Günaydın. Zincirini dün de kırmadın — güzel gidiyor. Bugün için küçük bir niyet seçelim mi?' },
+    ],
+    chips: ['Birini arayacağım', 'Erken yatacağım', 'Kitap okuyacağım'],
+    tasks: [
+      { id: 't1', cat: 'Sosyallik', title: 'Annemi ara', desc: '5 dakika, sadece hâl hatır sormak için.', pts: 50, done: false },
+      { id: 't2', cat: 'Disiplin', title: '22:00’de telefonu bırak', desc: 'Yatmadan önce 30 dakika ekransız kal.', pts: 40, done: false },
+      { id: 't3', cat: 'İrade', title: 'Sabah 2 bardak su', desc: 'Kahveden önce, gün açılışında.', pts: 30, done: true },
+    ],
+    cats: [
+      { name: 'İrade', lvl: 3, pct: 62 },
+      { name: 'İstikrar', lvl: 2, pct: 45 },
+      { name: 'Disiplin', lvl: 4, pct: 78 },
+      { name: 'Özgüven', lvl: 2, pct: 34 },
+      { name: 'Sosyallik', lvl: 3, pct: 55 },
+      { name: 'Özsaygı', lvl: 3, pct: 50 },
+    ],
+    week: [
+      { d: 'Pzt', on: true }, { d: 'Sal', on: true }, { d: 'Çar', on: true },
+      { d: 'Per', on: true }, { d: 'Cum', on: true }, { d: 'Cmt', on: false }, { d: 'Paz', on: false },
+    ],
+  };
+
+  push(msgs) {
+    this.setState(s => ({ messages: s.messages.concat(msgs.map(m => ({ id: ++this._uid, ...m }))) }));
+  }
+
+  send(textArg) {
+    const text = (textArg != null ? textArg : this.state.input).trim();
+    if (!text || this.state.typing) return;
+    this.push([{ role: 'user', text }]);
+    this.setState({ input: '', chips: [], typing: true });
+    const step = this.state.step;
+    setTimeout(() => this.reply(step, text), 800);
+  }
+
+  reply(step, text) {
+    let msgs = [], chips = [];
+    if (step === 0) {
+      msgs = [{ role: 'assistant', text: 'Güzel bir niyet. Bunu Sosyallik zincirine bağladım. Kimi arayacaksın — bir isim yeter.' }];
+      chips = ['Annem', 'Kardeşim', 'Eski bir dost'];
+    } else if (step === 1) {
+      const name = text;
+      const task = { id: 'u' + (++this._uid), cat: 'Sosyallik', title: name + ' ile 5 dk konuş', desc: 'Mesaj değil — sesini duyur. Niyetin: bağı canlı tutmak.', pts: 50, done: false };
+      msgs = [
+        { role: 'assistant', text: 'Not ettim. Bugünün görevi hazır:' },
+        { role: 'assistant', type: 'task', task },
+        { role: 'assistant', text: 'Bittiğinde küçük bir kanıt bırak — bir not ya da fotoğraf. Kimseye göstermek zorunda değilsin. Zorlanırsan “bugün olmadı” de; zincir kırılmaz.' },
+      ];
+      chips = ['Planı aç', 'Teşekkürler'];
+      this.setState(s => ({ tasks: [task, ...s.tasks] }));
+    } else {
+      const generics = [
+        'Kaydettim. Küçük ve sürdürülebilir tut — acelesi yok.',
+        'Güzel. Yarın tam buradan devam ederiz.',
+        'Not aldım. Plan sekmesinden bugünkü görevlerini görebilirsin.',
+      ];
+      msgs = [{ role: 'assistant', text: generics[(step - 2) % generics.length] }];
+      chips = [];
+    }
+    this.push(msgs);
+    this.setState(s => ({ typing: false, step: s.step + 1, chips }));
+  }
+
+  toggle(id) {
+    this.setState(s => ({ tasks: s.tasks.map(t => t.id === id ? { ...t, done: !t.done } : t) }));
+  }
+
+  componentDidMount() {
+    const el = this.chatRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }
+  componentDidUpdate() {
+    const el = this.chatRef.current;
+    if (el && this.state.tab === 'sohbet') el.scrollTop = el.scrollHeight;
+  }
+
+  renderVals() {
+    const { tab } = this.state;
+    const clay = '#B4623C';
+    const mutC = '#A28F76';
+    const streak = this.props.streakDays ?? 12;
+
+    const messages = this.state.messages.map(m => ({
+      ...m,
+      isUser: m.role === 'user',
+      isText: m.role === 'assistant' && m.type !== 'task',
+      isTask: m.type === 'task',
+      tCat: m.task && m.task.cat,
+      tTitle: m.task && m.task.title,
+      tDesc: m.task && m.task.desc,
+      tPts: m.task ? '+' + m.task.pts + ' puan' : '',
+    }));
+
+    const chips = this.state.chips.map(c => ({
+      label: c,
+      onClick: c === 'Planı aç' ? () => this.setState({ tab: 'plan' }) : () => this.send(c),
+    }));
+
+    const tasks = this.state.tasks.map(t => ({
+      ...t,
+      ptsLabel: '+' + t.pts,
+      notDone: !t.done,
+      onToggle: () => this.toggle(t.id),
+    }));
+
+    const cats = this.state.cats.map(c => ({
+      ...c,
+      pctStr: c.pct + '%',
+      levelLabel: 'Sv. ' + c.lvl,
+    }));
+
+    const week = this.state.week.map(w => ({ ...w, off: !w.on }));
+
+    const doneCount = this.state.tasks.filter(t => t.done).length;
+    const totalTasks = this.state.tasks.length;
+
+    return {
+      isSohbet: tab === 'sohbet', isPlan: tab === 'plan', isZincir: tab === 'zincir',
+      cSohbet: tab === 'sohbet' ? clay : mutC,
+      cPlan: tab === 'plan' ? clay : mutC,
+      cZincir: tab === 'zincir' ? clay : mutC,
+      goSohbet: () => this.setState({ tab: 'sohbet' }),
+      goPlan: () => this.setState({ tab: 'plan' }),
+      goZincir: () => this.setState({ tab: 'zincir' }),
+      messages, chips, tasks, cats, week,
+      typing: this.state.typing,
+      hasChips: chips.length > 0,
+      input: this.state.input,
+      onInput: e => this.setState({ input: e.target.value }),
+      onKey: e => { if (e.key === 'Enter') { e.preventDefault(); this.send(); } },
+      chatRef: this.chatRef,
+      send: () => this.send(),
+      streak,
+      progressLabel: doneCount + '/' + totalTasks + ' tamamlandı',
+    };
+  }
+}
+</script>
+<script>
+(async () => {
+  if (!document.title || !document.title.trim()) document.title = "Niyetsen MVP";
+  // Prepend so page-supplied @page / break rules (deck-stage's margin:0,
+  // author CSS) keep source-order precedence over the baseline.
+  const baseCss = document.createElement('style');
+  baseCss.textContent = "@media print {\n  figure, table { break-inside: avoid; }\n  *, *::before, *::after {\n    print-color-adjust: exact; -webkit-print-color-adjust: exact;\n    backdrop-filter: none !important; -webkit-backdrop-filter: none !important;\n    animation-delay: -99s !important; animation-duration: .001s !important;\n    animation-iteration-count: 1 !important; animation-fill-mode: both !important;\n    animation-play-state: running !important; transition-duration: 0s !important;\n  }\n}";
+  document.head.prepend(baseCss);
+  if (document.readyState === 'loading') {
+    await new Promise((r) => document.addEventListener('DOMContentLoaded', r, { once: true }));
+  }
+  let ds = document.querySelector('deck-stage');
+  // whenDefined never resolves when nothing registers the element, so only
+  // await it when a <deck-stage> tag exists (and race a timeout regardless).
+  if (ds && !customElements.get('deck-stage')) {
+    try {
+      await Promise.race([
+        customElements.whenDefined('deck-stage'),
+        new Promise((r) => setTimeout(r, 3000)),
+      ]);
+    } catch (e) {}
+    ds = document.querySelector('deck-stage');
+  }
+  // dc-runtime assigns window.DCLogic at init and mounts into #dc-root on
+  // DOMContentLoaded; settle on that subtree so React has rendered before
+  // print(). Non-DC pages fall through to weighing body.
+  const isDc = !ds && 'DCLogic' in window;
+  const settleRoot = ds || (isDc ? document.getElementById('dc-root') : null) || document.body;
+  if (settleRoot) {
+    // Weigh only content children — skip script/style/template so inline
+    // Babel/CSS doesn't register as stable "content" before the framework
+    // has mounted anything.
+    const MEDIA = 'img,svg,canvas,video,picture,iframe,embed,object';
+    const weigh = () => {
+      let text = 0, media = 0;
+      for (const c of settleRoot.children) {
+        const t = c.tagName;
+        if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+        text += (c.textContent || '').trim().length;
+        media += c.querySelectorAll(MEDIA).length + (c.matches(MEDIA) ? 1 : 0);
+      }
+      return text + media * 100;
+    };
+    // "Non-zero and stable" alone is not sufficient to mean rendered: generic
+    // body can carry a static shell while async main content is pending, and
+    // #dc-root can carry the root DC's static text while child refs are still
+    // .sc-placeholder boxes. Gate generic on readyState 'complete', and never
+    // accept stability while a dc-runtime placeholder is present.
+    const isGeneric = settleRoot === document.body;
+    const deadline = Date.now() + 15000;
+    let last = -1, stable = 0;
+    while (Date.now() < deadline) {
+      const n = weigh();
+      const ready =
+        (!isGeneric || document.readyState === 'complete') &&
+        !settleRoot.querySelector('.sc-placeholder');
+      if (n > 0 && n === last && ready) { if (++stable >= 2) break; } else { stable = 0; }
+      last = n;
+      await new Promise((r) => setTimeout(r, 250));
+    }
+  }
+  // Project support.js may predate runtime default-seeding; push via bridge.
+  if (isDc && window.__dcSetProps && window.__dcRootName) {
+    try {
+      const dpEl = document.querySelector('script[data-dc-script]');
+      const meta = JSON.parse((dpEl && dpEl.getAttribute('data-props')) || '{}');
+      const bag = {};
+      for (const k in meta)
+        if (k[0] !== '$' && meta[k] && meta[k].default !== undefined)
+          bag[k] = meta[k].default;
+      if (Object.keys(bag).length) {
+        window.__dcSetProps(window.__dcRootName(), bag);
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    } catch (e) {}
+  }
+  // Reveal content gated on scroll or visibility before printing. Lazy <img>,
+  // IntersectionObserver fade-ins, and collapsed <details> don't render while
+  // off-screen, so a long page would print with them blank or closed. Open
+  // every <details>, force native-lazy images eager, and scroll the document
+  // through its full height to trip lazy-load + IO; then wait (bounded) for the
+  // newly-triggered images. Inert for deck-stage (slides aren't scroll-gated).
+  try {
+    for (const d of document.querySelectorAll('details')) d.open = true;
+    for (const img of document.querySelectorAll('img[loading="lazy"]'))
+      img.loading = 'eager';
+    const scroller = document.scrollingElement || document.documentElement;
+    const full = Math.max(scroller.scrollHeight, document.body.scrollHeight);
+    const step = window.innerHeight || 800;
+    for (let y = 0; y <= full; y += step) {
+      window.scrollTo(0, y);
+      await new Promise((r) => requestAnimationFrame(r));
+    }
+    window.scrollTo(0, 0);
+    await Promise.race([
+      Promise.all(
+        [...document.images].map((img) =>
+          img.complete
+            ? null
+            : new Promise((res) => {
+                img.addEventListener('load', res, { once: true });
+                img.addEventListener('error', res, { once: true });
+              })
+        )
+      ),
+      new Promise((r) => setTimeout(r, 4000)),
+    ]);
+  } catch (e) {}
+  try { await document.fonts.ready; } catch (e) {}
+  // Jump every animation to its end state so print() never captures a slide
+  // mid-entrance. Ordering matters: the 0s-transition style must be live
+  // BEFORE data-deck-active is set so attribute-keyed transitions don't
+  // start a (now-0s) run from the pre-active base.
+  const st = document.createElement('style');
+  st.textContent = '*,*::before,*::after{animation-delay:-99s !important;animation-duration:.001s !important;animation-iteration-count:1 !important;animation-fill-mode:both !important;animation-play-state:running !important;transition-duration:0s !important}';
+  document.head.appendChild(st);
+  for (const d of document.querySelectorAll('deck-stage')) {
+    for (const c of d.children) {
+      const t = c.tagName;
+      if (t === 'SCRIPT' || t === 'STYLE' || t === 'TEMPLATE') continue;
+      c.setAttribute('data-deck-active', '');
+    }
+  }
+  // Re-append deck-stage's @page last so no author @page can add a margin and
+  // spill each full-bleed slide onto two sheets. Backstop for old copies.
+  if (ds) {
+    let pg = document.getElementById('deck-stage-print-page');
+    if (!pg) {
+      pg = document.createElement('style');
+      pg.textContent = '@page{size:' + (+ds.getAttribute('width') || 1920) +
+        'px ' + (+ds.getAttribute('height') || 1080) + 'px;margin:0}';
+    }
+    document.body.appendChild(pg);
+  }
+  try {
+    const sweep = () => {
+      for (const a of document.getAnimations()) {
+        try { a.finish(); } catch (e) {
+          try { a.currentTime = (a.effect && a.effect.getComputedTiming().duration) || 0; a.pause(); } catch (e2) {}
+        }
+      }
+    };
+    sweep();
+    await new Promise((r) => requestAnimationFrame(r));
+    sweep();
+    await new Promise((r) => requestAnimationFrame(r));
+  } catch (e) {}
+  // A document that owns its print CSS (the doc-page starter injects the
+  // meta at runtime; hand-rolled print designs author it) gets no automatic
+  // page geometry and keeps its forced breaks: strip the injected default
+  // @page — write time cannot see a runtime-injected meta — skip the frame
+  // override below, and skip the fakepage-flattening further down. What
+  // still applies: the print baseline and break-hygiene defaults (no @page
+  // in either; low specificity, so the document's own print CSS wins) and
+  // the break-inside relaxation on >page elements (avoid on those cannot
+  // be honored whoever authored it).
+  var ownsPrint = !!document.querySelector('meta[name="omelette-owns-print" i]');
+  if (ownsPrint) {
+    var dst = document.querySelector('style[data-omelette-print-defaults]');
+    if (dst && dst.textContent) {
+      dst.textContent = dst.textContent.replace(/@page\b[^{}]*\{[^}]*\}/, '');
+    }
+  }
+  // Size the PDF page to the rendered design unless the file opted into
+  // standard paper via @page{size:letter|A4|…} or declared print ownership
+  // via the meta above. Decks own their own @page.
+  // Wrappers (body, …) lose padding+margin so the frame sits at (0,0); the
+  // frame itself loses only margin — its padding is INSIDE the measured
+  // rect and must stay, or content shifts and leaves a gap at bottom/right.
+  var __m = null;
+  try { __m = (() => {
+  var STAMP = true;
+  var docEl = document.documentElement;
+  var doc = { width: docEl.scrollWidth, height: docEl.scrollHeight };
+  // Name-presence check, case-insensitive — the same contract as the
+  // instant-PDF path's runtime check in deck-stage-export.ts. The name is
+  // a string literal here because that file interpolates this script into
+  // its print script, so importing a shared constant from it would be a
+  // cycle; measure.test.ts pins the literal so the two cannot drift apart
+  // silently.
+  var ownsPrint = !!document.querySelector('meta[name="omelette-owns-print" i]');
+
+  var ds = document.querySelector('deck-stage');
+  if (ds) {
+    var dw = Number(ds.getAttribute('width')) || 1920;
+    var dh = Number(ds.getAttribute('height')) || 1080;
+    var n = typeof ds.length === 'number' ? ds.length : ds.children.length;
+    var idx = typeof ds.index === 'number' ? ds.index : 0;
+    var frames = [];
+    for (var i = 0; i < n; i++) frames.push({ left: 0, top: 0, width: dw, height: dh });
+    return { kind: 'deck', source: 'declared', doc: doc, frames: frames,
+      authored: frames.map(function(){return{width:true,height:true}}),
+      deck: { width: dw, height: dh, slideCount: n, index: idx },
+      signals: { paperPage: false, pxPage: false, ownsPrint: ownsPrint } };
+  }
+
+  // Declared kind: a doc-page tag names the kind outright, so no signal
+  // heuristics run (like the deck branch above, signals report false —
+  // they describe inferred classifications only). The tag alone is not
+  // trusted: the element must have upgraded (shadowRoot present), so a
+  // leftover tag whose script was deleted falls through to the heuristics
+  // that handle plain markup.
+  var stageSx = window.scrollX || 0, stageSy = window.scrollY || 0;
+  var dp = document.querySelector('doc-page');
+  if (dp && dp.shadowRoot) {
+    // Crop to the sheet, not the host — the desk around it is screen-only
+    // chrome that must not land in PNG exports.
+    var sheet = dp.shadowRoot.querySelector('.sheet');
+    var sr = (sheet || dp).getBoundingClientRect();
+    return { kind: 'paper-doc', source: 'declared', doc: doc,
+      frames: [{ left: sr.left + stageSx, top: sr.top + stageSy,
+        width: sr.width, height: sr.height }],
+      authored: [{ width: false, height: false }],
+      signals: { paperPage: false, pxPage: false, ownsPrint: ownsPrint } };
+  }
+  var paperPage = false, pxPage = false;
+  var eachRule = function (fn) {
+    for (var s = 0; s < document.styleSheets.length; s++) {
+      var rs; try { rs = document.styleSheets[s].cssRules; } catch (e) { continue; }
+      for (var r = 0; r < rs.length; r++) {
+        fn(rs[r]);
+        if (rs[r].cssRules) for (var n = 0; n < rs[r].cssRules.length; n++) fn(rs[r].cssRules[n]);
+      }
+    }
+  };
+  eachRule(function (r) {
+    if (r.type !== 6) return;
+    var m = /\bsize\s*:\s*([^;}]+)/i.exec(r.cssText || '');
+    if (!m) return;
+    if (/\b(letter|a[3-5]|legal|ledger)\b/i.test(m[1])) paperPage = true;
+    if (/\d+(?:\.\d+)?px\b/i.test(m[1])) pxPage = true;
+  });
+  var signals = { paperPage: paperPage, pxPage: pxPage, ownsPrint: ownsPrint };
+
+  var pxVal = function (v) {
+    var m = /^(\d+(?:\.\d+)?)px$/.exec(v || ''); return m ? +m[1] : 0;
+  };
+  var authoredPx = function (el, prop) {
+    if (pxVal(el.style[prop])) return true;
+    var attr = el.getAttribute(prop);
+    if (attr && /^\d+$/.test(attr)) return true;
+    var hit = false;
+    eachRule(function (r) {
+      if (hit || r.type !== 1 || !r.style) return;
+      try { if (el.matches(r.selectorText) && pxVal(r.style[prop])) hit = true; } catch (e) {}
+    });
+    return hit;
+  };
+
+  var el = document.body, rootPxW = false;
+  for (;;) {
+    var kids = [];
+    for (var c = 0; c < el.children.length; c++) {
+      var t = el.children[c].tagName;
+      if (t !== 'SCRIPT' && t !== 'STYLE' && t !== 'TEMPLATE') kids.push(el.children[c]);
+    }
+    if (kids.length !== 1 || !(kids[0] instanceof HTMLElement)) break;
+    if (STAMP) el.setAttribute('data-om-frame-wrap', '');
+    el = kids[0];
+    rootPxW = authoredPx(el, 'width');
+    if (rootPxW) break;
+  }
+  if (!rootPxW) rootPxW = authoredPx(el, 'width');
+
+  // @page{size:letter} alone is a flowing doc; with a px-width root it's a
+  // fixed sheet pretending to be paper — fall through and size to render.
+  if (paperPage && !rootPxW) {
+    return { kind: 'paper-doc', source: 'inferred', doc: doc, signals: signals,
+      frames: [{ left: 0, top: 0, width: doc.width, height: doc.height }],
+      authored: [{ width: false, height: false }] };
+  }
+
+  var sx = window.scrollX || 0, sy = window.scrollY || 0;
+  var rectOf = function (e) {
+    var r = e.getBoundingClientRect();
+    var oy; try { oy = getComputedStyle(e).overflowY; } catch (err) {}
+    var h = oy === 'visible' ? Math.max(r.height, e.scrollHeight || 0) : r.height;
+    return { left: r.left + sx, top: r.top + sy, width: r.width, height: h };
+  };
+
+  // Multi-frame: off unless the page opts in via data-om-multi-frame on the
+  // stop element — the explicit opt-in is what guards against card grids
+  // and pricing tables that match the geometry but aren't separate
+  // canvases. Two ways to name the frames, explicit first:
+  // 1. Descendants marked data-om-frame-export (the social-frames starter
+  //    marks each asset frame; shells/panels around them are presentation,
+  //    so nesting is expected). Document order.
+  // 2. Fallback, no marked descendants: direct children with an authored px
+  //    width AND height (the original geometry heuristic).
+  // Frames may be different sizes (a gallery mixes 1080×1920 stories with
+  // 728×90 banners); data-om-frame-label rides along for export filenames.
+  if (el.hasAttribute('data-om-multi-frame')) {
+    var visOk = function (e) {
+      var cs; try { cs = getComputedStyle(e); } catch (err) { return false; }
+      return cs.display !== 'none' && cs.visibility !== 'hidden' && cs.position !== 'fixed';
+    };
+    // A frame's crop is its VISUAL box — never the scrollHeight-inflated
+    // rect that rectOf computes for page roots. Shadow-DOM hover controls
+    // (image-slot's Replace bar parks 29px below its host) and similar
+    // escaping UI contribute scrollable overflow to the frame, and the
+    // inflated height both squashes the nominal-size resize and drags
+    // content below the frame into the crop. Zoom-independent; bit every
+    // slot-bearing frame.
+    var frameRectOf = function (e) {
+      var r = e.getBoundingClientRect();
+      return { left: r.left + sx, top: r.top + sy, width: r.width, height: r.height };
+    };
+    var pushCand = function (list, e) {
+      if (!visOk(e)) return;
+      var rc = frameRectOf(e);
+      if (rc.width < 2 || rc.height < 2) return;
+      var lbl = e.getAttribute('data-om-frame-label');
+      if (lbl) rc.label = lbl;
+      list.push(rc);
+    };
+    var cands = [];
+    var marked = el.querySelectorAll('[data-om-frame-export]');
+    if (marked.length) {
+      for (var mk = 0; mk < marked.length; mk++) pushCand(cands, marked[mk]);
+    } else {
+      for (var k = 0; k < el.children.length; k++) {
+        var ch = el.children[k];
+        if (!authoredPx(ch, 'width') || !authoredPx(ch, 'height')) continue;
+        pushCand(cands, ch);
+      }
+    }
+    if (cands.length >= 2) {
+      return { kind: 'multi-frame', source: 'inferred', doc: doc, signals: signals,
+        frames: cands, authored: cands.map(function(){return{width:true,height:true}}) };
+    }
+  }
+
+  if (STAMP) el.setAttribute('data-om-frame', '');
+  return { kind: 'single-canvas', source: 'inferred', doc: doc, signals: signals,
+    frames: [rectOf(el)],
+    authored: [{ width: rootPxW, height: authoredPx(el, 'height') }] };
+})(); } catch (e) {}
+  var frame = null;
+  if (!ownsPrint && __m && __m.kind === 'single-canvas') {
+    var f = __m.frames && __m.frames[0];
+    if (f && f.width >= 200 && f.height >= 200) {
+      frame = f;
+      var fst = document.createElement('style');
+      fst.textContent = '@media print{@page{size:' + Math.ceil(f.width) + 'px ' +
+        Math.ceil(f.height) + 'px;margin:0}' +
+        'html,body,[data-om-frame-wrap]{padding:0!important;margin:0!important;background:none!important}' +
+        '[data-om-frame]{margin:0!important}}';
+      document.body.appendChild(fst);
+    }
+  }
+  // Relax break-inside on oversized elements. An element taller than a
+  // printable page can't honor break-inside: avoid — browsers either overflow
+  // it or push it whole to the next page, leaving a blank gap, then break it
+  // anyway at an arbitrary point. After the final layout (content revealed,
+  // animations jumped), find elements taller than a page that still compute
+  // break-inside: avoid and reset them to auto, so the browser breaks them at
+  // their children's boundaries instead (children keep their own avoid). PAGE_PX
+  // is a conservative portrait estimate at 96 CSS px/in — Letter/A4 usable
+  // height minus our 0.5in margins — so only clearly-oversized elements are
+  // touched and under-page elements still stay whole. Skipped for decks (slides
+  // are sized to the page) and for fixed-size canvases (frame set, or an author
+  // px-based @page) — runs as before for flowing docs on letter/A4.
+  try {
+    if (!ds && !frame && !(__m && __m.signals && __m.signals.pxPage)) {
+      const PAGE_PX = 1024;
+      // Our print defaults add a real @page margin only when the source has
+      // no @page of its own; computed style can't tell us (it reports screen
+      // media), so read the injected rule directly.
+      const defaults = document.querySelector('style[data-omelette-print-defaults]');
+      const pageInset = /@page\s*\{[^}]*margin/.test(defaults ? defaults.textContent || '' : '');
+      const SEL = 'section,article,figure,table,pre,blockquote,[class~="card" i],[class~="page" i],[class~="sheet" i]';
+      for (const el of document.body.querySelectorAll(SEL)) {
+        if (el instanceof HTMLElement && el.offsetHeight > PAGE_PX) {
+          el.setAttribute('data-om-oversized', '');
+          // Fake-paged docs simulate sheets with over-tall break-after:page
+          // boxes; honoring the break spills half-blank pages and ends a
+          // colored box mid-sheet. Flow them, and (only when we own the page
+          // inset) drop the redundant padding/background via the rule below.
+          const cs = getComputedStyle(el);
+          // An owns-print doc's forced breaks are intentional sheet
+          // boundaries, never fake-paged simulation — don't strip them.
+          // The break-inside relaxation above still applies: avoid on a
+          // >page element is impossible to honor whoever authored it.
+          if (
+            !ownsPrint &&
+            (cs.breakAfter === 'page' || cs.pageBreakAfter === 'always')
+          ) {
+            el.setAttribute('data-om-fakepage', '');
+          }
+        }
+      }
+      const ost = document.createElement('style');
+      ost.textContent = '@media print{' +
+        '[data-om-oversized]{break-inside:auto !important;page-break-inside:auto !important}' +
+        '[data-om-fakepage]{break-after:auto !important;page-break-after:auto !important}' +
+        (pageInset ? '[data-om-fakepage]{padding:0 !important;background:none !important}' : '') +
+        '}';
+      document.head.appendChild(ost);
+    }
+  } catch (e) {}
+  // macOS Preview renders Skia-PDF Luminosity soft-masks as opaque grey boxes;
+  // swap the CSS that triggers them for Preview-safe forms.
+  try {
+    for (const el of document.body.querySelectorAll('*')) {
+      const cs = getComputedStyle(el);
+
+      if (cs.boxShadow !== 'none' && cs.filter === 'none') {
+        const outs = [], kept = [];
+        for (const s of cs.boxShadow.split(/,(?![^(]*[)])/)) {
+          const t = s.trim();
+          const m = t.match(/^(rgba?[(][^)]+[)]) (-?[0-9.]+px) (-?[0-9.]+px) ([0-9.]+px) -?[0-9.]+px$/);
+          if (m && parseFloat(m[4]) > 0) outs.push('drop-shadow(' + m[2] + ' ' + m[3] + ' ' + m[4] + ' ' + m[1] + ')');
+          else kept.push(t);
+        }
+        if (outs.length) {
+          el.style.setProperty('filter', outs.join(' '), 'important');
+          el.style.setProperty('box-shadow', kept.join(', ') || 'none', 'important');
+        }
+      }
+
+      const mask = cs.maskImage && cs.maskImage !== 'none' ? cs.maskImage : cs.webkitMaskImage;
+      if (mask && mask !== 'none' && cs.filter === 'none') el.style.setProperty('filter', 'opacity(1)', 'important');
+    }
+  } catch (e) {}
+  setTimeout(() => { try { window.print(); } catch (e) {} }, 200);
+})();
+</script>
+</body>
+</html>

@@ -29,8 +29,8 @@ CHAT_HISTORY_LIMIT = 24
 
 
 def _wants_replan(message: str) -> bool:
-    normalized = message.casefold()
-    return any(marker in normalized for marker in REPLAN_MARKERS)
+    normalized = prompts.normalize_tr(message)
+    return any(prompts.normalize_tr(marker) in normalized for marker in REPLAN_MARKERS)
 
 
 def _use_intent_mode(has_active_plan: bool, plan_has_content: bool, message: str) -> bool:
@@ -97,8 +97,11 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
         )
 
     tool_calls: list[ToolCall] = []
-    normalized_message = last_user_msg.casefold()
-    if any(marker in normalized_message for marker in TOOL_INTENT_MARKERS):
+    normalized_message = prompts.normalize_tr(last_user_msg)
+    if any(
+        prompts.normalize_tr(marker) in normalized_message
+        for marker in TOOL_INTENT_MARKERS
+    ):
         try:
             raw_calls = await generate_function_calls(
                 last_user_msg,

@@ -105,12 +105,20 @@ Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerl
 - Ruh sağlığı: chat guardrail'ine ek olarak backend'de kriz kelime filtresi →
   tetiklenirse model motivasyon modunu bırakır, profesyonel destek yönlendirmesi
   yapar (chat_system_prompt.md'deki kural + kod tarafında test).
+- **Türkçe normalizasyon (2026-07-12):** `normalize_tr()` — Python `lower()`'ın
+  `İ→i̇` hatası yüzünden büyük harfli kriz/kapsam mesajları kaçırılıyordu;
+  `prompts.py`, `intent_service.py`, `bonus_pool.py` bu fonksiyonu kullanır.
 
 ### 1.9 AI dayanıklılık & maliyet (EKSİKTİ)
 - Gemini çağrıları: chat için timeout 30 sn, 1 retry + `max_output_tokens=768`
   (gecikmeyi düşürür); plan üretimi için timeout 90 sn, `gemini-2.5-pro`,
   `max_output_tokens=8192`. Retry tükenince nazik hata ("Şu an yıldızlara
   ulaşamıyorum, birazdan tekrar dene ✨").
+- **Timeout uygulaması (2026-07-12):** `gemini_client.py` içinde `asyncio.wait_for`
+  — config'teki süreler artık gerçekten uygulanır (takılan istek worker'ı
+  süresiz bloklayamaz).
+- **Plan görselleri (2026-07-12):** `get_image_async` + `asyncio.gather` — sıralı
+  senkron Unsplash istekleri event loop'u kilitlemez.
 - **Çift model (2026-07-12):** `gemini-2.5-flash` = sohbet, araç çağrısı, kanıt
   vision; `gemini-2.5-pro` = yalnızca plan üretimi (`GEMINI_MODEL_PLAN`).
 - Rate limit: kullanıcı başına dakikada 10 chat isteği (slowapi).
@@ -162,7 +170,7 @@ Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerl
 - Kapsam: FAZ 3'te (`alarm_kur` zaten o fazda planlı) inşa edilecek, şimdi
   kodlanmıyor — sadece karar kilitlendi.
 
-### 1.13 Motivasyon Bonus-Görev Hub'ı (YENİ KARAR, 2026-07-07)
+### 1.14 Motivasyon Bonus-Görev Hub'ı (YENİ KARAR, 2026-07-07)
 - Ana 7/365 günlük plana dahil DEĞİL; ayrı, foto kanıtı istemeyen "bonus görev"
   katmanı — CLAUDE.md'deki "plan uydurma, her görev kullanıcının anlattığı
   hayattan türer" kuralını ihlal etmemesi için ana plandan ayrı tutulur.
@@ -177,6 +185,31 @@ Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerl
 - Kapsam: FAZ 4'te (Expo Push altyapısının üzerine) inşa edilecek, şimdi
   kodlanmıyor — sadece karar kilitlendi. Yeni bir function-calling aracı
   gerekirse `tools.py`'daki KAPALI LİSTE kuralı gereği ayrıca onay istenecek.
+
+### 1.16 MVP görsel dil (2026-07-13, tasarım mockup)
+- Palet: sıcak kil `#B4623C`, zeytin `#6E7856`, krem `#F1E7D9` / `#FBF6EF`.
+- Ton: "Potansiyelini ortaya çıkart" — utandırmayan, zincir/kimlik odaklı metinler (`mobile/src/constants/copy.ts`).
+- Ortak UI: `SurfaceCard`, `CategoryBadge`, `ScreenHeader`, `ProgressBar`.
+- Sekmeler: Sohbet · Bugün · Planım · **Zincir** (eski Rütbe).
+- Mobil `api.ts`: 20 sn `AbortController` timeout.
+- `/plan/generate` + `/plan/next`: rıza + dakikada 2 rate limit.
+Tam rapor: `docs/NIYETSEN_BULGULAR_VE_HATALAR.md` · Uygulanan yamalar:
+`docs/NIYETSEN_YAPILAN_DEGISIKLIKLER.md`
+
+**Düzeltildi (✅):**
+1. Türkçe büyük harf — kriz/kapsam/araç tespiti (`normalize_tr`)
+2. Gemini timeout — `asyncio.wait_for` ile chat 30 sn / plan 90 sn
+3. Plan görselleri — async paralel Unsplash (`get_image_async`)
+
+**Sıradaki (⏳, Faz 4 kapanmadan önce):**
+4. RevenueCat webhook sırrı prod'da zorunlu (`main.py` kilidi)
+5. Abonelik iptali → dönem sonuna kadar erişim (`CANCELLATION` ≠ `EXPIRATION`)
+6. ~~`/plan/generate` rate limit + rıza kontrolü~~ ✅ (2026-07-13)
+7. `get_today_tasks` kullanıcı timezone'u
+8. Gün kapanışı tüm plan slotlarını işlemeli (çoklu plan)
+9. Chat mesaj kaydı N+1 optimizasyonu
+10. Mobil `/projects/new` 409 kullanıcı mesajı
+11. ~~Mobil `api.ts` fetch timeout (`AbortController`)~~ ✅ (2026-07-13)
 
 ---
 

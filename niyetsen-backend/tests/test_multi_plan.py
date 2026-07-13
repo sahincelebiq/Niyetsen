@@ -5,7 +5,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.services import plan_service
+from app.models.schemas import ConsentChoice, ConsentUpdate
+from app.services import consent_service, plan_service
+from app.storage.repository import repo
 
 client = TestClient(app)
 
@@ -41,8 +43,21 @@ def _headers(user_id: str) -> dict[str, str]:
     return {"X-User-Id": user_id}
 
 
+def _ensure_consent(user_id: str) -> None:
+    consent_service.update(
+        repo,
+        user_id,
+        ConsentUpdate(
+            privacy_policy=ConsentChoice(accepted=True),
+            kvkk_explicit_consent=ConsentChoice(accepted=True),
+            ai_chat_processing=ConsentChoice(accepted=True),
+        ),
+    )
+
+
 def test_free_user_blocked_from_second_project():
     user_id = "multi-plan-free-user"
+    _ensure_consent(user_id)
     first = client.post("/projects/new", headers=_headers(user_id))
     assert first.status_code == 200
 
@@ -66,6 +81,7 @@ def test_free_user_blocked_from_second_project():
 
 def test_premium_user_can_start_second_project():
     user_id = "multi-plan-premium-user"
+    _ensure_consent(user_id)
     client.post("/projects/new", headers=_headers(user_id))
     collected = {
         "city": "Ankara",

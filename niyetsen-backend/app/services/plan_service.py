@@ -8,15 +8,18 @@ parti çağrılır (generate_batch aynı fonksiyondur, start_day kaydırılır).
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from datetime import date, timedelta
+
+import httpx
 
 from app.config import CATEGORIES, settings
 from app.core import prompts
 from app.core.gemini_client import generate_json
 from app.models.schemas import CollectedIntent, Plan, PlanDay, Task
-from app.services.image_service import category_fallback_query, get_image
+from app.services.image_service import category_fallback_query, get_image_async
 
 log = logging.getLogger("niyetsen.plan")
 
@@ -66,12 +69,13 @@ async def generate_batch(
         system_instruction=prompts.SYSTEM_PROMPT,
         model=settings.GEMINI_MODEL_PLAN,
         max_output_tokens=8192,
+        timeout_sec=settings.GEMINI_PLAN_TIMEOUT_SEC,
     )
 
-    days: list[PlanDay] = []
+    parsed: list[tuple[int, str, list[dict]]] = []
     for d in (data.get("days") or [])[:batch]:
-        day_no = start_day + len(days)
-        tasks: list[Task] = []
+        day_no = start_day + len(parsed)
+        raw_tasks = []
         for t in (d.get("tasks") or [])[: settings.MAX_TASKS_PER_DAY]:
             title = str(t.get("title") or "").strip()
             if not title:
@@ -80,17 +84,41 @@ async def generate_batch(
             keyword = str(t.get("image_keyword") or "").strip()
             if not keyword:
                 keyword = category_fallback_query(categories)
-            image = get_image(keyword, categories=categories)
+            raw_tasks.append({
+                **t,
+                "title": title,
+                "categories": categories,
+                "image_keyword": keyword,
+            })
+        parsed.append((day_no, str(d.get("theme") or ""), raw_tasks))
+
+    flat = [
+        (day_no, t) for day_no, _theme, raw_tasks in parsed for t in raw_tasks
+    ]
+    async with httpx.AsyncClient() as client:
+        images = await asyncio.gather(*(
+            get_image_async(client, t["image_keyword"], categories=t["categories"])
+            for _day_no, t in flat
+        ))
+    image_by_index = dict(zip(range(len(flat)), images))
+
+    days: list[PlanDay] = []
+    index = 0
+    for day_no, theme, raw_tasks in parsed:
+        tasks: list[Task] = []
+        for t in raw_tasks:
+            image = image_by_index[index]
+            index += 1
             tasks.append(
                 Task(
                     id=uuid.uuid4().hex[:12],
                     day=day_no,
                     date=start_date + timedelta(days=day_no - 1),
-                    title=title,
+                    title=t["title"],
                     task_type=t.get("task_type") if t.get("task_type") in
                         ("yer", "alışkanlık", "sosyal", "kişisel_gelişim") else "alışkanlık",
-                    categories=categories,
-                    image_keyword=keyword,
+                    categories=t["categories"],
+                    image_keyword=t["image_keyword"],
                     image_url=image.url,
                     image_source=image.source,
                     image_attribution=image.attribution,
@@ -100,7 +128,7 @@ async def generate_batch(
                 )
             )
         if tasks:
-            days.append(PlanDay(day=day_no, theme=str(d.get("theme") or ""), tasks=tasks))
+            days.append(PlanDay(day=day_no, theme=theme, tasks=tasks))
 
     if not days:
         raise ValueError("Model boş plan döndürdü — prompt veya niyet verisini kontrol et.")

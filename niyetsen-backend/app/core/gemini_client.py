@@ -56,15 +56,19 @@ async def generate_text(
     max_retries: Optional[int] = None,
     response_schema: Optional[dict] = None,
     disable_thinking: bool = False,
+    timeout_sec: Optional[float] = None,
 ) -> str:
     """
     Dayanıklı çağrı: settings.GEMINI_MAX_RETRIES kez exponential backoff.
     contents: str | list (google-genai formatında parça listesi — vision dahil).
+    timeout_sec: MASTER_PLAN §1.9 — chat 30 sn, plan 90 sn. Verilmezse
+    GEMINI_TIMEOUT_SEC uygulanır; takılan istek worker'ı süresiz bloklayamaz.
     """
     from google.genai import types
 
     resolved_model = _resolve_model(model)
     retry_limit = settings.GEMINI_MAX_RETRIES if max_retries is None else max_retries
+    resolved_timeout = timeout_sec or settings.GEMINI_TIMEOUT_SEC
     config_kwargs: dict[str, Any] = {
         "system_instruction": system_instruction,
         "response_mime_type": "application/json" if force_json else None,
@@ -82,11 +86,14 @@ async def generate_text(
     last_err: Exception | None = None
     for attempt in range(retry_limit + 1):
         try:
-            resp = await asyncio.to_thread(
-                client.models.generate_content,
-                model=resolved_model,
-                contents=contents,
-                config=config,
+            resp = await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.models.generate_content,
+                    model=resolved_model,
+                    contents=contents,
+                    config=config,
+                ),
+                timeout=resolved_timeout,
             )
             return resp.text or ""
         except Exception as e:  # noqa: BLE001 — SDK sürümüne göre hata tipleri değişir
@@ -116,6 +123,7 @@ async def generate_json(
     json_retries: int = 2,
     response_schema: Optional[dict] = None,
     disable_thinking: bool = False,
+    timeout_sec: Optional[float] = None,
 ) -> dict:
     """JSON zorla + güvenli parse. Bozuk JSON'da sınırlı tekrar."""
     last_raw = ""
@@ -129,6 +137,7 @@ async def generate_json(
             max_retries=max_retries,
             response_schema=response_schema,
             disable_thinking=disable_thinking,
+            timeout_sec=timeout_sec,
         )
         last_raw = raw
         try:
@@ -162,11 +171,14 @@ async def generate_function_calls(
     last_err: Exception | None = None
     for attempt in range(settings.GEMINI_MAX_RETRIES + 1):
         try:
-            response = await asyncio.to_thread(
-                client.models.generate_content,
-                model=resolved_model,
-                contents=contents,
-                config=config,
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.models.generate_content,
+                    model=resolved_model,
+                    contents=contents,
+                    config=config,
+                ),
+                timeout=settings.GEMINI_TIMEOUT_SEC,
             )
             return [
                 {"name": call.name, "args": dict(call.args or {})}
