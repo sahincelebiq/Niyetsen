@@ -29,9 +29,9 @@
   <meta name="twitter:image" content="https://niyetsen.com/images/og/default.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="/css/style.css?v=20260712-6">
-  <script src="/js/site-config.js?v=20260712-6"></script>
-  <script src="/js/marketing.js?v=20260712-6"></script>
+  <link rel="stylesheet" href="/css/style.css?v=20260713-1">
+  <script src="/js/site-config.js?v=20260713-1"></script>
+  <script src="/js/marketing.js?v=20260713-1"></script>
 </head>
 <body>
   <header>
@@ -39,6 +39,7 @@
       <a class="logo" href="/">Niyetsen</a>
       <div class="nav-links">
         <a href="/">Ana Sayfa</a>
+        <a href="/#erken-erisim">Erken Erişim</a>
         <a href="/blog/">Blog</a>
         <a href="/gizlilik.html">Gizlilik</a>
         <a href="/kullanim-kosullari.html">Koşullar</a>
@@ -154,21 +155,125 @@
       </div>
     </section>
 
-    <section class="section-spaced">
-      <span class="section-label">Keşfedilebilirlik</span>
-      <h2>Google, Pinterest ve reklam altyapısı</h2>
-      <div class="grid-3">
+    <section class="section-spaced" id="erken-erisim">
+      <span class="section-label">Erken erişim</span>
+      <h2>Liste & geliştirme entegrasyonu</h2>
+      <p class="lead">
+        Erken erişim formu <a href="/#erken-erisim">ana sayfada</a> canlı.
+        Talepler otomatik olarak <strong>ai@niyetsen.com</strong> adresine iletilir;
+        dönüş ve davetler bu kanaldan yapılır.
+      </p>
+      <div class="early-access" style="max-width: 640px;">
+        <form class="early-access-form" id="early-access-form" novalidate>
+          <label>
+            Adın
+            <input type="text" name="name" autocomplete="name" placeholder="Adın veya takma adın" required maxlength="80">
+          </label>
+          <label>
+            E-posta
+            <input type="email" name="email" autocomplete="email" placeholder="ornek@email.com" required maxlength="120">
+          </label>
+          <label>
+            Platform
+            <select name="platform" required>
+              <option value="" disabled selected>Seç</option>
+              <option value="iOS">iOS (iPhone)</option>
+              <option value="Android">Android</option>
+              <option value="Her ikisi">Her ikisi</option>
+            </select>
+          </label>
+          <label>
+            Not (isteğe bağlı)
+            <textarea name="message" placeholder="Bu yıl nasıl bir hayat istiyorsun?" maxlength="500"></textarea>
+          </label>
+          <button type="submit" class="button">Erken erişim talep et</button>
+          <div id="early-access-status" class="early-access-status" hidden aria-live="polite"></div>
+        </form>
+      </div>
+    </section>
+
+    <section class="section-spaced" id="seo-reklam">
+      <span class="section-label">Site ayarları</span>
+      <h2>SEO & reklam yapılandırması</h2>
+      <p class="lead">
+        Tüm pazarlama kimlikleri tek dosyada tutulur: <code>js/site-config.js</code>.
+        Etiket yükleme ve KVKK çerez onayı <code>js/marketing.js</code> üzerinden yönetilir.
+      </p>
+      <div class="settings-table-wrap">
+        <table class="settings-table">
+          <thead>
+            <tr>
+              <th>Ayar</th>
+              <th>Değer / durum</th>
+              <th>Açıklama</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Google Ads</td>
+              <td><code>AW-18318054605</code> <span class="status-active">Aktif</span></td>
+              <td>Dönüşüm ve remarketing etiketi. Çerez onayı sonrası yüklenir. Erken erişim formu gönderiminde <code>early_access_signup</code> olayı tetiklenir.</td>
+            </tr>
+            <tr>
+              <td>Google Analytics 4</td>
+              <td><span class="status-pending">Bekliyor</span></td>
+              <td><code>GA4_MEASUREMENT_ID</code> alanı boş. Measurement ID (G-…) gelince site-config'e eklenir; marketing.js otomatik yükler.</td>
+            </tr>
+            <tr>
+              <td>Google Search Console</td>
+              <td><code>google-site-verification=…</code> <span class="status-active">Doğrulandı</span></td>
+              <td>DNS TXT kaydı ile doğrulandı. Yedek HTML meta etiketi site-config'ten enjekte edilir.</td>
+            </tr>
+            <tr>
+              <td>Pinterest</td>
+              <td><code>1d27322d358bf294f1e1da3a23a8acdb</code> <span class="status-active">Aktif</span></td>
+              <td><code>p:domain_verify</code> meta etiketi tüm sayfalarda.</td>
+            </tr>
+            <tr>
+              <td>JSON-LD</td>
+              <td><span class="status-active">Aktif</span></td>
+              <td>Ana sayfa: Organization, WebSite, SoftwareApplication, FAQPage şemaları.</td>
+            </tr>
+            <tr>
+              <td>Sitemap & robots</td>
+              <td><span class="status-active">Aktif</span></td>
+              <td><code>/sitemap.xml</code>, <code>/robots.txt</code> — tüm indekslenebilir sayfalar listelenir.</td>
+            </tr>
+            <tr>
+              <td>Canonical & OG</td>
+              <td><span class="status-active">Aktif</span></td>
+              <td>Her sayfada canonical URL, Open Graph ve Twitter Card meta etiketleri.</td>
+            </tr>
+            <tr>
+              <td>Erken erişim e-posta</td>
+              <td><code>ai@niyetsen.com</code> <span class="status-active">Aktif</span></td>
+              <td>FormSubmit AJAX endpoint ile otomatik iletim. İlk gönderimde mailbox aktivasyon maili gelir.</td>
+            </tr>
+            <tr>
+              <td>Site içi reklam</td>
+              <td><span class="status-pending">Yok</span></td>
+              <td>AdSense veya banner reklam yok — yalnızca dönüşüm ölçümü (Google Ads).</td>
+            </tr>
+            <tr>
+              <td>Instagram</td>
+              <td><a href="https://www.instagram.com/niyetsen.ai/" rel="noopener noreferrer" target="_blank">@niyetsen.ai</a></td>
+              <td>Organik sosyal kanal; JSON-LD <code>sameAs</code> alanında.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="grid-3" style="margin-top: 1.5rem;">
         <article class="card">
           <h3>Google arama</h3>
-          <p>“niyetsen” aramasında site indekslendi. Ana sayfa, blog ve geliştirme günlüğü sonuçlarda görünüyor. Logo için favicon yeniden üretildi; Google’ın güncellemesi birkaç gün sürebilir.</p>
+          <p>“niyetsen” aramasında site indekslendi. Ana sayfa, blog ve geliştirme günlüğü sonuçlarda görünüyor.</p>
         </article>
         <article class="card">
-          <h3>SEO yapısı</h3>
-          <p>JSON-LD (Organization, WebSite, SoftwareApplication, FAQPage), sitemap.xml, robots.txt, canonical URL’ler ve sosyal meta etiketleri.</p>
+          <h3>KVKK çerez onayı</h3>
+          <p>Reklam/analitik etiketleri yalnızca kullanıcı “Kabul et” dedikten sonra yüklenir. Reddet seçeneği mevcut.</p>
         </article>
         <article class="card">
-          <h3>Reklam hazırlığı</h3>
-          <p>Google Ads etiketi aktif (<code>AW-18318054605</code>). Tüm sayfalarda tek merkezi yükleme; KVKK uyumlu çerez onayı sonrası ölçüm başlar.</p>
+          <h3>Önbellek bust</h3>
+          <p>CSS/JS dosyalarında <code>?v=20260713-1</code> sürüm parametresi — CDN güncellemesi için.</p>
         </article>
       </div>
     </section>
@@ -197,6 +302,17 @@
     </section>
 
     <div class="timeline">
+      <article class="timeline-entry">
+        <div class="timeline-date">13 Temmuz 2026</div>
+        <h3>Erken erişim formu & SEO/reklam dokümantasyonu</h3>
+        <p><span class="status-tag done">Tamamlandı</span></p>
+        <ul>
+          <li><strong>Erken erişim:</strong> Ana sayfada form bölümü; talepler FormSubmit ile <code>ai@niyetsen.com</code>'a otomatik iletilir.</li>
+          <li><strong>Geliştirme entegrasyonu:</strong> Bu sayfada erken erişim formu + SEO/reklam ayarları tablosu.</li>
+          <li><strong>Google Ads dönüşüm:</strong> Form gönderiminde <code>early_access_signup</code> olayı tetiklenir.</li>
+          <li><strong>site-config.js:</strong> Tüm pazarlama kimlikleri tek merkezde (Ads, GSC, Pinterest, erken erişim endpoint).</li>
+        </ul>
+      </article>
       <article class="timeline-entry">
         <div class="timeline-date">12 Temmuz 2026 — akşam</div>
         <h3>Faz 3 ilerlemesi & site dili güncellemesi</h3>
@@ -343,5 +459,6 @@
       </div>
     </div>
   </footer>
+  <script src="/js/early-access.js?v=20260713-1" defer></script>
 </body>
 </html>

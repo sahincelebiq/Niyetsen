@@ -32,7 +32,7 @@
   <meta name="twitter:image" content="https://niyetsen.com/images/og/default.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link rel="stylesheet" href="/css/style.css?v=20260712-6">
+  <link rel="stylesheet" href="/css/style.css?v=20260713-1">
   <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -119,8 +119,8 @@
     ]
   }
   </script>
-  <script src="/js/site-config.js?v=20260712-6"></script>
-  <script src="/js/marketing.js?v=20260712-6"></script>
+  <script src="/js/site-config.js?v=20260713-1"></script>
+  <script src="/js/marketing.js?v=20260713-1"></script>
 </head>
 <body>
   <header>
@@ -129,6 +129,7 @@
       <div class="nav-links">
         <a href="#felsefe">Felsefe</a>
         <a href="#plan">Plan</a>
+        <a href="#erken-erisim">Erken Erişim</a>
         <a href="/blog/">Blog</a>
         <a href="/gelistirme.html">Geliştirme</a>
         <a href="/gizlilik.html">Gizlilik</a>
@@ -167,8 +168,8 @@
         <div class="vision-list" id="vision-list" aria-live="polite"></div>
 
         <div class="cta-row">
-          <a class="button" href="/gelistirme.html">Geliştirme günlüğü</a>
-          <a class="button secondary" href="mailto:ai@niyetsen.com">ai@niyetsen.com</a>
+          <a class="button" href="#erken-erisim">Erken erişim talep et</a>
+          <a class="button secondary" href="/gelistirme.html">Geliştirme günlüğü</a>
           <a class="button secondary" href="https://www.instagram.com/niyetsen.ai/" rel="noopener noreferrer" target="_blank">Instagram</a>
         </div>
       </div>
@@ -367,6 +368,54 @@
       </p>
     </section>
 
+    <section class="section" id="erken-erisim" aria-labelledby="early-access-title">
+      <span class="section-label">Erken erişim</span>
+      <div class="early-access">
+        <div class="early-access-grid">
+          <div>
+            <h2 id="early-access-title">İlk kullananlardan ol</h2>
+            <p class="lead">
+              Niyetsen henüz geliştirme aşamasında. Erken erişim listesine katıl;
+              uygulama mağazalara çıkmadan önce seninle <strong>ai@niyetsen.com</strong> üzerinden iletişime geçelim.
+            </p>
+            <div class="early-access-perks">
+              <div class="early-access-perk"><span>✓</span><span>7 gün ücretsiz deneme — ilk planın tam görünür</span></div>
+              <div class="early-access-perk"><span>✓</span><span>Erken erişim davetleri ve geliştirme güncellemeleri</span></div>
+              <div class="early-access-perk"><span>✓</span><span>Geri bildirimin ürün yol haritasını şekillendirir — <a href="/gelistirme.html">geliştirme günlüğü</a></span></div>
+            </div>
+          </div>
+          <form class="early-access-form" id="early-access-form" novalidate>
+            <label>
+              Adın
+              <input type="text" name="name" autocomplete="name" placeholder="Adın veya takma adın" required maxlength="80">
+            </label>
+            <label>
+              E-posta
+              <input type="email" name="email" autocomplete="email" placeholder="ornek@email.com" required maxlength="120">
+            </label>
+            <label>
+              Platform
+              <select name="platform" required>
+                <option value="" disabled selected>Seç</option>
+                <option value="iOS">iOS (iPhone)</option>
+                <option value="Android">Android</option>
+                <option value="Her ikisi">Her ikisi</option>
+              </select>
+            </label>
+            <label>
+              Not (isteğe bağlı)
+              <textarea name="message" placeholder="Bu yıl nasıl bir hayat istiyorsun? Kısaca yazabilirsin." maxlength="500"></textarea>
+            </label>
+            <button type="submit" class="button">Erken erişim talep et</button>
+            <p class="disclaimer" style="margin:0;font-size:0.82rem;">
+              Göndererek <a href="/gizlilik.html">gizlilik politikasını</a> kabul etmiş olursun. Verilerin yalnızca erken erişim iletişimi için kullanılır.
+            </p>
+            <div id="early-access-status" class="early-access-status" hidden aria-live="polite"></div>
+          </form>
+        </div>
+      </div>
+    </section>
+
     <section class="section" aria-labelledby="blog-title">
       <span class="section-label">Blog</span>
       <div class="section-intro">
@@ -423,6 +472,7 @@
     </div>
   </footer>
 
-  <script src="/js/vision.js?v=20260712-7" defer></script>
+  <script src="/js/early-access.js?v=20260713-1" defer></script>
+  <script src="/js/vision.js?v=20260713-1" defer></script>
 </body>
 </html>
