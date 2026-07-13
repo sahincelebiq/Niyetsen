@@ -32,15 +32,21 @@ Sidebar’daki eski denemeleri sil; şunları **tut** (yeniden oluştur):
 | ✅ | `Niyetsen — Sağlık kontrolü` | `VERIFY_HEALTH.sql` |
 | ✅ | `Niyetsen — Çekirdek tablolar` | `20260707000000_niyetsen_core_tables.sql` (yedek) |
 
-**Silinebilir** (duplicate / deneme):
+**Silinebilir** (23 PRIVATE listesindeki tümü — veritabanına dokunmaz):
 
-- `Untitled query` (tümü)
-- `çoklu plan projeleri 1/2/3` (tek canonical dosya yeter)
-- `plan 1`, `push token`, `doğrulama`, `sadece doğrulama` (VERIFY ile değiştirildi)
-- `yıldızlara ulaşamıyorum hata...` (backend fix deploy edildi)
-- `Genural Versiyon`, `kolon planlama`, `abonelik çoklu plan` (eski taslaklar)
+- `Untitled query`
+- `çoklu plan projeleri`, `çoklu plan projeleri 2`, `çoklu plan projeleri 3`
+- `doğrulama`, `sadece doğrulama`
+- `yıldızlara ulaşamıyorum hata...`
+- `Tam düzenleme opsiyonel`, `kolon planlama`, `Çoklu Plan`
+- `plan 1`, `abonelik çoklu plan`, `push token`, `Genural Versiyon`
+- `Niyetsen çekirdek tablolar` (yedek olarak repoda duruyor)
+- `Niyetsen sohbet geçmişi...`, `Niyetsen sohbet kayıtlarını id...`
+- `onboarding profili ve KVKK r...`, `Unsplash kalite ve attribution...`
+- `foto kanıtı, puan olayları...`, `public placeholder' kısmı`
+- `Key kısımları`, `İlk zemin`
 
-Silme: sorguya sağ tık → Delete (veritabanı tablolarına dokunmaz).
+Hepsini silip yalnızca yukarıdaki **2 canonical** sorguyu bırak.
 
 ## Otomatik denetim (lokal)
 
