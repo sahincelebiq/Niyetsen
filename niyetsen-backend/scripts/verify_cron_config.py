@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Railway cron servisinin API_BASE_URL + CRON_SECRET yapılandırmasını doğrular."""
+"""Railway cron servisinin direct veya HTTP yapılandırmasını doğrular."""
 from __future__ import annotations
 
 import json
@@ -12,7 +12,6 @@ API = "https://backboard.railway.com/graphql/v2"
 PROJECT_ID = "922f94cb-08ae-47ce-a44a-7527ff98c004"
 ENVIRONMENT_ID = "73ba01c3-9c84-4343-9439-80cab9923991"
 API_SERVICE_ID = "4e9d589e-2bbf-4b93-a627-09697929a1ce"
-CRON_SERVICE_ID = "0499ddee-8f0c-4c2d-9c0a-8f3f6f6f6f6f"  # fallback: listed below
 TOKEN_FILE = pathlib.Path(__file__).resolve().parents[1] / ".railway-project-token"
 
 
@@ -64,7 +63,7 @@ def _resolve_cron_service_id() -> str:
     for edge in data["project"]["services"]["edges"]:
         if edge["node"]["name"] == "cron":
             return edge["node"]["id"]
-    return CRON_SERVICE_ID
+    raise RuntimeError("cron servisi bulunamadı")
 
 
 def main() -> int:
@@ -74,7 +73,7 @@ def main() -> int:
 
     api_secret = api_vars.get("CRON_SECRET", "")
     cron_secret = cron_vars.get("CRON_SECRET", "")
-    api_base = cron_vars.get("API_BASE_URL", "").rstrip("/")
+    mode = cron_vars.get("CRON_EXECUTION_MODE", "").strip().lower()
 
     issues: list[str] = []
     if not api_secret:
@@ -83,10 +82,26 @@ def main() -> int:
         issues.append("Cron servisinde CRON_SECRET eksik")
     if api_secret and cron_secret and api_secret != cron_secret:
         issues.append("CRON_SECRET API ve cron servisinde farklı")
-    if not api_base:
-        issues.append("Cron servisinde API_BASE_URL eksik")
-    elif not api_base.startswith("https://"):
-        issues.append("API_BASE_URL https ile başlamalı")
+
+    if mode == "direct" or (
+        cron_vars.get("USE_SUPABASE_DB", "").lower() == "true"
+        and cron_vars.get("SUPABASE_URL")
+        and cron_vars.get("SUPABASE_SERVICE_KEY")
+    ):
+        if cron_vars.get("USE_SUPABASE_DB", "").lower() != "true":
+            issues.append("Direct mod için cron USE_SUPABASE_DB=true olmalı")
+        if not cron_vars.get("SUPABASE_URL"):
+            issues.append("Direct mod için cron SUPABASE_URL eksik")
+        if not cron_vars.get("SUPABASE_SERVICE_KEY"):
+            issues.append("Direct mod için cron SUPABASE_SERVICE_KEY eksik")
+        mode_label = "direct"
+    else:
+        api_base = cron_vars.get("API_BASE_URL", "").rstrip("/")
+        if not api_base:
+            issues.append("HTTP mod için cron API_BASE_URL eksik")
+        elif not api_base.startswith("https://"):
+            issues.append("API_BASE_URL https ile başlamalı")
+        mode_label = "http"
 
     if issues:
         print("❌ Cron yapılandırma sorunları:")
@@ -95,7 +110,11 @@ def main() -> int:
         return 1
 
     print("✅ Cron yapılandırması tutarlı")
-    print(f"  API_BASE_URL={api_base}")
+    print(f"  mod={mode_label}")
+    if mode_label == "direct":
+        print(f"  SUPABASE_URL={cron_vars.get('SUPABASE_URL', '')[:40]}…")
+    else:
+        print(f"  API_BASE_URL={cron_vars.get('API_BASE_URL', '')}")
     print(f"  CRON_SECRET uzunluğu={len(cron_secret)}")
     return 0
 

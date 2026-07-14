@@ -20,8 +20,11 @@ Niyetsen uses two Railway services from the same repository and backend root.
 - Create a second service from the same repository.
 - Root directory: `/niyetsen-backend`
 - Config path: `/railway.cron.toml`
-- Required variables: `API_BASE_URL` (the API service HTTPS URL) and the same
-  `CRON_SECRET`
+- **Önerilen (direct mod):** API ile aynı Supabase env'leri + `CRON_EXECUTION_MODE=direct`
+  - `ENV=prod`, `USE_SUPABASE_DB=true`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
+  - `CRON_SECRET` (API ile aynı değer — doğrulama scriptleri için)
+- **Yedek (http mod):** `API_BASE_URL` + `CRON_SECRET` (yavaş / timeout riski)
+- Senkron: `python -m scripts.sync_cron_railway_env`
 - Railway runs this service every five minutes in UTC. The API determines each
   user's local date/time and all jobs are idempotent.
 
