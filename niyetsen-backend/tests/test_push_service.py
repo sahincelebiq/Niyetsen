@@ -1,3 +1,5 @@
+import httpx
+
 from app.services import push_service
 
 
@@ -48,6 +50,23 @@ def test_send_filters_tokens_and_posts_batch(monkeypatch):
     assert result == [{"status": "ok"}]
     assert captured["url"] == push_service.EXPO_PUSH_URL
     assert len(captured["json"]) == 1
+
+
+def test_send_returns_error_results_on_timeout(monkeypatch):
+    def fake_post(*args, **kwargs):
+        raise httpx.ReadTimeout("timed out")
+
+    monkeypatch.setattr(push_service.httpx, "post", fake_post)
+    result = push_service.send([
+        push_service.PushMessage(
+            token="ExpoPushToken[valid]",
+            title="Niyetsen",
+            body="Test",
+            data={"url": "/daily"},
+        ),
+    ])
+    assert len(result) == 1
+    assert result[0]["status"] == "error"
 
 
 def test_send_batched_splits_large_payloads(monkeypatch):

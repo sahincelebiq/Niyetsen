@@ -41,6 +41,8 @@ def test_run_jobs_direct_completes_with_in_memory_repo(monkeypatch, capsys):
 def test_main_direct_mode_exits_zero_on_soft_notification_failure(monkeypatch):
     monkeypatch.setenv("CRON_EXECUTION_MODE", "direct")
     monkeypatch.setenv("USE_SUPABASE_DB", "true")
+    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
+    monkeypatch.setenv("SUPABASE_SERVICE_KEY", "service-key")
 
     def fake_direct():
         return [], ["notifications: expo down"]
@@ -56,9 +58,6 @@ def test_main_direct_mode_exits_zero_on_soft_notification_failure(monkeypatch):
     assert exit_code == 0
 
 
-def test_execution_mode_prefers_direct_when_supabase_env_present(monkeypatch):
-    monkeypatch.delenv("CRON_EXECUTION_MODE", raising=False)
-    monkeypatch.setenv("USE_SUPABASE_DB", "true")
-    monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
-    monkeypatch.setenv("SUPABASE_SERVICE_KEY", "service-key")
-    assert cron_jobs._execution_mode() == "direct"
+def test_execution_mode_http_only_when_explicit(monkeypatch):
+    monkeypatch.setenv("CRON_EXECUTION_MODE", "http")
+    assert cron_jobs._execution_mode() == "http"

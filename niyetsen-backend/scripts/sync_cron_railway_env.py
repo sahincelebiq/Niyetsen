@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""API servisindeki Supabase env'lerini Railway cron servisine kopyalar (direct mod)."""
+"""Railway API servisindeki env'leri cron servisine kopyalar (direct mod zorunlu)."""
 from __future__ import annotations
 
 import json
@@ -11,6 +11,7 @@ import urllib.request
 API = "https://backboard.railway.com/graphql/v2"
 PROJECT_ID = "922f94cb-08ae-47ce-a44a-7527ff98c004"
 ENVIRONMENT_ID = "73ba01c3-9c84-4343-9439-80cab9923991"
+API_SERVICE_ID = "4e9d589e-2bbf-4b93-a627-09697929a1ce"
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 TOKEN_FILE = ROOT / ".railway-project-token"
 BACKEND_ENV = ROOT / ".env"
@@ -61,6 +62,22 @@ def _service_id(name: str) -> str:
     raise RuntimeError(f"Railway servisi bulunamadı: {name}")
 
 
+def _service_variables(service_id: str) -> dict[str, str]:
+    data = _gql(
+        "query($projectId:String!,$environmentId:String!,$serviceId:String!){"
+        "variables(projectId:$projectId,environmentId:$environmentId,serviceId:$serviceId)}",
+        {
+            "projectId": PROJECT_ID,
+            "environmentId": ENVIRONMENT_ID,
+            "serviceId": service_id,
+        },
+    )
+    raw = data.get("variables")
+    if isinstance(raw, dict):
+        return raw
+    return {}
+
+
 def _parse_env(path: pathlib.Path) -> dict[str, str]:
     if not path.exists():
         return {}
@@ -88,31 +105,40 @@ def _railway_upsert(service_name: str, variables: dict[str, str]) -> None:
                 "environmentId": ENVIRONMENT_ID,
                 "serviceId": service_id,
                 "variables": variables,
-                "skipDeploys": True,
+                "skipDeploys": False,
             }
         },
     )
 
 
 def main() -> int:
+    api_vars = _service_variables(API_SERVICE_ID)
     local = _parse_env(BACKEND_ENV)
-    missing = [key for key in ("SUPABASE_URL", "SUPABASE_SERVICE_KEY", "CRON_SECRET") if not local.get(key)]
+
+    source = {**local, **{k: v for k, v in api_vars.items() if v}}
+    missing = [
+        key for key in ("SUPABASE_URL", "SUPABASE_SERVICE_KEY", "CRON_SECRET")
+        if not source.get(key)
+    ]
     if missing:
-        print(f"❌ niyetsen-backend/.env eksik: {', '.join(missing)}")
+        print(f"❌ Kaynak env eksik (API Railway veya .env): {', '.join(missing)}")
         return 1
 
-    cron_vars = {key: local[key] for key in COPY_KEYS if local.get(key)}
-    cron_vars["ENV"] = local.get("ENV", "prod")
-    cron_vars["USE_SUPABASE_DB"] = local.get("USE_SUPABASE_DB", "true")
+    cron_vars = {key: source[key] for key in COPY_KEYS if source.get(key)}
+    cron_vars["ENV"] = source.get("ENV", "prod")
+    cron_vars["USE_SUPABASE_DB"] = source.get("USE_SUPABASE_DB", "true")
     cron_vars["CRON_EXECUTION_MODE"] = "direct"
     cron_vars.setdefault(
         "API_BASE_URL",
         "https://api-production-86f1.up.railway.app",
     )
 
-    print("Railway cron servisine direct-mod env yazılıyor…")
+    print("Railway cron ← api env senkronu (direct mod)…")
     _railway_upsert("cron", cron_vars)
-    print("✓ cron: CRON_EXECUTION_MODE=direct + Supabase env senkronlandı")
+    print("✓ cron servisi güncellendi ve redeploy tetiklendi")
+    print(f"  USE_SUPABASE_DB={cron_vars.get('USE_SUPABASE_DB')}")
+    print(f"  SUPABASE_URL={'set' if cron_vars.get('SUPABASE_URL') else 'MISSING'}")
+    print(f"  CRON_EXECUTION_MODE=direct")
 
     subprocess.run(
         [sys.executable, "-m", "scripts.railway_redeploy"],

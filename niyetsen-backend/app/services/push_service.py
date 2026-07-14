@@ -32,7 +32,7 @@ def emotional_penalty_body(streak_len: int) -> str:
     return "Bugün eksik kaldı; yarın yeni bir halka için yeniden başlayabilirsin."
 
 
-def send(messages: list[PushMessage], timeout: float = 15) -> list[dict]:
+def send(messages: list[PushMessage], timeout: float = 8) -> list[dict]:
     payload = [
         {
             "to": message.token,
@@ -46,29 +46,28 @@ def send(messages: list[PushMessage], timeout: float = 15) -> list[dict]:
     ]
     if not payload:
         return []
-    response = httpx.post(
-        EXPO_PUSH_URL,
-        json=payload,
-        headers={"Accept": "application/json", "Content-Type": "application/json"},
-        timeout=timeout,
-    )
-    response.raise_for_status()
+    try:
+        response = httpx.post(
+            EXPO_PUSH_URL,
+            json=payload,
+            headers={"Accept": "application/json", "Content-Type": "application/json"},
+            timeout=timeout,
+        )
+        response.raise_for_status()
+    except httpx.TimeoutException as exc:
+        return [{"status": "error", "message": f"timeout: {exc}"} for _ in payload]
+    except httpx.HTTPError as exc:
+        return [{"status": "error", "message": str(exc)} for _ in payload]
     body = response.json()
     data = body.get("data", [])
     return data if isinstance(data, list) else [data]
 
 
-def send_batched(messages: list[PushMessage], timeout: float = 10) -> list[dict]:
+def send_batched(messages: list[PushMessage], timeout: float = 8) -> list[dict]:
     """Expo API limiti (100) kadar parçalara bölerek tek seferde gönder."""
     if not messages:
         return []
     results: list[dict] = []
     for start in range(0, len(messages), EXPO_BATCH_SIZE):
-        try:
-            results.extend(send(messages[start : start + EXPO_BATCH_SIZE], timeout=timeout))
-        except httpx.HTTPError as exc:
-            # Push hatası cron/API'yi düşürmemeli; kalan batch'ler denenir.
-            results.extend({"status": "error", "message": str(exc)} for _ in range(
-                min(EXPO_BATCH_SIZE, len(messages) - start)
-            ))
+        results.extend(send(messages[start : start + EXPO_BATCH_SIZE], timeout=timeout))
     return results
