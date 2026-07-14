@@ -215,6 +215,9 @@ Puan: görev +50; sessiz kaçırma −25×2^n (tavan 200); mazeret −25 sabit.
 
 ## §3. FAZ PLANI
 
+> **Aktif faz: FAZ 5** — yalnızca bu faz için günlük plan: [`docs/FAZ5_AKTIF.md`](docs/FAZ5_AKTIF.md).
+> FAZ 0–4 tamamlandı; aşağıdaki arşiv bölümlerine gerekmedikçe bakma.
+
 Her faz: GÖREVLER (checkbox) → KAPI (geçilmeden sonraki faz YASAK).
 Tahminler tek kişi + Cursor vibe-coding temposuna göredir.
 
