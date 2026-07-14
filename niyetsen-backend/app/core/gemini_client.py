@@ -34,6 +34,21 @@ class GeminiUnavailable(Exception):
     """Retry'lar tükendi. Kullanıcıya nazik mesajı routes katmanı verir."""
 
 
+def _error_text(exc: Exception) -> str:
+    return str(exc).casefold()
+
+
+def _is_retryable(exc: Exception) -> bool:
+    text = _error_text(exc)
+    if "invalid_argument" in text and (
+        "image" in text or "process input" in text or "unable to process" in text
+    ):
+        return False
+    if "permission_denied" in text or "api key" in text or "api_key" in text:
+        return False
+    return True
+
+
 def _strip_json_fences(text: str) -> str:
     t = (text or "").strip()
     if t.startswith("```"):
@@ -98,9 +113,11 @@ async def generate_text(
             return resp.text or ""
         except Exception as e:  # noqa: BLE001 — SDK sürümüne göre hata tipleri değişir
             last_err = e
+            if not _is_retryable(e):
+                break
             if attempt >= retry_limit:
                 break
-            wait = min(2 ** attempt, 4)
+            wait = min(2 ** attempt, 8)
             log.warning(
                 "Gemini hatası (%s, deneme %s): %s — %ss bekleniyor",
                 resolved_model,
@@ -110,6 +127,8 @@ async def generate_text(
             )
             await asyncio.sleep(wait)
 
+    if last_err is not None and not _is_retryable(last_err):
+        raise GeminiUnavailable(str(last_err))
     raise GeminiUnavailable(str(last_err))
 
 
@@ -186,9 +205,11 @@ async def generate_function_calls(
             ]
         except Exception as exc:  # noqa: BLE001
             last_err = exc
+            if not _is_retryable(exc):
+                break
             if attempt >= settings.GEMINI_MAX_RETRIES:
                 break
-            await asyncio.sleep(min(2 ** attempt, 4))
+            await asyncio.sleep(min(2 ** attempt, 8))
     raise GeminiUnavailable(str(last_err))
 
 
@@ -212,6 +233,15 @@ async def generate_json_with_image(
         max_output_tokens=256,
         json_retries=2,
         max_retries=settings.GEMINI_MAX_RETRIES,
+        response_schema={
+            "type": "object",
+            "properties": {
+                "matches": {"type": "boolean"},
+                "confidence": {"type": "integer"},
+                "reason": {"type": "string"},
+            },
+            "required": ["matches", "confidence", "reason"],
+        },
         disable_thinking=True,
-        timeout_sec=settings.GEMINI_TIMEOUT_SEC,
+        timeout_sec=settings.GEMINI_PROOF_TIMEOUT_SEC,
     )

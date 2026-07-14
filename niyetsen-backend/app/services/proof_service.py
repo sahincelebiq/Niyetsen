@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from app.config import settings
 from app.core import prompts
-from app.core.gemini_client import generate_json_with_image
+from app.core.gemini_client import GeminiUnavailable, generate_json_with_image
 from app.models.schemas import ProofResult
 
 ALLOWED_MIME = {"image/jpeg", "image/png"}
@@ -76,16 +76,26 @@ async def evaluate_proof(
             attempt_no=attempt_no, accepted_by_declaration=True,
         )
 
-    data = await generate_json_with_image(
-        prompt=prompts.PROOF_VALIDATION_PROMPT.format(
-            task_title=task_title,
-            tiny_version=tiny_version or "belirtilmedi",
-            categories=", ".join(categories or []) or "belirtilmedi",
-            task_type=task_type,
-        ),
-        image_bytes=image_bytes,
-        mime_type=resolved_mime,
-    )
+    try:
+        data = await generate_json_with_image(
+            prompt=prompts.PROOF_VALIDATION_PROMPT.format(
+                task_title=task_title,
+                tiny_version=tiny_version or "belirtilmedi",
+                categories=", ".join(categories or []) or "belirtilmedi",
+                task_type=task_type,
+            ),
+            image_bytes=image_bytes,
+            mime_type=resolved_mime,
+        )
+    except GeminiUnavailable as exc:
+        msg = str(exc).casefold()
+        if "invalid_argument" in msg and (
+            "image" in msg or "process input" in msg or "unable to process" in msg
+        ):
+            raise ProofRejected(
+                "Fotoğraf okunamadı veya işlenemedi. Yeni bir kare çekip tekrar dener misin?"
+            ) from exc
+        raise
 
     try:
         confidence = max(0, min(100, int(data.get("confidence") or 0)))

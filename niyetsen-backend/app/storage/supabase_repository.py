@@ -33,6 +33,14 @@ def _maybe_single(builder) -> Optional[dict]:
     return response.data if response is not None else None
 
 
+def _parse_optional_date(value) -> dt_date | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, dt_date):
+        return value
+    return dt_date.fromisoformat(str(value))
+
+
 def _task_from_row(row: dict) -> Task:
     raw_categories = row.get("categories")
     categories = raw_categories if isinstance(raw_categories, list) else []
@@ -108,9 +116,9 @@ class SupabaseRepository(Repository):
         streak_row = _maybe_single(
             self._db.table("streaks").select("*").eq("user_id", user_id)
         ) or {}
-        user_row = (
+        user_row = _maybe_single(
             self._db.table("users").select("excuse_count,freeze_tokens,freeze_last_grant")
-            .eq("id", user_id).single().execute().data
+            .eq("id", user_id)
         ) or {}
 
         last_active = streak_row.get("last_active_date")
@@ -724,8 +732,12 @@ class SupabaseRepository(Repository):
             NotificationRecipient(
                 user_id=row["user_id"],
                 token=row["token"],
-                last_task_reminder_date=row.get("last_task_reminder_date"),
-                last_bonus_offer_date=row.get("last_bonus_offer_date"),
+                last_task_reminder_date=_parse_optional_date(
+                    row.get("last_task_reminder_date")
+                ),
+                last_bonus_offer_date=_parse_optional_date(
+                    row.get("last_bonus_offer_date")
+                ),
                 timezone=(row.get("users") or {}).get("timezone") or "Europe/Istanbul",
                 notif_hour=(row.get("users") or {}).get("notif_hour") or 8,
             )

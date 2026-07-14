@@ -58,6 +58,12 @@ def main() -> None:
             if response.status_code == 404 and endpoint == "/cron/notifications":
                 # FAZ 4 endpoint'i deploy edilene kadar close-day çalışmaya devam eder.
                 continue
+            if response.status_code == 401:
+                failures.append(
+                    f"{endpoint}: 401 CRON_SECRET eşleşmiyor veya eksik "
+                    f"(API ve cron servisinde aynı değer olmalı)"
+                )
+                continue
             if response.is_error:
                 failures.append(
                     f"{endpoint}: {response.status_code} {response.text[:500]}"
