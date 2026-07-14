@@ -1,8 +1,10 @@
 """Karşılama metni testleri."""
+from datetime import date
+
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.models.schemas import ConsentChoice, ConsentUpdate, ProfileUpdate, UserProfile
+from app.models.schemas import ConsentChoice, ConsentUpdate, Plan, PlanDay, ProfileUpdate, Task, UserProfile
 from app.services import consent_service, profile_service
 from app.services.greeting_service import build_chat_greeting
 from app.storage.repository import repo
@@ -19,6 +21,20 @@ def test_greeting_without_name():
     text = build_chat_greeting(name=None, timezone_name="Europe/Istanbul")
     assert "Günaydın" in text or "İyi günler" in text or "İyi akşamlar" in text
     assert "Ben Niyetsen" in text
+
+
+def test_greeting_with_streak_and_pending_tasks():
+    text = build_chat_greeting(
+        name="Ayşe",
+        timezone_name="Europe/Istanbul",
+        streak_len=5,
+        pending_tasks_today=2,
+        active_plan_name="Sabah Rutini",
+        has_plan=True,
+    )
+    assert "5 günlük zincirin" in text
+    assert "2 görev" in text
+    assert "Sabah Rutini" in text
 
 
 def test_invalid_timezone_falls_back():
@@ -49,3 +65,44 @@ def test_chat_greeting_endpoint():
     body = resp.json()
     assert "Deniz" in body["message"]
     assert "Niyetsen" in body["message"]
+
+
+def test_chat_greeting_endpoint_with_plan_context():
+    user_id = "greeting_plan_user"
+    today = date.today()
+    state = repo.get_state(user_id)
+    state.streak_len = 3
+    repo.save_state(state)
+    repo.save_plan(
+        user_id,
+        Plan(
+            id="plan_greet",
+            duration_days=30,
+            batch_generated_until=1,
+            start_date=today,
+            days=[
+                PlanDay(
+                    day=1,
+                    theme="Başlangıç",
+                    tasks=[
+                        Task(
+                            id="task_greet",
+                            day=1,
+                            date=today,
+                            title="Yürüyüş",
+                            categories=["İrade"],
+                            status="pending",
+                        )
+                    ],
+                )
+            ],
+            name="Planım",
+            slot_no=1,
+            is_active=True,
+        ),
+    )
+    resp = client.get("/chat/greeting", headers={"X-User-Id": user_id})
+    assert resp.status_code == 200
+    message = resp.json()["message"]
+    assert "3 günlük zincirin" in message
+    assert "1 görev" in message

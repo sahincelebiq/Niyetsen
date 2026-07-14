@@ -1,4 +1,5 @@
 .env
+.env.stripe.local
 .railway-project-token
 .railway-revenuecat-secret
 .venv/

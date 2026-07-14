@@ -215,21 +215,28 @@ async def generate_json_with_image(
         types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
         prompt,
     ]
-    return await generate_json(
-        parts,
-        model=model,
-        max_output_tokens=256,
-        json_retries=2,
-        max_retries=settings.GEMINI_MAX_RETRIES,
-        response_schema={
-            "type": "object",
-            "properties": {
-                "matches": {"type": "boolean"},
-                "confidence": {"type": "integer"},
-                "reason": {"type": "string"},
-            },
-            "required": ["matches", "confidence", "reason"],
-        },
-        disable_thinking=True,
-        timeout_sec=settings.GEMINI_PROOF_TIMEOUT_SEC,
-    )
+    try:
+        return await asyncio.wait_for(
+            generate_json(
+                parts,
+                model=model,
+                max_output_tokens=256,
+                json_retries=2,
+                max_retries=settings.GEMINI_MAX_RETRIES,
+                response_schema={
+                    "type": "object",
+                    "properties": {
+                        "matches": {"type": "boolean"},
+                        "confidence": {"type": "integer"},
+                        "reason": {"type": "string"},
+                    },
+                    "required": ["matches", "confidence", "reason"],
+                },
+                disable_thinking=True,
+            ),
+            timeout=settings.GEMINI_PROOF_TIMEOUT_SEC,
+        )
+    except asyncio.TimeoutError as exc:
+        raise GeminiUnavailable(
+            f"Kanıt görüntüsü {settings.GEMINI_PROOF_TIMEOUT_SEC}s içinde işlenemedi."
+        ) from exc

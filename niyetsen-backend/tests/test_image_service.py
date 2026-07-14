@@ -65,6 +65,34 @@ def test_empty_search_uses_category_fallback(monkeypatch):
     assert image.source == "category_fallback"
 
 
+def test_compose_image_query_merges_city_and_interest():
+    query = image_service.compose_image_query(
+        "morning walk",
+        title="Sabah yürüyüşü",
+        city="İstanbul",
+        interests=["koşu", "kahve"],
+        categories=["İrade"],
+    )
+    assert "morning walk" in query
+    assert "istanbul" in query
+
+
+def test_enrich_image_keywords_batch_falls_back_without_gemini(monkeypatch):
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "")
+    items = [("Sabah yürüyüşü", "morning walk", ["İrade"])]
+    import asyncio
+
+    result = asyncio.run(
+        image_service.enrich_image_keywords_batch(
+            items,
+            city="İstanbul",
+            interests=["koşu"],
+        )
+    )
+    assert len(result) == 1
+    assert "istanbul" in result[0]
+
+
 def test_missing_key_uses_deterministic_placeholder(monkeypatch):
     monkeypatch.setattr(settings, "UNSPLASH_ACCESS_KEY", "")
     first = image_service.get_image("", categories=["Disiplin"])

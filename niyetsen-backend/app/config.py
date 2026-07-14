@@ -67,7 +67,7 @@ class Settings:
 
     # --- Rate limit (kullanıcı başına) ---
     CHAT_RATE_LIMIT_PER_MIN: int = int(os.environ.get("CHAT_RATE_LIMIT_PER_MIN", "10"))
-    PROOF_RATE_LIMIT_PER_MIN: int = int(os.environ.get("PROOF_RATE_LIMIT_PER_MIN", "5"))
+    PROOF_RATE_LIMIT_PER_MIN: int = int(os.environ.get("PROOF_RATE_LIMIT_PER_MIN", "12"))
     PLAN_RATE_LIMIT_PER_MIN: int = int(os.environ.get("PLAN_RATE_LIMIT_PER_MIN", "3"))
 
     # --- Hukuki metin metadata'sı (metin değişince sürümü değiştir) ---

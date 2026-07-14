@@ -62,6 +62,104 @@ def category_fallback_query(categories: list[str] | None) -> str:
     return "healthy daily routine"
 
 
+def compose_image_query(
+    keyword: str,
+    *,
+    title: str = "",
+    city: str = "",
+    interests: list[str] | None = None,
+    categories: list[str] | None = None,
+) -> str:
+    """Görev + şehir + ilgi alanından bağlama uygun Unsplash arama terimi."""
+    parts: list[str] = []
+    base = normalize_image_query(keyword) or normalize_image_query(title)
+    if base:
+        parts.append(base)
+
+    city_part = normalize_image_query(city)
+    if city_part and city_part not in " ".join(parts):
+        parts.append(city_part)
+
+    for interest in (interests or [])[:2]:
+        token = normalize_image_query(interest)
+        if token and token not in " ".join(parts):
+            parts.append(token)
+            break
+
+    query = " ".join(parts).strip()
+    if not query:
+        return category_fallback_query(categories)
+    return " ".join(query.split()[:6])
+
+
+async def enrich_image_keywords_batch(
+    items: list[tuple[str, str, list[str]]],
+    *,
+    city: str,
+    interests: list[str],
+) -> list[str]:
+    """Tek Gemini çağrısıyla parti görevlerinin görsel arama terimlerini zenginleştirir."""
+    if not items:
+        return []
+
+    fallbacks = [
+        compose_image_query(keyword, title=title, city=city, interests=interests, categories=cats)
+        for title, keyword, cats in items
+    ]
+    if not settings.GEMINI_API_KEY:
+        return fallbacks
+
+    from app.core.gemini_client import GeminiUnavailable, generate_json
+
+    task_lines = "\n".join(
+        f"{index + 1}. title={title!r} keyword={keyword!r} categories={cats!r}"
+        for index, (title, keyword, cats) in enumerate(items)
+    )
+    interest_text = ", ".join(interests) if interests else "belirtilmedi"
+    prompt = (
+        f"Kullanıcı şehri: {city or 'belirtilmedi'}\n"
+        f"İlgi alanları: {interest_text}\n\n"
+        "Her görev için Unsplash'ta aranacak İngilizce 2-4 kelimelik, somut, küçük harf "
+        "görsel arama terimi üret. Şehir ve ilgi alanına uygun olsun.\n\n"
+        f"Görevler:\n{task_lines}\n\n"
+        f'JSON: {{"queries": ["terim1", ...]}} — tam {len(items)} öğe, aynı sıra.'
+    )
+    try:
+        data = await generate_json(
+            prompt,
+            model=settings.GEMINI_MODEL,
+            max_output_tokens=512,
+            json_retries=2,
+            response_schema={
+                "type": "object",
+                "properties": {
+                    "queries": {"type": "array", "items": {"type": "string"}},
+                },
+                "required": ["queries"],
+            },
+            disable_thinking=True,
+        )
+        queries = data.get("queries") or []
+        if len(queries) != len(items):
+            return fallbacks
+        enriched: list[str] = []
+        for index, (title, keyword, cats) in enumerate(items):
+            refined = normalize_image_query(str(queries[index]))
+            enriched.append(
+                refined
+                or compose_image_query(
+                    keyword, title=title, city=city, interests=interests, categories=cats
+                )
+            )
+        return enriched
+    except GeminiUnavailable as exc:
+        log.warning("Görsel terim zenginleştirme atlandı: %s", exc)
+        return fallbacks
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Görsel terim zenginleştirme hatası: %s", exc)
+        return fallbacks
+
+
 def _search(query: str) -> list[dict]:
     if not settings.UNSPLASH_ACCESS_KEY:
         return []
@@ -87,8 +185,21 @@ def _pick_result(results: list[dict], keyword: str) -> dict:
     return candidates[digest % len(candidates)]
 
 
-def get_image(keyword: str, *, categories: list[str] | None = None) -> ImageResult:
-    query = normalize_image_query(keyword)
+def get_image(
+    keyword: str,
+    *,
+    categories: list[str] | None = None,
+    title: str = "",
+    city: str = "",
+    interests: list[str] | None = None,
+) -> ImageResult:
+    query = compose_image_query(
+        keyword,
+        title=title,
+        city=city,
+        interests=interests,
+        categories=categories,
+    )
     fallback_query = category_fallback_query(categories)
     try:
         results = _search(query) if query else []

@@ -120,6 +120,28 @@ def test_invalid_location_does_not_consume_proof_attempt():
     assert repo.get_proof_attempts(user_id, task_id) == 0
 
 
+def test_first_proof_attempt_calls_vision_with_mime_type(monkeypatch):
+    captured: dict = {}
+
+    async def fake_vision(**kwargs):
+        captured.update(kwargs)
+        return {"confidence": 82, "reason": "Görevle uyumlu", "matches": True}
+
+    monkeypatch.setattr(proof_service, "generate_json_with_image", fake_vision)
+    result = asyncio.run(
+        proof_service.evaluate_proof(
+            task_title="Yürüyüş",
+            image_bytes=_image(),
+            mime_type="image/png",
+            attempt_no=1,
+        )
+    )
+    assert captured["mime_type"] == "image/png"
+    assert result.approved is True
+    assert result.confidence == 82
+    assert result.accepted_by_declaration is False
+
+
 def test_third_proof_attempt_is_accepted_without_vision(monkeypatch):
     async def vision_should_not_run(**_kwargs):
         raise AssertionError("Vision üçüncü denemede çağrılmamalı")

@@ -7,6 +7,7 @@ from dataclasses import dataclass
 import httpx
 
 EXPO_PUSH_URL = "https://exp.host/--/api/v2/push/send"
+EXPO_BATCH_SIZE = 100
 TOKEN_PATTERN = re.compile(r"^(Expo(nent)?PushToken)\[[A-Za-z0-9_-]+\]$")
 
 
@@ -55,3 +56,13 @@ def send(messages: list[PushMessage], timeout: float = 15) -> list[dict]:
     body = response.json()
     data = body.get("data", [])
     return data if isinstance(data, list) else [data]
+
+
+def send_batched(messages: list[PushMessage], timeout: float = 15) -> list[dict]:
+    """Expo API limiti (100) kadar parçalara bölerek tek seferde gönder."""
+    if not messages:
+        return []
+    results: list[dict] = []
+    for start in range(0, len(messages), EXPO_BATCH_SIZE):
+        results.extend(send(messages[start : start + EXPO_BATCH_SIZE], timeout=timeout))
+    return results

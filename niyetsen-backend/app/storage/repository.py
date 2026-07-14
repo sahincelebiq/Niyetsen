@@ -8,6 +8,7 @@ supabase_repository.py arasında dairesel import'u önlemek için).
 """
 from __future__ import annotations
 
+import time
 import uuid
 from datetime import date as dt_date, datetime, timezone
 from threading import RLock
@@ -38,6 +39,7 @@ class InMemoryRepository(Repository):
         self._proof_requests: dict[
             tuple[str, str, str], tuple[str, int, ProofResult | None]
         ] = {}
+        self._proof_request_started: dict[tuple[str, str, str], float] = {}
         self._proof_locks: dict[tuple[str, str], RLock] = {}
         self._consents: dict[str, dict[tuple[str, str], ConsentRecord]] = {}
         self._push_tokens: dict[str, PushTokenRecord] = {}
@@ -202,11 +204,26 @@ class InMemoryRepository(Repository):
         self._attempts[key] = self._attempts.get(key, 0) + 1
         return self._attempts[key]
 
+    def _reclaim_stale_proof_requests(self, user_id: str, task_id: str) -> None:
+        now = time.monotonic()
+        stale_keys = [
+            key
+            for key, started in self._proof_request_started.items()
+            if key[0] == user_id
+            and key[1] == task_id
+            and now - started > 120
+            and self._proof_requests.get(key, ("", 0, None))[0] == "in_progress"
+        ]
+        for key in stale_keys:
+            self._proof_requests.pop(key, None)
+            self._proof_request_started.pop(key, None)
+
     def begin_proof_attempt(
         self, user_id: str, task_id: str, idempotency_key: str
     ) -> ProofAttemptClaim:
         lock = self._proof_locks.setdefault((user_id, task_id), RLock())
         with lock:
+            self._reclaim_stale_proof_requests(user_id, task_id)
             task = self.get_task(user_id, task_id)
             if task is None:
                 raise ValueError("Görev bulunamadı.")
@@ -214,9 +231,16 @@ class InMemoryRepository(Repository):
             existing = self._proof_requests.get(request_key)
             if existing:
                 status, attempt_no, result = existing
-                return ProofAttemptClaim(
-                    status=status, attempt_no=attempt_no, result=result
-                )
+                if status == "completed":
+                    return ProofAttemptClaim(
+                        status=status, attempt_no=attempt_no, result=result
+                    )
+                if status == "in_progress":
+                    return ProofAttemptClaim(
+                        status="in_progress",
+                        attempt_no=attempt_no,
+                        result=result,
+                    )
             if task.status != "pending":
                 raise RuntimeError("Görev zaten sonuçlanmış.")
             if any(
@@ -229,6 +253,7 @@ class InMemoryRepository(Repository):
                 )
             attempt_no = self._attempts.get((user_id, task_id), 0) + 1
             self._proof_requests[request_key] = ("in_progress", attempt_no, None)
+            self._proof_request_started[request_key] = time.monotonic()
             return ProofAttemptClaim(status="started", attempt_no=attempt_no)
 
     def finish_proof_attempt(
@@ -258,6 +283,7 @@ class InMemoryRepository(Repository):
             request_key = (user_id, task_id, idempotency_key)
             if self._proof_requests.get(request_key, ("", 0, None))[0] == "in_progress":
                 self._proof_requests.pop(request_key, None)
+                self._proof_request_started.pop(request_key, None)
 
     def store_proof_photo(
         self, user_id: str, task_id: str, image_bytes: bytes, mime_type: str
@@ -399,6 +425,7 @@ class InMemoryRepository(Repository):
                 user_id=token.user_id,
                 timezone=profile.timezone,
                 notif_hour=profile.notif_hour,
+                notif_minute=profile.notif_minute,
                 token=token.token,
                 last_task_reminder_date=token.last_task_reminder_date,
                 last_bonus_offer_date=token.last_bonus_offer_date,

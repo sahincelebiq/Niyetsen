@@ -67,7 +67,7 @@ async def evaluate_proof(
                 task_type=task_type,
             ),
             image_bytes=image_bytes,
-            mime_type=resolved_mime,
+            mime_type=mime_type,
         )
     except GeminiUnavailable as exc:
         msg = str(exc).casefold()

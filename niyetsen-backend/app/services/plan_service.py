@@ -16,7 +16,7 @@ from app.config import CATEGORIES, settings
 from app.core import prompts
 from app.core.gemini_client import generate_json
 from app.models.schemas import CollectedIntent, Plan, PlanDay, Task
-from app.services.image_service import category_fallback_query, get_image
+from app.services.image_service import category_fallback_query, enrich_image_keywords_batch, get_image
 
 log = logging.getLogger("niyetsen.plan")
 
@@ -68,39 +68,65 @@ async def generate_batch(
         max_output_tokens=8192,
     )
 
-    days: list[PlanDay] = []
-    for d in (data.get("days") or [])[:batch]:
-        day_no = start_day + len(days)
-        tasks: list[Task] = []
-        for t in (d.get("tasks") or [])[: settings.MAX_TASKS_PER_DAY]:
-            title = str(t.get("title") or "").strip()
+    raw_days = (data.get("days") or [])[:batch]
+    pending_images: list[tuple[str, str, list[str]]] = []
+    pending_meta: list[tuple[int, str, dict, list[str], str]] = []
+
+    for day_index, day_payload in enumerate(raw_days):
+        day_no = start_day + day_index
+        theme = str(day_payload.get("theme") or "")
+        for task_payload in (day_payload.get("tasks") or [])[: settings.MAX_TASKS_PER_DAY]:
+            title = str(task_payload.get("title") or "").strip()
             if not title:
                 continue
-            categories = _sanitize_categories(t.get("categories"))
-            keyword = str(t.get("image_keyword") or "").strip()
+            categories = _sanitize_categories(task_payload.get("categories"))
+            keyword = str(task_payload.get("image_keyword") or "").strip()
             if not keyword:
                 keyword = category_fallback_query(categories)
-            image = get_image(keyword, categories=categories)
-            tasks.append(
-                Task(
-                    id=uuid.uuid4().hex[:12],
-                    day=day_no,
-                    date=start_date + timedelta(days=day_no - 1),
-                    title=title,
-                    task_type=t.get("task_type") if t.get("task_type") in
-                        ("yer", "alışkanlık", "sosyal", "kişisel_gelişim") else "alışkanlık",
-                    categories=categories,
-                    image_keyword=keyword,
-                    image_url=image.url,
-                    image_source=image.source,
-                    image_attribution=image.attribution,
-                    image_attribution_url=image.attribution_url,
-                    duration_min=int(t.get("duration_min") or 15),
-                    tiny_version=str(t.get("tiny_version") or "2 dakikanı ayır ve sadece başla."),
-                )
-            )
-        if tasks:
-            days.append(PlanDay(day=day_no, theme=str(d.get("theme") or ""), tasks=tasks))
+            pending_images.append((title, keyword, categories))
+            pending_meta.append((day_no, theme, task_payload, categories, keyword))
+
+    enriched_queries = await enrich_image_keywords_batch(
+        pending_images,
+        city=collected.city,
+        interests=collected.interests,
+    )
+
+    day_tasks: dict[int, list[Task]] = {}
+    day_themes: dict[int, str] = {}
+    for index, (day_no, theme, task_payload, categories, keyword) in enumerate(pending_meta):
+        title = str(task_payload.get("title") or "").strip()
+        search_query = enriched_queries[index] if index < len(enriched_queries) else keyword
+        image = get_image(
+            search_query,
+            categories=categories,
+            title=title,
+            city=collected.city,
+            interests=collected.interests,
+        )
+        task = Task(
+            id=uuid.uuid4().hex[:12],
+            day=day_no,
+            date=start_date + timedelta(days=day_no - 1),
+            title=title,
+            task_type=task_payload.get("task_type") if task_payload.get("task_type") in
+                ("yer", "alışkanlık", "sosyal", "kişisel_gelişim") else "alışkanlık",
+            categories=categories,
+            image_keyword=search_query,
+            image_url=image.url,
+            image_source=image.source,
+            image_attribution=image.attribution,
+            image_attribution_url=image.attribution_url,
+            duration_min=int(task_payload.get("duration_min") or 15),
+            tiny_version=str(task_payload.get("tiny_version") or "2 dakikanı ayır ve sadece başla."),
+        )
+        day_tasks.setdefault(day_no, []).append(task)
+        day_themes.setdefault(day_no, theme)
+
+    days = [
+        PlanDay(day=day_no, theme=day_themes.get(day_no, ""), tasks=day_tasks[day_no])
+        for day_no in sorted(day_tasks)
+    ]
 
     if not days:
         raise ValueError("Model boş plan döndürdü — prompt veya niyet verisini kontrol et.")

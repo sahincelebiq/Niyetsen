@@ -14,8 +14,8 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import jwt
 from fastapi import (
-    APIRouter, Depends, File, Form, Header, HTTPException, Request, Response,
-    UploadFile,
+    APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, Request,
+    Response, UploadFile,
 )
 from jwt import PyJWKClient
 
@@ -307,9 +307,19 @@ def chat_history(user_id: str = Depends(get_current_user)) -> list[ChatMessage]:
 def chat_greeting(user_id: str = Depends(get_current_user)) -> ChatGreetingResponse:
     """Yeni sohbet veya boş oturumda saat dilimine göre kişiselleştirilmiş karşılama."""
     profile = repo.get_profile(user_id)
+    state = repo.get_state(user_id)
+    summaries = repo.list_plan_summaries(user_id)
+    active_summary = next((item for item in summaries if item.is_active), None)
+    has_plan = bool(active_summary and active_summary.has_content)
+    today_items = project_service.get_today_tasks(repo, user_id)
+    pending_today = sum(1 for item in today_items if item.task.status == "pending")
     message = greeting_service.build_chat_greeting(
         name=profile.name,
         timezone_name=profile.timezone,
+        streak_len=state.streak_len if state else 0,
+        pending_tasks_today=pending_today,
+        active_plan_name=active_summary.name if active_summary else "",
+        has_plan=has_plan,
     )
     return ChatGreetingResponse(message=message)
 
@@ -617,26 +627,27 @@ def require_cron_secret(
 
 @router.post("/cron/close-day")
 def close_day(
+    background_tasks: BackgroundTasks,
     at: datetime | None = None,
     _: None = Depends(require_cron_secret),
 ) -> dict:
     """
     Her kullanıcı için kendi timezone'unda son kapanmış günü hesaplar. Endpoint
     kullanıcı JWT'si yerine yalnız sunucudaki cron sırrıyla çağrılır.
+    Ceza push bildirimleri HTTP yanıtından sonra arka planda gönderilir.
     """
     if at is not None and at.tzinfo is None:
         at = at.replace(tzinfo=timezone.utc)
     result = task_lifecycle_service.close_due_users(repo, at)
-    try:
-        result["penalty_notifications_sent"] = (
-            notification_service.send_penalty_notifications(
-                repo, result.get("results", [])
-            )
+    penalized = [
+        row for row in result.get("results", [])
+        if row.get("penalized_tasks", 0) > 0
+    ]
+    if penalized:
+        background_tasks.add_task(
+            notification_service.send_penalty_notifications, repo, penalized
         )
-    except Exception as exc:
-        log.exception("Ceza bildirimleri gönderilemedi")
-        result["penalty_notifications_sent"] = 0
-        result["penalty_notification_error"] = str(exc)[:300]
+    result["penalty_notifications_scheduled"] = len(penalized)
     return result
 
 

@@ -209,6 +209,7 @@ class UserProfile(BaseModel):
     zodiac_sign: Optional[str] = None
     timezone: str = "Europe/Istanbul"
     notif_hour: int = 8
+    notif_minute: int = 0
     irade_modu_active: bool = False
     kvkk_consent_at: Optional[datetime] = None
     onboarding_complete: bool = False
@@ -219,6 +220,7 @@ class ProfileUpdate(BaseModel):
     birth_date: dt_date
     timezone: str = Field(default="Europe/Istanbul", min_length=1, max_length=80)
     notif_hour: int = Field(default=8, ge=0, le=23)
+    notif_minute: int = Field(default=0, ge=0, le=59)
     # Legacy onboarding clients may still send true. Omitted/false never revokes
     # consent; revocation belongs to the explicit /me/consent endpoint.
     kvkk_consent: Optional[bool] = None
@@ -306,6 +308,7 @@ class NotificationRecipient(BaseModel):
     user_id: str
     timezone: str = "Europe/Istanbul"
     notif_hour: int = Field(default=8, ge=0, le=23)
+    notif_minute: int = Field(default=0, ge=0, le=59)
     token: str
     last_task_reminder_date: Optional[dt_date] = None
     last_bonus_offer_date: Optional[dt_date] = None

@@ -34,6 +34,7 @@ def build_profile(update: ProfileUpdate, current: UserProfile) -> UserProfile:
         zodiac_sign=zodiac_for(update.birth_date),
         timezone=update.timezone,
         notif_hour=update.notif_hour,
+        notif_minute=update.notif_minute,
         irade_modu_active=update.irade_modu_active,
         kvkk_consent_at=consent_at,
         onboarding_complete=consent_at is not None,

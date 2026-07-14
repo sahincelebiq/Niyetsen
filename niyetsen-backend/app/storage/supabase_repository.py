@@ -599,7 +599,7 @@ class SupabaseRepository(Repository):
     def get_profile(self, user_id: str) -> UserProfile:
         self._ensure_user(user_id)
         row = self._db.table("users").select(
-            "name,birth_date,zodiac_sign,timezone,notif_hour,"
+            "name,birth_date,zodiac_sign,timezone,notif_hour,notif_minute,"
             "irade_modu_active,kvkk_consent_at"
         ).eq("id", user_id).single().execute().data
         complete = bool(
@@ -617,6 +617,7 @@ class SupabaseRepository(Repository):
             "zodiac_sign": profile.zodiac_sign,
             "timezone": profile.timezone,
             "notif_hour": profile.notif_hour,
+            "notif_minute": profile.notif_minute,
             "irade_modu_active": profile.irade_modu_active,
             "kvkk_consent_at": (
                 profile.kvkk_consent_at.isoformat()
@@ -669,7 +670,7 @@ class SupabaseRepository(Repository):
     def list_notification_recipients(self) -> list[NotificationRecipient]:
         rows = self._db.table("push_tokens").select(
             "user_id,token,last_task_reminder_date,last_bonus_offer_date,"
-            "users!inner(timezone,notif_hour)"
+            "users!inner(timezone,notif_hour,notif_minute)"
         ).eq("enabled", True).execute().data
         return [
             NotificationRecipient(
@@ -683,6 +684,7 @@ class SupabaseRepository(Repository):
                 ),
                 timezone=(row.get("users") or {}).get("timezone") or "Europe/Istanbul",
                 notif_hour=(row.get("users") or {}).get("notif_hour") or 8,
+                notif_minute=(row.get("users") or {}).get("notif_minute") or 0,
             )
             for row in rows
         ]
