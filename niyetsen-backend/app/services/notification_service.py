@@ -33,55 +33,61 @@ def run_due_notifications(
     sent_bonus = 0
     errors: list[str] = []
     for recipient in repository.list_notification_recipients():
-        local = _local_now(now_utc, recipient.timezone)
-        day = local.date()
-        plan = repository.get_plan(recipient.user_id)
-        pending_today = [
-            task for plan_day in (plan.days if plan else [])
-            for task in plan_day.tasks
-            if task.date == day and task.status == "pending"
-        ]
-        if (
-            pending_today
-            and local.hour >= recipient.notif_hour
-            and recipient.last_task_reminder_date != day
-        ):
-            try:
-                result = push_service.send([push_service.PushMessage(
-                    token=recipient.token,
-                    title="Bugünün halkası seni bekliyor",
-                    body=pending_today[0].title,
-                    data={"url": "/daily", "taskId": pending_today[0].id},
-                )])
-                if _delivered(result):
-                    repository.mark_task_reminder_sent(
-                        recipient.user_id, recipient.token, day
-                    )
-                    sent_task += 1
-            except Exception as exc:  # delivery failure must not stop other users
-                log.warning("Görev push hatası (%s): %s", recipient.user_id, exc)
-                errors.append(recipient.user_id)
+        try:
+            local = _local_now(now_utc, recipient.timezone)
+            day = local.date()
+            plan = repository.get_plan(recipient.user_id)
+            pending_today = [
+                task for plan_day in (plan.days if plan else [])
+                for task in plan_day.tasks
+                if task.date == day and task.status == "pending"
+            ]
+            if (
+                pending_today
+                and local.hour >= recipient.notif_hour
+                and recipient.last_task_reminder_date != day
+            ):
+                try:
+                    result = push_service.send([push_service.PushMessage(
+                        token=recipient.token,
+                        title="Bugünün halkası seni bekliyor",
+                        body=pending_today[0].title,
+                        data={"url": "/daily", "taskId": pending_today[0].id},
+                    )])
+                    if _delivered(result):
+                        repository.mark_task_reminder_sent(
+                            recipient.user_id, recipient.token, day
+                        )
+                        sent_task += 1
+                except Exception as exc:  # delivery failure must not stop other users
+                    log.warning("Görev push hatası (%s): %s", recipient.user_id, exc)
+                    errors.append(recipient.user_id)
 
-        if (
-            local.hour >= BONUS_LOCAL_HOUR
-            and recipient.last_bonus_offer_date != day
-        ):
-            offer = bonus_service.offer_for_day(repository, recipient.user_id, day)
-            try:
-                result = push_service.send([push_service.PushMessage(
-                    token=recipient.token,
-                    title="10 puanlık küçük bir halka",
-                    body=offer.title,
-                    data={"url": "/bonus", "bonusId": offer.id},
-                )])
-                if _delivered(result):
-                    repository.mark_bonus_offer_sent(
-                        recipient.user_id, recipient.token, day
-                    )
-                    sent_bonus += 1
-            except Exception as exc:
-                log.warning("Bonus push hatası (%s): %s", recipient.user_id, exc)
-                errors.append(recipient.user_id)
+            if (
+                local.hour >= BONUS_LOCAL_HOUR
+                and recipient.last_bonus_offer_date != day
+            ):
+                offer = bonus_service.offer_for_day(repository, recipient.user_id, day)
+                try:
+                    result = push_service.send([push_service.PushMessage(
+                        token=recipient.token,
+                        title="10 puanlık küçük bir halka",
+                        body=offer.title,
+                        data={"url": "/bonus", "bonusId": offer.id},
+                    )])
+                    if _delivered(result):
+                        repository.mark_bonus_offer_sent(
+                            recipient.user_id, recipient.token, day
+                        )
+                        sent_bonus += 1
+                except Exception as exc:
+                    log.warning("Bonus push hatası (%s): %s", recipient.user_id, exc)
+                    errors.append(recipient.user_id)
+        except Exception as exc:
+            log.exception(
+                "Bildirim işlenemedi (user_id=%s)", recipient.user_id
+            )
+            errors.append(recipient.user_id)
 
     return {
         "task_reminders_sent": sent_task,

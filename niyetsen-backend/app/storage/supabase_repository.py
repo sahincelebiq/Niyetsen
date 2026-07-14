@@ -33,6 +33,14 @@ def _maybe_single(builder) -> Optional[dict]:
     return response.data if response is not None else None
 
 
+def _parse_optional_date(value) -> dt_date | None:
+    if value is None or value == "":
+        return None
+    if isinstance(value, dt_date):
+        return value
+    return dt_date.fromisoformat(str(value))
+
+
 def _task_from_row(row: dict) -> Task:
     return Task(
         id=row["id"],
@@ -98,21 +106,25 @@ class SupabaseRepository(Repository):
         streak_row = _maybe_single(
             self._db.table("streaks").select("*").eq("user_id", user_id)
         ) or {}
-        user_row = (
+        user_row = _maybe_single(
             self._db.table("users").select("excuse_count,freeze_tokens,freeze_last_grant")
-            .eq("id", user_id).single().execute().data
-        )
+            .eq("id", user_id)
+        ) or {}
+
+        last_active = streak_row.get("last_active_date")
+        if last_active is not None and not isinstance(last_active, dt_date):
+            last_active = dt_date.fromisoformat(str(last_active))
 
         return GameState(
             user_id=user_id,
             points=points,
             silent_miss_streak=streak_row.get("silent_miss_streak", 0),
-            excuse_count=user_row["excuse_count"],
+            excuse_count=user_row.get("excuse_count") or 0,
             streak_len=streak_row.get("current_len", 0),
             best_streak=streak_row.get("best_len", 0),
-            last_active_date=streak_row.get("last_active_date"),
-            freeze_tokens=user_row["freeze_tokens"],
-            freeze_last_grant=user_row["freeze_last_grant"],
+            last_active_date=last_active,
+            freeze_tokens=user_row.get("freeze_tokens") or 0,
+            freeze_last_grant=user_row.get("freeze_last_grant"),
         )
 
     def save_state(self, state: GameState) -> None:
@@ -663,8 +675,12 @@ class SupabaseRepository(Repository):
             NotificationRecipient(
                 user_id=row["user_id"],
                 token=row["token"],
-                last_task_reminder_date=row.get("last_task_reminder_date"),
-                last_bonus_offer_date=row.get("last_bonus_offer_date"),
+                last_task_reminder_date=_parse_optional_date(
+                    row.get("last_task_reminder_date")
+                ),
+                last_bonus_offer_date=_parse_optional_date(
+                    row.get("last_bonus_offer_date")
+                ),
                 timezone=(row.get("users") or {}).get("timezone") or "Europe/Istanbul",
                 notif_hour=(row.get("users") or {}).get("notif_hour") or 8,
             )

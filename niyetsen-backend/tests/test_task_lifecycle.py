@@ -220,6 +220,28 @@ def test_gemini_unavailable_does_not_approve_persist_or_consume_attempt(monkeypa
     assert repo.get_point_log(user_id) == []
 
 
+def test_gemini_image_error_returns_400_without_consuming_attempt(monkeypatch):
+    user_id = "proof-gemini-image"
+    task_id = "proof-gemini-image-task"
+    repo.save_plan(user_id, _plan(task_id, date.today()))
+    _allow_proof(user_id)
+
+    async def bad_image(**_kwargs):
+        raise proof_service.ProofRejected(
+            "Fotoğraf okunamadı veya işlenemedi. Yeni bir kare çekip tekrar dener misin?"
+        )
+
+    monkeypatch.setattr(proof_service, "evaluate_proof", bad_image)
+    response = client.post(
+        f"/task/{task_id}/proof",
+        files={"photo": ("proof.png", _image(), "image/png")},
+        headers={"X-User-Id": user_id},
+    )
+    assert response.status_code == 400
+    assert "Fotoğraf okunamadı" in response.json()["detail"]
+    assert repo.get_proof_attempts(user_id, task_id) == 0
+
+
 def test_proof_idempotency_key_returns_cached_result_without_double_points(monkeypatch):
     user_id = "proof-idempotent"
     task_id = "proof-idempotent-task"

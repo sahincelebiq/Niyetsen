@@ -27,7 +27,9 @@ class Settings:
     GEMINI_MODEL_PLAN: str = os.environ.get("GEMINI_MODEL_PLAN", "gemini-2.5-pro")
     GEMINI_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_TIMEOUT_SEC", "30"))
     GEMINI_PLAN_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_PLAN_TIMEOUT_SEC", "90"))
-    GEMINI_MAX_RETRIES: int = int(os.environ.get("GEMINI_MAX_RETRIES", "2"))
+    # Vision kanıt: retry + ağ gecikmesi; mobil istemci ProofTimeoutMs ile uyumlu tut.
+    GEMINI_PROOF_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_PROOF_TIMEOUT_SEC", "45"))
+    GEMINI_MAX_RETRIES: int = int(os.environ.get("GEMINI_MAX_RETRIES", "3"))
     GEMINI_CHAT_MAX_OUTPUT_TOKENS: int = int(
         os.environ.get("GEMINI_CHAT_MAX_OUTPUT_TOKENS", "2048")
     )
