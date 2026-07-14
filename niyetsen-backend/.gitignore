@@ -1,4 +1,6 @@
 .env
+.railway-project-token
+.railway-revenuecat-secret
 .venv/
 venv/
 __pycache__/
