@@ -632,13 +632,19 @@ def close_day(
     _: None = Depends(require_cron_secret),
 ) -> dict:
     """
-    Her kullanıcı için kendi timezone'unda son kapanmış günü hesaplar. Endpoint
-    kullanıcı JWT'si yerine yalnız sunucudaki cron sırrıyla çağrılır.
-    Ceza push bildirimleri HTTP yanıtından sonra arka planda gönderilir.
+    Her kullanıcı için kendi timezone'unda son kapanmış günü hesaplar.
+    Prod cron doğrudan Supabase kullanır; bu endpoint yedek/manuel test içindir.
     """
     if at is not None and at.tzinfo is None:
         at = at.replace(tzinfo=timezone.utc)
-    result = task_lifecycle_service.close_due_users(repo, at)
+    try:
+        result = task_lifecycle_service.close_due_users(repo, at)
+    except Exception as exc:
+        log.exception("close-day toplu işlem hatası")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Gün sonu kapanışı başarısız: {str(exc)[:300]}",
+        ) from exc
     penalized = [
         row for row in result.get("results", [])
         if row.get("penalized_tasks", 0) > 0

@@ -332,10 +332,19 @@ class SupabaseRepository(Repository):
         )
         return _task_from_row(row) if row else None
 
-    def list_tasks_for_date(self, user_id: str, day: dt_date) -> list[Task]:
+    def _plan_ids_for_user(self, user_id: str) -> list[str]:
         rows = (
-            self._db.table("tasks").select("*, plans!inner(user_id)")
-            .eq("plans.user_id", user_id)
+            self._db.table("plans").select("id").eq("user_id", user_id).execute().data
+        )
+        return [row["id"] for row in rows]
+
+    def list_tasks_for_date(self, user_id: str, day: dt_date) -> list[Task]:
+        plan_ids = self._plan_ids_for_user(user_id)
+        if not plan_ids:
+            return []
+        rows = (
+            self._db.table("tasks").select("*")
+            .in_("plan_id", plan_ids)
             .eq("date", day.isoformat())
             .execute().data
         )
@@ -344,22 +353,28 @@ class SupabaseRepository(Repository):
     def list_daily_tasks_for_date(
         self, user_id: str, day: dt_date
     ) -> list[DailyTaskItem]:
+        plans = (
+            self._db.table("plans").select("id,name")
+            .eq("user_id", user_id).execute().data
+        )
+        if not plans:
+            return []
+        plan_names = {row["id"]: row.get("name") or "Planım" for row in plans}
+        plan_ids = list(plan_names)
         rows = (
-            self._db.table("tasks")
-            .select("*, plans!inner(user_id,id,name)")
-            .eq("plans.user_id", user_id)
+            self._db.table("tasks").select("*")
+            .in_("plan_id", plan_ids)
             .eq("date", day.isoformat())
             .execute().data
         )
-        items: list[DailyTaskItem] = []
-        for row in rows:
-            plan = row.get("plans") or {}
-            items.append(DailyTaskItem(
-                plan_id=plan.get("id") or row.get("plan_id", ""),
-                plan_name=plan.get("name") or "Planım",
+        return [
+            DailyTaskItem(
+                plan_id=row["plan_id"],
+                plan_name=plan_names.get(row["plan_id"], "Planım"),
                 task=_task_from_row(row),
-            ))
-        return items
+            )
+            for row in rows
+        ]
 
     def update_task(self, user_id: str, task: Task) -> None:
         if self.get_task(user_id, task.id) is None:

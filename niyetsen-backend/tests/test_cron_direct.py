@@ -1,15 +1,13 @@
-"""Tests for direct Railway cron execution."""
+"""Tests for Railway cron direct execution."""
 from __future__ import annotations
-
-import json
-from datetime import date, datetime, timezone
 
 import scripts.run_scheduled_jobs as cron_jobs
 from app.models.schemas import GameState, Plan, PlanDay, Task, UserProfile
 from app.storage.repository import InMemoryRepository
+from datetime import date
 
 
-def test_run_jobs_direct_completes_with_in_memory_repo(monkeypatch, capsys):
+def test_run_jobs_completes_with_in_memory_repo(monkeypatch, capsys):
     repository = InMemoryRepository()
     user_id = "cron-direct"
     repository.save_profile(user_id, UserProfile(timezone="Europe/Istanbul"))
@@ -30,7 +28,7 @@ def test_run_jobs_direct_completes_with_in_memory_repo(monkeypatch, capsys):
 
     monkeypatch.setattr("app.storage.repository.repo", repository)
 
-    hard, soft = cron_jobs.run_jobs_direct()
+    hard, soft = cron_jobs.run_jobs()
     captured = capsys.readouterr()
 
     assert hard == []
@@ -38,16 +36,15 @@ def test_run_jobs_direct_completes_with_in_memory_repo(monkeypatch, capsys):
     assert repository.get_task(user_id, "task-14").status == "missed_silent"
 
 
-def test_main_direct_mode_exits_zero_on_soft_notification_failure(monkeypatch):
-    monkeypatch.setenv("CRON_EXECUTION_MODE", "direct")
+def test_main_exits_zero_on_soft_notification_failure(monkeypatch):
     monkeypatch.setenv("USE_SUPABASE_DB", "true")
     monkeypatch.setenv("SUPABASE_URL", "https://example.supabase.co")
     monkeypatch.setenv("SUPABASE_SERVICE_KEY", "service-key")
 
-    def fake_direct():
+    def fake_jobs():
         return [], ["notifications: expo down"]
 
-    monkeypatch.setattr(cron_jobs, "run_jobs_direct", fake_direct)
+    monkeypatch.setattr(cron_jobs, "run_jobs", fake_jobs)
 
     try:
         cron_jobs.main()
@@ -58,6 +55,10 @@ def test_main_direct_mode_exits_zero_on_soft_notification_failure(monkeypatch):
     assert exit_code == 0
 
 
-def test_execution_mode_http_only_when_explicit(monkeypatch):
-    monkeypatch.setenv("CRON_EXECUTION_MODE", "http")
-    assert cron_jobs._execution_mode() == "http"
+def test_require_direct_env_lists_missing(monkeypatch):
+    monkeypatch.delenv("USE_SUPABASE_DB", raising=False)
+    monkeypatch.delenv("SUPABASE_URL", raising=False)
+    monkeypatch.delenv("SUPABASE_SERVICE_KEY", raising=False)
+    import pytest
+    with pytest.raises(RuntimeError, match="USE_SUPABASE_DB"):
+        cron_jobs._require_direct_env()
