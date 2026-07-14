@@ -28,8 +28,11 @@ Niyetsen uses two Railway services from the same repository and backend root.
 - Railway runs this service every five minutes in UTC. The API determines each
   user's local date/time and all jobs are idempotent.
 
-The cron process must exit after each run. `scripts/run_scheduled_jobs.py`
-does so and returns a non-zero exit code if a job fails.
+The cron process must exit after each run. `scripts/cron_paused.py` geçici
+duraklatma içindir (exit 0, mail yok). Normal iş için `run_scheduled_jobs.py`.
+
+**Cron duraklatma:** `railway.cron.toml` → `startCommand = python scripts/cron_paused.py`
+**Cron devam:** `startCommand = python scripts/run_scheduled_jobs.py` + redeploy
 
 ## Verification
 
