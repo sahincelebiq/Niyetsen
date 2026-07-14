@@ -66,21 +66,4 @@ def get_today_tasks(repo: Repository, user_id: str, *, today: date | None = None
         current = _user_local_today(profile.timezone)
     else:
         current = today
-    items: list[DailyTaskItem] = []
-    for summary in repo.list_plan_summaries(user_id):
-        if not summary.has_content:
-            continue
-        plan = repo.get_plan_by_id(user_id, summary.id)
-        if not plan:
-            continue
-        for day in plan.days:
-            for task in day.tasks:
-                if task.date == current:
-                    items.append(
-                        DailyTaskItem(
-                            plan_id=summary.id,
-                            plan_name=summary.name,
-                            task=task,
-                        )
-                    )
-    return items
+    return repo.list_daily_tasks_for_date(user_id, current)

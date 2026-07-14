@@ -12,8 +12,8 @@ from datetime import date as dt_date
 from typing import Optional
 
 from app.models.schemas import (
-    BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, GameState,
-    NotificationRecipient, Plan, PlanSummary, PointLogRecord, ProofAttemptClaim,
+    BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, DailyTaskItem,
+    GameState, NotificationRecipient, Plan, PlanSummary, PointLogRecord, ProofAttemptClaim,
     ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task, UserProfile,
 )
 
@@ -59,6 +59,14 @@ class Repository(ABC):
 
     @abstractmethod
     def get_task(self, user_id: str, task_id: str) -> Optional[Task]: ...
+
+    @abstractmethod
+    def list_tasks_for_date(self, user_id: str, day: dt_date) -> list[Task]: ...
+
+    @abstractmethod
+    def list_daily_tasks_for_date(
+        self, user_id: str, day: dt_date
+    ) -> list[DailyTaskItem]: ...
 
     @abstractmethod
     def update_task(self, user_id: str, task: Task) -> None: ...

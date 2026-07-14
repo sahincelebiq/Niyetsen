@@ -16,8 +16,8 @@ from typing import Optional
 
 from app.config import BONUS_POINTS, settings
 from app.models.schemas import (
-    BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, GameState,
-    NotificationRecipient, Plan, PlanSummary, PointLogRecord, ProofAttemptClaim,
+    BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, DailyTaskItem,
+    GameState, NotificationRecipient, Plan, PlanSummary, PointLogRecord, ProofAttemptClaim,
     ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task, UserProfile,
 )
 from app.storage.base import Repository
@@ -183,6 +183,31 @@ class InMemoryRepository(Repository):
                     if task.id == task_id:
                         return task
         return None
+
+    def list_tasks_for_date(self, user_id: str, day: dt_date) -> list[Task]:
+        tasks: list[Task] = []
+        for plan in self._user_plans(user_id).values():
+            for plan_day in plan.days:
+                for task in plan_day.tasks:
+                    if task.date == day:
+                        tasks.append(task)
+        return tasks
+
+    def list_daily_tasks_for_date(
+        self, user_id: str, day: dt_date
+    ) -> list[DailyTaskItem]:
+        items: list[DailyTaskItem] = []
+        for plan_id, plan in self._user_plans(user_id).items():
+            meta = self._user_meta(user_id).get(plan_id, {})
+            for plan_day in plan.days:
+                for task in plan_day.tasks:
+                    if task.date == day:
+                        items.append(DailyTaskItem(
+                            plan_id=plan_id,
+                            plan_name=meta.get("name", plan.name),
+                            task=task,
+                        ))
+        return items
 
     def update_task(self, user_id: str, task: Task) -> None:
         for plan in self._user_plans(user_id).values():

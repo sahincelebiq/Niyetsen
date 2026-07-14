@@ -13,13 +13,14 @@ import uuid
 from datetime import date as dt_date, datetime, timezone
 from typing import Optional
 
-from supabase import Client, create_client
+from supabase import Client, ClientOptions, create_client
 
 from app.config import CATEGORIES, settings
 from app.models.schemas import (
-    BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, GameState,
-    NotificationRecipient, Plan, PlanDay, PlanSummary, PointLogRecord, ProofAttemptClaim,
-    ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task, UserProfile,
+    BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, DailyTaskItem,
+    GameState, NotificationRecipient, Plan, PlanDay, PlanSummary, PointLogRecord,
+    ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task,
+    UserProfile,
 )
 from app.storage.base import Repository
 
@@ -90,7 +91,15 @@ def _bonus_from_row(row: dict) -> BonusOffer:
 
 class SupabaseRepository(Repository):
     def __init__(self) -> None:
-        self._db: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+        timeout_sec = settings.SUPABASE_TIMEOUT_SEC
+        self._db: Client = create_client(
+            settings.SUPABASE_URL,
+            settings.SUPABASE_SERVICE_KEY,
+            options=ClientOptions(
+                postgrest_client_timeout=timeout_sec,
+                storage_client_timeout=min(timeout_sec, 60),
+            ),
+        )
 
     # ------------------------------------------------------------------
     # Oyun durumu
@@ -322,6 +331,35 @@ class SupabaseRepository(Repository):
             .eq("id", task_id).eq("plans.user_id", user_id)
         )
         return _task_from_row(row) if row else None
+
+    def list_tasks_for_date(self, user_id: str, day: dt_date) -> list[Task]:
+        rows = (
+            self._db.table("tasks").select("*, plans!inner(user_id)")
+            .eq("plans.user_id", user_id)
+            .eq("date", day.isoformat())
+            .execute().data
+        )
+        return [_task_from_row(row) for row in rows]
+
+    def list_daily_tasks_for_date(
+        self, user_id: str, day: dt_date
+    ) -> list[DailyTaskItem]:
+        rows = (
+            self._db.table("tasks")
+            .select("*, plans!inner(user_id,id,name)")
+            .eq("plans.user_id", user_id)
+            .eq("date", day.isoformat())
+            .execute().data
+        )
+        items: list[DailyTaskItem] = []
+        for row in rows:
+            plan = row.get("plans") or {}
+            items.append(DailyTaskItem(
+                plan_id=plan.get("id") or row.get("plan_id", ""),
+                plan_name=plan.get("name") or "Planım",
+                task=_task_from_row(row),
+            ))
+        return items
 
     def update_task(self, user_id: str, task: Task) -> None:
         if self.get_task(user_id, task.id) is None:

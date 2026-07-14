@@ -44,6 +44,7 @@ class Settings:
     SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "")
     # service_role anahtarı — SADECE backend'de yaşar, RLS'i bypass eder, .env dışına çıkmaz.
     SUPABASE_SERVICE_KEY: str = os.environ.get("SUPABASE_SERVICE_KEY", "")
+    SUPABASE_TIMEOUT_SEC: int = int(os.environ.get("SUPABASE_TIMEOUT_SEC", "120"))
     # false: InMemoryRepository (MVP varsayılanı, testler bunu kullanır).
     # true: SupabaseRepository — gerçek DB kalıcılığı (Faz 2).
     USE_SUPABASE_DB: bool = _bool("USE_SUPABASE_DB", "false")

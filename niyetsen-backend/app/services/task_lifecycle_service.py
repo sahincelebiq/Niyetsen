@@ -67,30 +67,8 @@ def excuse_task(
 
 
 def _tasks_for_day(repository: Repository, user_id: str, day: date) -> list:
-    """Tüm içerikli planlardan o güne düşen görevler (çoklu plan §1.1.1)."""
-    tasks = []
-    for summary in repository.list_plan_summaries(user_id):
-        if not summary.has_content:
-            continue
-        plan = repository.get_plan_by_id(user_id, summary.id)
-        if not plan:
-            continue
-        for plan_day in plan.days:
-            for task in plan_day.tasks:
-                if task.date == day:
-                    tasks.append(task)
-    if tasks:
-        return tasks
-
-    plan = repository.get_plan(user_id)
-    if not plan:
-        return []
-    return [
-        task
-        for plan_day in plan.days
-        for task in plan_day.tasks
-        if task.date == day
-    ]
+    """O güne düşen görevler — tam plan yüklemeden tek sorgu."""
+    return repository.list_tasks_for_date(user_id, day)
 
 
 def close_user_day(

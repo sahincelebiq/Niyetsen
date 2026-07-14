@@ -128,6 +128,8 @@ def main() -> int:
     cron_vars["ENV"] = source.get("ENV", "prod")
     cron_vars["USE_SUPABASE_DB"] = source.get("USE_SUPABASE_DB", "true")
     cron_vars["CRON_EXECUTION_MODE"] = "direct"
+    cron_vars["CRON_SKIP_PUSH"] = "true"
+    cron_vars["SUPABASE_TIMEOUT_SEC"] = source.get("SUPABASE_TIMEOUT_SEC", "120")
     cron_vars.setdefault(
         "API_BASE_URL",
         "https://api-production-86f1.up.railway.app",
