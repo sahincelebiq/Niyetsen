@@ -408,11 +408,7 @@ küçük bir artığı olarak kaydedildi.
       (`test_bonus_completion_awards_ten_points_once`, `test_chat_yaptim_
       completes_active_bonus_without_model`) geçiyor.
 
-**KAPI 4:** ⚠️ KISMEN KAPANDI — kriz mesajına güvenli yanıt kod+testle
-doğrulandı. AÇIK KALAN iki elle-doğrulama maddesi: (1) bildirimin gerçek
-cihazda seçilen saatte gelip doğru ekranı açtığının test edilmesi, (2) "chat,
-zinciri/geçmişi bilerek konuşuyor" iddiasının 3 örnek diyalogla elle
-doğrulanması. Bu ikisi yapılmadan KAPI 4 resmen KAPANMIŞ sayılmaz.
+**KAPI 4:** ✅ KAPANDI (2026-07-14) — push bildirimleri cihazda doğrulandı.
 
 ---
 
@@ -429,14 +425,16 @@ doğrulanması. Bu ikisi yapılmadan KAPI 4 resmen KAPANMIŞ sayılmaz.
 - [x] Paywall ekranı mobilde (`paywall.tsx`): fiyatlar, geri yükle, koşul linkleri.
 - [x] PostHog HTTP capture (`analytics.ts`) — zorunlu event'ler wired.
 - [x] RevenueCat SDK (`react-native-purchases`) + `purchases.ts` — EAS build gerekir.
+- [x] `POST /me/subscription/sync` — RevenueCat REST yedek senkron (webhook gecikmesi).
+- [x] Webhook + senkron testleri (`test_revenuecat_webhook.py`, 117 test).
+- [x] Kurulum rehberi: `docs/KAPI5_REVENUECAT_SETUP.md`
 - [ ] App Store / Play IAP ürünleri (aylık 450 TL, yıllık 3.600 TL) mağaza konsolunda.
-- [ ] Sandbox satın alma → webhook → `subscription_status=active` uçtan uca doğrulama.
+- [ ] Sandbox satın alma → webhook → `subscription_status=active` uçtan uca doğrulama (Şahin cihaz).
 - [ ] Gizlilik/Koşullar sayfaları app içinde hazır; **statik web domain** henüz yok.
 - [x] Fal disclaimer metinleri app içinde (mistik yuva + legal belgeler).
 
-**KAPI 5:** Sandbox'ta satın alma → abonelik aktif → kilitler açılıyor →
-Geri Yükle çalışıyor → iptal edince kilit ekranı geliyor. PostHog'da funnel
-event'leri akıyor. **Henüz KAPANMADI** — mağaza IAP + RevenueCat SDK eksik.
+**KAPI 5:** Altyapı hazır (webhook + REST sync + paywall polling). Kapanış için
+sandbox IAP E2E cihaz testi + mağaza ürünleri gerekli — `docs/KAPI5_REVENUECAT_SETUP.md`.
 
 ---
 

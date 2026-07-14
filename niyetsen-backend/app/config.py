@@ -95,6 +95,9 @@ class Settings:
 
     # --- Abonelik (FAZ 5) ---
     REVENUECAT_WEBHOOK_SECRET: str = os.environ.get("REVENUECAT_WEBHOOK_SECRET", "")
+    # Secret API key (dashboard) — /me/subscription/sync için; yalnız backend'de.
+    REVENUECAT_API_KEY: str = os.environ.get("REVENUECAT_API_KEY", "")
+    REVENUECAT_ENTITLEMENT_ID: str = os.environ.get("REVENUECAT_ENTITLEMENT_ID", "premium")
 
     # --- Gözlemlenebilirlik (FAZ 6) ---
     SENTRY_DSN: str = os.environ.get("SENTRY_DSN", "")

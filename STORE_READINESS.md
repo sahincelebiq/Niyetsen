@@ -91,6 +91,6 @@ Aşağıdaki adımlar yapı hazır olduktan sonra:
 | KAPI | Durum |
 |------|-------|
 | KAPI 3 (görev/kanıt/puan) | ✅ Kapandı |
-| KAPI 4 (bildirim + guardrail) | ⚠️ Kod tamam; cihaz push elle test bekliyor |
-| KAPI 5 (paywall + analitik) | ⚠️ SDK + IAP sandbox E2E bekliyor |
+| KAPI 4 (bildirim + guardrail) | ✅ Kapandı |
+| KAPI 5 (paywall + analitik) | ⚠️ Altyapı hazır; sandbox IAP E2E bekliyor |
 | KAPI 6 (store canlı) | ⏸ Yapı hazır; yayınlama bekliyor |

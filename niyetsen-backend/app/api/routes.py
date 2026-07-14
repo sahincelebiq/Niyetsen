@@ -754,6 +754,16 @@ def my_subscription(user_id: str = Depends(get_current_user)) -> SubscriptionInf
     return subscription_service.sync_expired_trials(repo, user_id)
 
 
+@router.post("/me/subscription/sync", response_model=SubscriptionInfo)
+@limiter.limit("12/minute")
+async def sync_my_subscription(
+    request: Request,
+    user_id: str = Depends(get_current_user),
+) -> SubscriptionInfo:
+    """Satın alma sonrası RevenueCat REST ile backend'i hizalar (webhook yedek)."""
+    return await subscription_service.sync_from_revenuecat(repo, user_id)
+
+
 @router.post("/webhooks/revenuecat", response_model=SubscriptionInfo)
 async def revenuecat_webhook(
     payload: RevenueCatWebhookPayload,
@@ -774,6 +784,11 @@ async def revenuecat_webhook(
     expiration_at = (
         datetime.fromtimestamp(expiration_ms / 1000, tz=timezone.utc)
         if expiration_ms else None
+    )
+    log.info(
+        "RevenueCat webhook: type=%s user=%s",
+        event_type,
+        app_user_id,
     )
     return subscription_service.apply_revenuecat_event(
         repo,

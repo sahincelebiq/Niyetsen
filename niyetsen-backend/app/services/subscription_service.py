@@ -189,3 +189,23 @@ def sync_expired_trials(repo: Repository, user_id: str) -> SubscriptionInfo:
         return get_subscription(repo, user_id)
     repo.update_subscription(user_id, subscription_status="expired")
     return get_subscription(repo, user_id)
+
+
+async def sync_from_revenuecat(repo: Repository, user_id: str) -> SubscriptionInfo:
+    """Mağaza satın alması sonrası RC REST ile backend durumunu hizalar."""
+    from app.services import revenuecat_client
+
+    sync_expired_trials(repo, user_id)
+    try:
+        payload = await revenuecat_client.fetch_subscriber(user_id)
+    except revenuecat_client.RevenueCatUnavailable:
+        return get_subscription(repo, user_id)
+
+    active, expires_at = revenuecat_client.entitlement_is_active(payload)
+    if active:
+        repo.update_subscription(user_id, subscription_status="active")
+    elif expires_at is not None and expires_at <= datetime.now(timezone.utc):
+        row = repo.get_subscription_row(user_id)
+        if row.get("subscription_status") == "active":
+            repo.update_subscription(user_id, subscription_status="expired")
+    return get_subscription(repo, user_id)
