@@ -152,15 +152,26 @@ def apply_revenuecat_event(
     if event_type in active_events:
         repo.update_subscription(app_user_id, subscription_status="active")
     elif event_type in inactive_events:
-        row = repo.get_subscription_row(app_user_id)
-        if trial_is_active(
-            row.get("trial_started_at"),
-            row.get("timezone", "Europe/Istanbul"),
+        now = datetime.now(timezone.utc)
+        # İptal = otomatik yenileme kapandı; erişim dönem sonuna kadar sürer.
+        if (
+            event_type == "CANCELLATION"
+            and expiration_at is not None
+            and expiration_at > now
         ):
-            repo.update_subscription(app_user_id, subscription_status="trial")
+            repo.update_subscription(app_user_id, subscription_status="active")
+        elif expiration_at is not None and expiration_at > now:
+            repo.update_subscription(app_user_id, subscription_status="active")
         else:
-            status = "cancelled" if event_type == "CANCELLATION" else "expired"
-            repo.update_subscription(app_user_id, subscription_status=status)
+            row = repo.get_subscription_row(app_user_id)
+            if trial_is_active(
+                row.get("trial_started_at"),
+                row.get("timezone", "Europe/Istanbul"),
+            ):
+                repo.update_subscription(app_user_id, subscription_status="trial")
+            else:
+                status = "cancelled" if event_type == "CANCELLATION" else "expired"
+                repo.update_subscription(app_user_id, subscription_status=status)
     elif expiration_at and expiration_at > datetime.now(timezone.utc):
         repo.update_subscription(app_user_id, subscription_status="active")
 

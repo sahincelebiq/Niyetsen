@@ -364,11 +364,9 @@ Google/Apple sağlayıcı aktivasyonu yukarıdaki açık auth maddesi olarak kal
       `kanit_dogrula`, `puan_guncelle`, `gorev_ertele_mazeretli`, `alarm_kur`,
       `takvime_ekle`) tanımlı; `tool_service.py` dispatch ediyor, `is_allowed()`
       kapalı liste enforcement'ı var.
-- [ ] **İrade Modu** (§1.12) — KISMEN: `users.irade_modu_active` toggle alanı
-      DB'de saklanıyor (`profile_service.py`) AMA açıkken İrade/Disiplin
-      görevlerine OTOMATİK `alarm_kur` tetikleme mantığı henüz YOK — sadece
-      genel `alarm_kur` aracı chat üzerinden (modelin kendi kararıyla)
-      çağrılabiliyor. §1.12'deki otomatik linkaj eksik kalan tek madde.
+- [x] **İrade Modu** (§1.12): `users.irade_modu_active` açıkken İrade/Disiplin
+      görevinde kanıt kamerası açılınca otomatik yerel hatırlatıcı kurulur
+      (`daily.tsx` + `task-reminders.ts`). Chat `alarm_kur` aracı ayrıca duruyor.
 
 **KAPI 3:** ✅ Fiilen KAPANDI (2026-07-12) — foto→puan→rank zinciri Şahin
 tarafından gerçek cihazda elle doğrulandı; sessiz kaçırma/mazeret/cron akışları
@@ -421,15 +419,17 @@ doğrulanması. Bu ikisi yapılmadan KAPI 4 resmen KAPANMIŞ sayılmaz.
 ### FAZ 5 — Paywall + Analitik + Uyum (3–4 gün)
 
 > 🚧 BAŞLADI (2026-07-12): backend deneme/abonelik servisi + paywall ekranı +
-> PostHog HTTP iskeleti tamamlandı. RevenueCat SDK ve mağaza IAP ürünleri AÇIK.
+> PostHog HTTP iskeleti tamamlandı. RevenueCat SDK kodda hazır; mağaza IAP
+> sandbox E2E AÇIK (Şahin elle).
 
 - [x] Deneme mantığı backend'de: ilk plan → `trial_started_at` + 7 gün (`subscription_service.py`);
       süre bitince `402 paywall_required` kilidi (chat/kanıt/bonus).
-- [x] `GET /me/subscription` + `POST /webhooks/revenuecat` (webhook sırrı `.env`).
+- [x] `GET /me/subscription` + `POST /webhooks/revenuecat` (webhook sırrı prod zorunlu).
+- [x] İptal sonrası erişim `expiration_at`'a kadar sürer (`CANCELLATION` webhook).
 - [x] Paywall ekranı mobilde (`paywall.tsx`): fiyatlar, geri yükle, koşul linkleri.
-- [x] PostHog HTTP capture iskeleti (`analytics.ts`) — `EXPO_PUBLIC_POSTHOG_KEY` ile.
-- [ ] RevenueCat SDK (`react-native-purchases`) + App Store / Play IAP ürünleri
-      (aylık 450 TL, yıllık 3.600 TL) — Expo Go'da test edilemez, EAS build gerekir.
+- [x] PostHog HTTP capture (`analytics.ts`) — zorunlu event'ler wired.
+- [x] RevenueCat SDK (`react-native-purchases`) + `purchases.ts` — EAS build gerekir.
+- [ ] App Store / Play IAP ürünleri (aylık 450 TL, yıllık 3.600 TL) mağaza konsolunda.
 - [ ] Sandbox satın alma → webhook → `subscription_status=active` uçtan uca doğrulama.
 - [ ] Gizlilik/Koşullar sayfaları app içinde hazır; **statik web domain** henüz yok.
 - [x] Fal disclaimer metinleri app içinde (mistik yuva + legal belgeler).
@@ -445,11 +445,12 @@ event'leri akıyor. **Henüz KAPANMADI** — mağaza IAP + RevenueCat SDK eksik.
 Hesaplar & yapı:
 - [ ] Apple Developer Program ($99/yıl) + Google Play Developer ($25) hesapları
       — ONAY GÜNLER SÜREBİLİR, bu kaydı Faz 4 civarında paralel başlat
-- [ ] EAS Build kurulumu (`eas.json`: development / preview / production profilleri)
-- [ ] Bundle ID / package name kilitle: örn. `com.niyetsen.app`
-- [ ] App ikonları (1024×1024 + adaptive icon), splash, uygulama adı, sürüm 1.0.0
-- [ ] Production backend: Railway/Render'a deploy, prod .env, prod Supabase,
-      Gemini ücretli katman, HTTPS, Sentry (hata izleme) ekle
+- [x] EAS Build kurulumu (`eas.json`: development / preview / production profilleri)
+- [x] Bundle ID / package name kilitle: `com.niyetsen.app`
+- [x] App ikonları + splash mevcut (`app.json`); store 1024×1024 kontrolü açık
+- [x] Production backend: Railway deploy, prod Supabase, Gemini, HTTPS
+- [x] Sentry iskeleti (backend `observability.py` + mobil `sentry.ts`)
+- [x] `STORE_READINESS.md` — yayın öncesi kontrol listesi (yayınlama henüz değil)
 
 Store varlıkları:
 - [ ] Ekran görüntüleri: iPhone 6.7" + 6.5" + iPad (zorunluysa), Android telefon —

@@ -5,7 +5,7 @@ import logging
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from app.services import bonus_service, push_service
+from app.services import bonus_service, project_service, push_service
 from app.storage.base import Repository
 
 log = logging.getLogger("niyetsen.notifications")
@@ -36,11 +36,12 @@ def run_due_notifications(
         try:
             local = _local_now(now_utc, recipient.timezone)
             day = local.date()
-            plan = repository.get_plan(recipient.user_id)
             pending_today = [
-                task for plan_day in (plan.days if plan else [])
-                for task in plan_day.tasks
-                if task.date == day and task.status == "pending"
+                item.task
+                for item in project_service.get_today_tasks(
+                    repository, recipient.user_id, today=day
+                )
+                if item.task.status == "pending"
             ]
             if (
                 pending_today

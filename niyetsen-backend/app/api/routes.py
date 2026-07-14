@@ -421,8 +421,15 @@ def get_plan(user_id: str = Depends(get_current_user)) -> Plan:
 
 
 @router.post("/plan/generate", response_model=Plan)
-async def generate_plan(req: PlanGenerateRequest, user_id: str = Depends(get_current_user)) -> Plan:
+@limiter.limit(f"{settings.PLAN_RATE_LIMIT_PER_MIN}/minute")
+async def generate_plan(
+    request: Request,
+    req: PlanGenerateRequest,
+    user_id: str = Depends(get_current_user),
+) -> Plan:
     """Çekirdek halka 2/2: görselli plan (ilk parti). Sonraki partiler /plan/next."""
+    _require_consent(user_id, "chat")
+    _require_premium(user_id)
     summaries = repo.list_plan_summaries(user_id)
     active = next((item for item in summaries if item.is_active), None)
     if active and active.has_content:
@@ -620,11 +627,16 @@ def close_day(
     if at is not None and at.tzinfo is None:
         at = at.replace(tzinfo=timezone.utc)
     result = task_lifecycle_service.close_due_users(repo, at)
-    result["penalty_notifications_sent"] = (
-        notification_service.send_penalty_notifications(
-            repo, result.get("results", [])
+    try:
+        result["penalty_notifications_sent"] = (
+            notification_service.send_penalty_notifications(
+                repo, result.get("results", [])
+            )
         )
-    )
+    except Exception as exc:
+        log.exception("Ceza bildirimleri gönderilemedi")
+        result["penalty_notifications_sent"] = 0
+        result["penalty_notification_error"] = str(exc)[:300]
     return result
 
 
@@ -748,10 +760,11 @@ async def revenuecat_webhook(
     authorization: str | None = Header(default=None),
 ) -> SubscriptionInfo:
     secret = settings.REVENUECAT_WEBHOOK_SECRET
-    if secret:
-        expected = f"Bearer {secret}"
-        if authorization != expected:
-            raise HTTPException(status_code=401, detail="Geçersiz webhook sırrı.")
+    if not secret:
+        raise HTTPException(status_code=503, detail="Webhook sırrı yapılandırılmamış.")
+    expected = f"Bearer {secret}"
+    if authorization != expected:
+        raise HTTPException(status_code=401, detail="Geçersiz webhook sırrı.")
     event = payload.event or {}
     app_user_id = event.get("app_user_id")
     event_type = event.get("type", "")

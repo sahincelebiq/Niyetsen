@@ -1,11 +1,20 @@
 """Niyetsen — çoklu plan projeleri (free=1 plan, abonelikle sınırsız yeni niyet)."""
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.models.schemas import CollectedIntent, DailyTaskItem, PlanSummary
 from app.services import subscription_service
 from app.storage.base import Repository
+
+
+def _user_local_today(timezone_name: str) -> date:
+    try:
+        tz = ZoneInfo(timezone_name)
+    except ZoneInfoNotFoundError:
+        tz = ZoneInfo("Europe/Istanbul")
+    return datetime.now(timezone.utc).astimezone(tz).date()
 
 
 def list_projects(repo: Repository, user_id: str) -> list[PlanSummary]:
@@ -52,7 +61,11 @@ def start_new_project(repo: Repository, user_id: str) -> PlanSummary:
 
 
 def get_today_tasks(repo: Repository, user_id: str, *, today: date | None = None) -> list[DailyTaskItem]:
-    current = today or date.today()
+    if today is None:
+        profile = repo.get_profile(user_id)
+        current = _user_local_today(profile.timezone)
+    else:
+        current = today
     items: list[DailyTaskItem] = []
     for summary in repo.list_plan_summaries(user_id):
         if not summary.has_content:

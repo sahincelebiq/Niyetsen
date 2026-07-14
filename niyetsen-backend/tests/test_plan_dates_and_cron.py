@@ -15,6 +15,7 @@ from app.main import app
 from app.config import settings
 from app.services import plan_service
 from app.storage.repository import repo
+from tests.conftest import grant_chat_consent
 
 client = TestClient(app)
 
@@ -49,6 +50,7 @@ def _mock_gemini(monkeypatch):
 
 
 def _generate_plan(user_id: str) -> dict:
+    grant_chat_consent(user_id, client)
     resp = client.post(
         "/plan/generate",
         json={"collected": COLLECTED, "duration_days": 3},

@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services import plan_service
+from tests.conftest import grant_chat_consent
 
 client = TestClient(app)
 
@@ -52,6 +53,7 @@ def test_free_user_blocked_from_second_project():
         "weekly_hours": 5,
         "duration_days": 7,
     }
+    grant_chat_consent(user_id, client)
     generate = client.post(
         "/plan/generate",
         headers=_headers(user_id),
@@ -73,6 +75,7 @@ def test_premium_user_can_start_second_project():
         "weekly_hours": 4,
         "duration_days": 7,
     }
+    grant_chat_consent(user_id, client)
     client.post(
         "/plan/generate",
         headers=_headers(user_id),

@@ -12,9 +12,11 @@ from slowapi.errors import RateLimitExceeded
 
 from app.api.routes import router
 from app.config import settings
+from app.core.observability import init_observability
 from app.core.rate_limit import limiter
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
+init_observability()
 
 # GÜVENLİK KİLİDİ: prod'da auth kapalı çalıştırmak imkânsız olsun.
 if settings.ENV == "prod" and settings.AUTH_DISABLED:
@@ -34,6 +36,12 @@ if settings.ENV == "prod" and not settings.CRON_SECRET:
     raise RuntimeError(
         "ENV=prod iken CRON_SECRET boş olamaz. Güçlü ve yalnız sunucuda tutulan "
         "bir cron sırrı yapılandır."
+    )
+
+if settings.ENV == "prod" and not settings.REVENUECAT_WEBHOOK_SECRET:
+    raise RuntimeError(
+        "ENV=prod iken REVENUECAT_WEBHOOK_SECRET boş olamaz. RevenueCat webhook "
+        "doğrulaması zorunludur."
     )
 
 app = FastAPI(
