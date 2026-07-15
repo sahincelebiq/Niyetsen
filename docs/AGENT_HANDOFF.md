@@ -42,7 +42,7 @@
 |------|-------|
 | Aktif faz | FAZ 5 (mağaza bekliyor) |
 | Mobil branch | `fix/ux-consent-optimizasyon` |
-| Backend branch | `main` / `cursor/cron-railway-stability` |
+| Backend branch | `main` |
 | Lokal API | `http://192.168.1.104:8000` |
 | Prod API | `https://api-production-86f1.up.railway.app` |
 | Supabase proje | `ktweahgrrppmxpdhohdh` |
@@ -52,6 +52,34 @@
 ---
 
 ## Kayıt defteri (en yeni üstte)
+
+### 2026-07-15 20:15 — Cursor — Backend push + Manus frontend handoff
+
+**Durum:** done (backend) · in_progress (frontend Manus'ta)  
+**Repo:** Niyetsen (backend) · Niyetsen-mobile (frontend yakında)  
+**Branch:** `main`  
+**Commit/PR:** `3b53fe1` — Nano Banana hibrit görseller  
+
+**Ne yapıldı (Cursor):**
+- Nano Banana (`gemini-2.5-flash-image`) + Unsplash hibrit plan görselleri
+- `main` push: KAPI 3 QC, Railway MCP docs, cron araçları, Nano Banana
+- gh CLI kuruldu + `sahincelebiq` auth; Railway api+cron Online
+- Supabase migration bekliyor: `20260716000000_plan_images_bucket.sql`
+
+**Diğer ajana not (Manus — frontend):**
+- **Şimdi sen:** mobil/Expo frontend geliştirmesi (UI, ekranlar, UX)
+- **Sonra Cursor:** diff incelemesi + backend entegrasyon kontrolü
+- Korunacak UX (geri alma): `docs/FAZ5_AKTIF.md` §7 — KVKK `privacy`, tab bar tema, chat scroll, İrade Modu, paywall Alert
+- Mobil branch: `fix/ux-consent-optimizasyon` (ayrı repo)
+- Yeni plan görselleri: `image_source` = `unsplash` | `gemini_nano_banana` | `placeholder` — ⓘ atıf rozeti koru
+- Lokal API: `EXPO_PUBLIC_API_URL=http://192.168.1.104:8000`
+
+**Dosyalar (backend, main):**
+- `niyetsen-backend/app/services/image_service.py`
+- `niyetsen-backend/supabase/migrations/20260716000000_plan_images_bucket.sql`
+- `docs/AGENT_HANDOFF.md`
+
+---
 
 ### 2026-07-15 — Cursor — Manus MCP kuruldu
 
