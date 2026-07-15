@@ -124,10 +124,7 @@ def _build_vars(source: dict[str, str], *, for_cron: bool) -> dict[str, str]:
         base.update({
             "CRON_EXECUTION_MODE": "direct",
             "CRON_SKIP_PUSH": source.get("CRON_SKIP_PUSH", "true"),
-            "API_BASE_URL": source.get(
-                "API_BASE_URL",
-                "https://api-production-86f1.up.railway.app",
-            ),
+            "PYTHONPATH": "/app",
         })
     return {k: v for k, v in base.items() if v}
 

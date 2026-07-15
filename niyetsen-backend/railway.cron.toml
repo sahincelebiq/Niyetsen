@@ -4,5 +4,6 @@ dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "python scripts/run_scheduled_jobs.py"
+# Railway dashboard → Config-as-code path: /railway.cron.toml (railway.toml DEĞİL)
 cronSchedule = "*/5 * * * *"
 restartPolicyType = "NEVER"

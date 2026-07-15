@@ -6,6 +6,19 @@ import os
 import sys
 import time
 import traceback
+from pathlib import Path
+
+# Dockerfile CMD uvicorn olsa bile cron script app.* import edebilsin.
+_ROOT = Path(__file__).resolve().parents[1]
+if str(_ROOT) not in sys.path:
+    sys.path.insert(0, str(_ROOT))
+
+try:
+    from dotenv import load_dotenv
+
+    load_dotenv(_ROOT / ".env")
+except ImportError:
+    pass
 
 # Yeni Supabase key adları → backend'in beklediği isim
 if not os.environ.get("SUPABASE_SERVICE_KEY") and os.environ.get("SUPABASE_SECRET_KEY"):

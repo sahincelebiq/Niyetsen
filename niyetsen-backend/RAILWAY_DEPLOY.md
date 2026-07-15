@@ -37,7 +37,12 @@ duraklatma içindir (exit 0, mail yok). Normal iş için `run_scheduled_jobs.py`
 ## Verification
 
 1. Open the API `/health` endpoint and expect HTTP 200.
-2. Trigger the cron service once from Railway.
-3. Confirm `/cron/close-day` returns 200 in the cron logs.
-4. Confirm only tasks whose local day has closed are changed and `point_log`
-   contains the resulting penalty.
+2. Cron servisinde **Config-as-code path** = `/railway.cron.toml` (uvicorn değil).
+3. Trigger the cron service once from Railway.
+4. **Direct mod logları** (doğru):
+   - `cron modu: direct`
+   - `close-day: {"processed_users":…,"failed_users":0,…}`
+   - `cron tamamlandı (exit 0)`
+5. **Yanlış mod** (düzelt): `POST /cron/close-day HTTP/1.1` → cron servisi
+   `railway.toml` ile uvicorn çalıştırıyor; config path'i `/railway.cron.toml` yap.
+6. Lokal kontrol: `python -m scripts.verify_railway_cron_runtime`
