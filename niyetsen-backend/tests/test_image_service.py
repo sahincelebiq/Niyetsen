@@ -36,6 +36,7 @@ def test_result_pick_is_deterministic():
 
 def test_unsplash_result_has_crop_quality_and_attribution(monkeypatch):
     monkeypatch.setattr(settings, "UNSPLASH_ACCESS_KEY", "test-key")
+    monkeypatch.setattr(settings, "IMAGE_GEMINI_ENABLED", False)
     monkeypatch.setattr(
         image_service.httpx,
         "get",
@@ -51,6 +52,7 @@ def test_unsplash_result_has_crop_quality_and_attribution(monkeypatch):
 
 def test_empty_search_uses_category_fallback(monkeypatch):
     monkeypatch.setattr(settings, "UNSPLASH_ACCESS_KEY", "test-key")
+    monkeypatch.setattr(settings, "IMAGE_GEMINI_ENABLED", False)
     queries = []
 
     def fake_get(*args, **kwargs):
@@ -95,8 +97,64 @@ def test_enrich_image_keywords_batch_falls_back_without_gemini(monkeypatch):
 
 def test_missing_key_uses_deterministic_placeholder(monkeypatch):
     monkeypatch.setattr(settings, "UNSPLASH_ACCESS_KEY", "")
+    monkeypatch.setattr(settings, "IMAGE_GEMINI_ENABLED", False)
     first = image_service.get_image("", categories=["Disiplin"])
     second = image_service.get_image("", categories=["Disiplin"])
     assert first.source == "placeholder"
     assert first.url == second.url
     assert "focusedstudydesk" in first.url
+
+
+def test_should_use_gemini_for_specific_task_types(monkeypatch):
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(settings, "IMAGE_GEMINI_ENABLED", True)
+    monkeypatch.setattr(settings, "IMAGE_GEMINI_RATIO", 0.0)
+    assert image_service.should_use_gemini_image(
+        title="Kadıköy sahil yürüyüşü",
+        keyword="istanbul seaside walk",
+        task_type="yer",
+    )
+
+
+def test_should_use_gemini_by_ratio(monkeypatch):
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(settings, "IMAGE_GEMINI_ENABLED", True)
+    monkeypatch.setattr(settings, "IMAGE_GEMINI_RATIO", 1.0)
+    assert image_service.should_use_gemini_image(
+        title="Sabah çayı",
+        keyword="morning tea",
+        task_type="alışkanlık",
+    )
+
+
+def test_gemini_image_falls_back_to_unsplash(monkeypatch):
+    import asyncio
+
+    from app.core.gemini_client import GeminiUnavailable
+
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
+    monkeypatch.setattr(settings, "IMAGE_GEMINI_ENABLED", True)
+    monkeypatch.setattr(settings, "IMAGE_GEMINI_RATIO", 1.0)
+    monkeypatch.setattr(settings, "UNSPLASH_ACCESS_KEY", "test-key")
+
+    async def fake_gemini(prompt, *, model=None):
+        raise GeminiUnavailable("mock fail")
+
+    from app.core import gemini_client
+
+    monkeypatch.setattr(gemini_client, "generate_image_bytes", fake_gemini)
+    monkeypatch.setattr(
+        image_service.httpx,
+        "get",
+        lambda *args, **kwargs: FakeResponse([_result(3)]),
+    )
+
+    image = asyncio.run(
+        image_service.get_image_async(
+            "morning yoga",
+            categories=["İrade"],
+            title="Sabah yogası",
+            task_type="alışkanlık",
+        )
+    )
+    assert image.source == "unsplash"

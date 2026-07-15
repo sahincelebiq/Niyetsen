@@ -1,8 +1,9 @@
 """
 Niyetsen — Görsel Servisi
-image_keyword → görsel URL. MVP kaynağı Unsplash (lisans temiz).
+image_keyword → görsel URL. Ana kaynak Unsplash; hibrit modda Nano Banana
+(gemini-2.5-flash-image) özel/spesifik görevlerde ve oransal olarak devreye girer.
 Cursor notu (v2): Pinterest'e geçilirse SADECE bu dosya değişir; sözleşme
-(get_image_url) aynı kalır. ToS/hukuk kontrolü yapılmadan Pinterest'e geçme.
+(get_image / get_image_async) aynı kalır.
 """
 from __future__ import annotations
 
@@ -10,6 +11,7 @@ import hashlib
 import logging
 import re
 import unicodedata
+import uuid
 from dataclasses import dataclass
 
 import httpx
@@ -27,6 +29,8 @@ _CATEGORY_QUERIES = {
     "Sosyallik": "friends meeting cafe",
     "Özsaygı": "self care wellness",
 }
+_GEMINI_ATTRIBUTION = "AI generated · Nano Banana"
+_GEMINI_SOURCE = "gemini_nano_banana"
 
 
 @dataclass(frozen=True)
@@ -38,8 +42,7 @@ class ImageResult:
 
 
 def _placeholder(keyword: str) -> str:
-    """Anahtar yoksa / arama boş dönerse: deterministik, ücretsiz yer tutucu.
-    (Dev ortamında Unsplash anahtarı olmadan da plan ekranı görselli çalışsın.)"""
+    """Anahtar yoksa / arama boş dönerse: deterministik, ücretsiz yer tutucu."""
     seed = "".join(ch for ch in keyword if ch.isalnum()) or "niyetsen"
     return f"https://picsum.photos/seed/{seed}/800/600"
 
@@ -70,7 +73,7 @@ def compose_image_query(
     interests: list[str] | None = None,
     categories: list[str] | None = None,
 ) -> str:
-    """Görev + şehir + ilgi alanından bağlama uygun Unsplash arama terimi."""
+    """Görev + şehir + ilgi alanından bağlama uygun arama / görsel terimi."""
     parts: list[str] = []
     base = normalize_image_query(keyword) or normalize_image_query(title)
     if base:
@@ -92,13 +95,68 @@ def compose_image_query(
     return " ".join(query.split()[:6])
 
 
+def should_use_gemini_image(
+    *,
+    title: str,
+    keyword: str,
+    task_type: str = "",
+    categories: list[str] | None = None,
+) -> bool:
+    """Unsplash ana; Nano Banana özel görevler + IMAGE_GEMINI_RATIO ile ~yarı yarıya."""
+    if not settings.GEMINI_API_KEY or not settings.IMAGE_GEMINI_ENABLED:
+        return False
+
+    normalized = normalize_image_query(keyword)
+    specific_visual = (
+        task_type in ("yer", "kişisel_gelişim")
+        or len(normalized.split()) >= 4
+        or len((title or "").split()) >= 5
+    )
+    ratio_pct = max(0.0, min(1.0, settings.IMAGE_GEMINI_RATIO)) * 100
+    digest = int(hashlib.sha256(f"{title}:{keyword}".encode()).hexdigest(), 16) % 100
+    ratio_pick = digest < ratio_pct
+
+    return specific_visual or ratio_pick
+
+
+def build_gemini_visual_prompt(
+    *,
+    title: str,
+    keyword: str,
+    city: str = "",
+    interests: list[str] | None = None,
+    categories: list[str] | None = None,
+) -> str:
+    """Nano Banana için somut, fotogerçekçi İngilizce görsel istemi."""
+    query = compose_image_query(
+        keyword,
+        title=title,
+        city=city,
+        interests=interests,
+        categories=categories,
+    )
+    category_hint = ", ".join(categories or []) or "personal growth"
+    interest_hint = ", ".join((interests or [])[:2]) or "wellness"
+    city_hint = city or "modern city"
+    return (
+        "Create a single inspiring lifestyle photograph for a daily habit task card. "
+        "Photorealistic, warm natural light, 4:3 landscape composition, no text, "
+        "no logos, no watermarks, no collage.\n"
+        f"Task title: {title}\n"
+        f"Visual focus: {query}\n"
+        f"Category mood: {category_hint}\n"
+        f"City context: {city_hint}\n"
+        f"User interests: {interest_hint}"
+    )
+
+
 async def enrich_image_keywords_batch(
     items: list[tuple[str, str, list[str]]],
     *,
     city: str,
     interests: list[str],
 ) -> list[str]:
-    """Tek Gemini çağrısıyla parti görevlerinin görsel arama terimlerini zenginleştirir."""
+    """Tek Gemini çağrısıyla parti görevlerinin görsel terimlerini zenginleştirir."""
     if not items:
         return []
 
@@ -119,8 +177,8 @@ async def enrich_image_keywords_batch(
     prompt = (
         f"Kullanıcı şehri: {city or 'belirtilmedi'}\n"
         f"İlgi alanları: {interest_text}\n\n"
-        "Her görev için Unsplash'ta aranacak İngilizce 2-4 kelimelik, somut, küçük harf "
-        "görsel arama terimi üret. Şehir ve ilgi alanına uygun olsun.\n\n"
+        "Her görev için Unsplash araması veya AI görsel üretimi için İngilizce "
+        "2-4 kelimelik, somut, küçük harf görsel terimi üret. Şehir ve ilgi alanına uygun olsun.\n\n"
         f"Görevler:\n{task_lines}\n\n"
         f'JSON: {{"queries": ["terim1", ...]}} — tam {len(items)} öğe, aynı sıra.'
     )
@@ -185,14 +243,14 @@ def _pick_result(results: list[dict], keyword: str) -> dict:
     return candidates[digest % len(candidates)]
 
 
-def get_image(
+def _get_unsplash_image(
     keyword: str,
     *,
     categories: list[str] | None = None,
     title: str = "",
     city: str = "",
     interests: list[str] | None = None,
-) -> ImageResult:
+) -> ImageResult | None:
     query = compose_image_query(
         keyword,
         title=title,
@@ -230,12 +288,163 @@ def get_image(
                 ),
                 attribution_url=attribution_url,
             )
-    except Exception as e:  # noqa: BLE001
-        log.warning("Unsplash hatası (%s): %s — yer tutucuya düşülüyor", query, e)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Unsplash hatası (%s): %s", query, exc)
+    return None
 
+
+def _upload_plan_image(image_bytes: bytes, mime_type: str) -> str | None:
+    """Supabase plan-images bucket'a yükle; public URL döner."""
+    if not settings.USE_SUPABASE_DB or not settings.SUPABASE_URL:
+        return None
+    if not settings.SUPABASE_SERVICE_KEY:
+        return None
+    extension = "jpg" if mime_type == "image/jpeg" else "png"
+    path = f"generated/{uuid.uuid4().hex}.{extension}"
+    try:
+        from supabase import create_client
+
+        client = create_client(settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY)
+        client.storage.from_("plan-images").upload(
+            path,
+            image_bytes,
+            file_options={"content-type": mime_type, "upsert": "false"},
+        )
+        base = settings.SUPABASE_URL.rstrip("/")
+        return f"{base}/storage/v1/object/public/plan-images/{path}"
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Plan görseli Storage yüklemesi başarısız: %s", exc)
+        return None
+
+
+async def _get_gemini_image(
+    *,
+    title: str,
+    keyword: str,
+    city: str = "",
+    interests: list[str] | None = None,
+    categories: list[str] | None = None,
+) -> ImageResult | None:
+    from app.core.gemini_client import GeminiUnavailable, generate_image_bytes
+
+    prompt = build_gemini_visual_prompt(
+        title=title,
+        keyword=keyword,
+        city=city,
+        interests=interests,
+        categories=categories,
+    )
+    try:
+        image_bytes, mime_type = await generate_image_bytes(prompt)
+        public_url = _upload_plan_image(image_bytes, mime_type)
+        if not public_url:
+            log.warning("Nano Banana görseli depolanamadı — Unsplash'a düşülüyor")
+            return None
+        return ImageResult(
+            url=public_url,
+            source=_GEMINI_SOURCE,
+            attribution=_GEMINI_ATTRIBUTION,
+            attribution_url="https://ai.google.dev/gemini-api/docs/models/gemini-2.5-flash-image",
+        )
+    except GeminiUnavailable as exc:
+        log.warning("Nano Banana atlandı: %s", exc)
+        return None
+    except Exception as exc:  # noqa: BLE001
+        log.warning("Nano Banana hatası: %s", exc)
+        return None
+
+
+async def get_image_async(
+    keyword: str,
+    *,
+    categories: list[str] | None = None,
+    title: str = "",
+    city: str = "",
+    interests: list[str] | None = None,
+    task_type: str = "",
+) -> ImageResult:
+    """Hibrit görsel: Nano Banana (koşullu) → Unsplash → placeholder."""
+    if should_use_gemini_image(
+        title=title,
+        keyword=keyword,
+        task_type=task_type,
+        categories=categories,
+    ):
+        gemini_image = await _get_gemini_image(
+            title=title,
+            keyword=keyword,
+            city=city,
+            interests=interests,
+            categories=categories,
+        )
+        if gemini_image is not None:
+            return gemini_image
+
+    unsplash_image = _get_unsplash_image(
+        keyword,
+        categories=categories,
+        title=title,
+        city=city,
+        interests=interests,
+    )
+    if unsplash_image is not None:
+        return unsplash_image
+
+    query = compose_image_query(
+        keyword,
+        title=title,
+        city=city,
+        interests=interests,
+        categories=categories,
+    )
+    fallback_query = category_fallback_query(categories)
     return ImageResult(
         url=_placeholder(query or fallback_query),
         source="placeholder",
+    )
+
+
+def get_image(
+    keyword: str,
+    *,
+    categories: list[str] | None = None,
+    title: str = "",
+    city: str = "",
+    interests: list[str] | None = None,
+    task_type: str = "",
+) -> ImageResult:
+    """Senkron sarmalayıcı (testler + geriye dönük uyumluluk)."""
+    import asyncio
+
+    try:
+        loop = asyncio.get_running_loop()
+    except RuntimeError:
+        loop = None
+    if loop and loop.is_running():
+        # Zaten async bağlamdaysa doğrudan Unsplash (plan_service get_image_async kullanır)
+        unsplash_image = _get_unsplash_image(
+            keyword,
+            categories=categories,
+            title=title,
+            city=city,
+            interests=interests,
+        )
+        if unsplash_image is not None:
+            return unsplash_image
+        query = compose_image_query(
+            keyword, title=title, city=city, interests=interests, categories=categories
+        )
+        return ImageResult(url=_placeholder(query), source="placeholder")
+
+    return asyncio.run(
+        get_image_async(
+            keyword,
+            categories=categories,
+            title=title,
+            city=city,
+            interests=interests,
+            task_type=task_type,
+        )
     )
 
 

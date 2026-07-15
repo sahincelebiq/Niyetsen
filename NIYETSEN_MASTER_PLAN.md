@@ -133,7 +133,10 @@ Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerl
 - D1/D7/D30 retention bu event'lerden ölçülür — yatırımcı hikâyesinin tamamı bu.
 
 ### 1.11 Görsel kaynak
-- MVP + v1: Unsplash (lisans temiz). Pinterest v2'ye ertelendi (API onayı yavaş +
+- MVP + v1: **Unsplash ana kaynak** (lisans temiz). **Hibrit:** Nano Banana
+  (`gemini-2.5-flash-image`) özel/spesifik görevlerde ve `IMAGE_GEMINI_RATIO`
+  (varsayılan %50) ile; başarısız olursa Unsplash → placeholder zinciri.
+  Pinterest v2'ye ertelendi (API onayı yavaş +
   app içinde gösterim ToS riski — v2'de hukuki kontrol yapılacak).
 - Atıf UI (2026-07-12): görev kartında görsel üzerinde küçük ⓘ rozeti; uzun basınca
   fotoğrafçı metni + Unsplash linki. Metin DB'de kalır, ekranda gizlenir.

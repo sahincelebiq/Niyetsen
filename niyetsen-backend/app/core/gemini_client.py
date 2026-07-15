@@ -240,3 +240,56 @@ async def generate_json_with_image(
         raise GeminiUnavailable(
             f"Kanıt görüntüsü {settings.GEMINI_PROOF_TIMEOUT_SEC}s içinde işlenemedi."
         ) from exc
+
+
+async def generate_image_bytes(
+    prompt: str,
+    *,
+    model: str | None = None,
+) -> tuple[bytes, str]:
+    """Nano Banana (gemini-2.5-flash-image) ile plan görseli üretir."""
+    from google.genai import types
+
+    resolved_model = model or settings.GEMINI_MODEL_IMAGE
+    config = types.GenerateContentConfig(
+        response_modalities=["IMAGE"],
+    )
+    client = get_client()
+    last_err: Exception | None = None
+    for attempt in range(settings.GEMINI_MAX_RETRIES + 1):
+        try:
+            resp = await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.models.generate_content,
+                    model=resolved_model,
+                    contents=prompt,
+                    config=config,
+                ),
+                timeout=settings.GEMINI_IMAGE_TIMEOUT_SEC,
+            )
+            candidates = getattr(resp, "candidates", None) or []
+            for candidate in candidates:
+                content = getattr(candidate, "content", None)
+                parts = getattr(content, "parts", None) or []
+                for part in parts:
+                    inline = getattr(part, "inline_data", None)
+                    if inline and getattr(inline, "data", None):
+                        mime = getattr(inline, "mime_type", None) or "image/png"
+                        return inline.data, mime
+            raise GeminiUnavailable("Model görsel üretmedi (inline_data yok)")
+        except asyncio.TimeoutError as exc:
+            raise GeminiUnavailable(
+                f"Görsel üretimi {settings.GEMINI_IMAGE_TIMEOUT_SEC}s içinde tamamlanamadı."
+            ) from exc
+        except GeminiUnavailable:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+            if not _is_retryable(exc):
+                break
+            if attempt >= settings.GEMINI_MAX_RETRIES:
+                break
+            await asyncio.sleep(min(2 ** attempt, 8))
+    if last_err is not None and not _is_retryable(last_err):
+        raise GeminiUnavailable(str(last_err))
+    raise GeminiUnavailable(str(last_err))

@@ -16,7 +16,7 @@ from app.config import CATEGORIES, settings
 from app.core import prompts
 from app.core.gemini_client import generate_json
 from app.models.schemas import CollectedIntent, Plan, PlanDay, Task
-from app.services.image_service import category_fallback_query, enrich_image_keywords_batch, get_image
+from app.services.image_service import category_fallback_query, enrich_image_keywords_batch, get_image_async
 
 log = logging.getLogger("niyetsen.plan")
 
@@ -70,7 +70,7 @@ async def generate_batch(
 
     raw_days = (data.get("days") or [])[:batch]
     pending_images: list[tuple[str, str, list[str]]] = []
-    pending_meta: list[tuple[int, str, dict, list[str], str]] = []
+    pending_meta: list[tuple[int, str, dict, list[str], str, str]] = []
 
     for day_index, day_payload in enumerate(raw_days):
         day_no = start_day + day_index
@@ -83,8 +83,14 @@ async def generate_batch(
             keyword = str(task_payload.get("image_keyword") or "").strip()
             if not keyword:
                 keyword = category_fallback_query(categories)
+            task_type = (
+                task_payload.get("task_type")
+                if task_payload.get("task_type") in
+                ("yer", "alışkanlık", "sosyal", "kişisel_gelişim")
+                else "alışkanlık"
+            )
             pending_images.append((title, keyword, categories))
-            pending_meta.append((day_no, theme, task_payload, categories, keyword))
+            pending_meta.append((day_no, theme, task_payload, categories, keyword, task_type))
 
     enriched_queries = await enrich_image_keywords_batch(
         pending_images,
@@ -94,23 +100,23 @@ async def generate_batch(
 
     day_tasks: dict[int, list[Task]] = {}
     day_themes: dict[int, str] = {}
-    for index, (day_no, theme, task_payload, categories, keyword) in enumerate(pending_meta):
+    for index, (day_no, theme, task_payload, categories, keyword, task_type) in enumerate(pending_meta):
         title = str(task_payload.get("title") or "").strip()
         search_query = enriched_queries[index] if index < len(enriched_queries) else keyword
-        image = get_image(
+        image = await get_image_async(
             search_query,
             categories=categories,
             title=title,
             city=collected.city,
             interests=collected.interests,
+            task_type=task_type,
         )
         task = Task(
             id=uuid.uuid4().hex[:12],
             day=day_no,
             date=start_date + timedelta(days=day_no - 1),
             title=title,
-            task_type=task_payload.get("task_type") if task_payload.get("task_type") in
-                ("yer", "alışkanlık", "sosyal", "kişisel_gelişim") else "alışkanlık",
+            task_type=task_type,
             categories=categories,
             image_keyword=search_query,
             image_url=image.url,

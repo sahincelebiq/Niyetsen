@@ -33,6 +33,13 @@ class Settings:
     GEMINI_CHAT_MAX_OUTPUT_TOKENS: int = int(
         os.environ.get("GEMINI_CHAT_MAX_OUTPUT_TOKENS", "2048")
     )
+    # Nano Banana — plan görselleri (Unsplash ile hibrit)
+    GEMINI_MODEL_IMAGE: str = os.environ.get(
+        "GEMINI_MODEL_IMAGE", "gemini-2.5-flash-image"
+    )
+    GEMINI_IMAGE_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_IMAGE_TIMEOUT_SEC", "60"))
+    IMAGE_GEMINI_ENABLED: bool = _bool("IMAGE_GEMINI_ENABLED", "true")
+    IMAGE_GEMINI_RATIO: float = float(os.environ.get("IMAGE_GEMINI_RATIO", "0.5"))
 
     # --- Görsel ---
     UNSPLASH_ACCESS_KEY: str = os.environ.get("UNSPLASH_ACCESS_KEY", "")
