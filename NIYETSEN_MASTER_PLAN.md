@@ -215,7 +215,7 @@ Puan: görev +50; sessiz kaçırma −25×2^n (tavan 200); mazeret −25 sabit.
 
 ## §3. FAZ PLANI
 
-> **Aktif faz: FAZ 5** — yalnızca bu faz için günlük plan: [`docs/FAZ5_AKTIF.md`](docs/FAZ5_AKTIF.md).
+> **Aktif faz: FAZ 5** — günlük plan: [`docs/FAZ5_AKTIF.md`](docs/FAZ5_AKTIF.md) (KAPI 3–4 kapalı).
 > FAZ 0–4 tamamlandı; aşağıdaki arşiv bölümlerine gerekmedikçe bakma.
 
 Her faz: GÖREVLER (checkbox) → KAPI (geçilmeden sonraki faz YASAK).
@@ -371,20 +371,17 @@ Google/Apple sağlayıcı aktivasyonu yukarıdaki açık auth maddesi olarak kal
       görevinde kanıt kamerası açılınca otomatik yerel hatırlatıcı kurulur
       (`daily.tsx` + `task-reminders.ts`). Chat `alarm_kur` aracı ayrıca duruyor.
 
-**KAPI 3:** ✅ Fiilen KAPANDI (2026-07-12) — foto→puan→rank zinciri Şahin
-tarafından gerçek cihazda elle doğrulandı; sessiz kaçırma/mazeret/cron akışları
-backend'in 86/86 testiyle doğrulandı. Açık kalan tek madde: İrade Modu'nun
-otomatik tetikleme mantığı (yukarı bakınız) — bu KAPI 3'ü bloklamıyor, Faz 3'ün
-küçük bir artığı olarak kaydedildi.
+**KAPI 3:** ✅ **KAPANDI** (2026-07-15) — foto→puan→rank gerçek cihazda; Supabase prod
+smoke test; `close_due_users` 56 kullanıcı 0 hata; backend 127 test. Railway cron
+direct mod kodu hazır (ops ince ayarı KAPI 3'ü bloklamaz).
+
+**KAPI 4:** ✅ KAPANDI (2026-07-14) — push bildirimleri cihazda doğrulandı.
 
 ---
 
 ### FAZ 4 — Bildirim + Rehber Kişiliği (3–4 gün)
 
-> ✅ Bağımsız doğrulandı (2026-07-12, Claude Code): backend kodu + otomatik
-> testler (86/86) tamam. Git commit "faz4: KVKK, bildirim ve bonus akışlarını
-> tamamla" (2026-07-11) ile checkbox senkron kopukluğu kapatıldı. AÇIK KALAN:
-> KAPI 4'ün elle doğrulama şartları (aşağıya bakınız) henüz yapılmadı.
+> ✅ **KAPANDI** (2026-07-14) — KAPI 4 cihaz doğrulaması tamam; backend 127 test.
 
 - [x] Statik, responsive **Mistik Keşif** yuvası hazırlandı (2026-07-10):
       Astroloji/Fal/Tarot yalnız “Yakında · v2” ekranı + zorunlu eğlence
@@ -410,8 +407,6 @@ küçük bir artığı olarak kaydedildi.
 - [x] **Motivasyon Bonus-Görev Hub'ı** (§1.13): `bonus_service.py` + testler
       (`test_bonus_completion_awards_ten_points_once`, `test_chat_yaptim_
       completes_active_bonus_without_model`) geçiyor.
-
-**KAPI 4:** ✅ KAPANDI (2026-07-14) — push bildirimleri cihazda doğrulandı.
 
 ---
 

@@ -8,6 +8,9 @@ _arsiv/
 .DS_Store
 .claude/
 
+# Cursor MCP (API key içerebilir)
+.cursor/mcp.json
+
 # Python
 __pycache__/
 *.pyc

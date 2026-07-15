@@ -156,6 +156,26 @@ REVENUECAT_WEBHOOK_SECRET={existing.get("REVENUECAT_WEBHOOK_SECRET", "")}
 """
 
 
+def _is_service_key_material(key: str) -> bool:
+    k = (key or "").strip()
+    if not k:
+        return False
+    if k.startswith("sb_secret_"):
+        return True
+    if k.startswith("eyJ") and _jwt_role(k) == "service_role":
+        return True
+    return False
+
+
+def _validate_mobile_publishable(key: str) -> str | None:
+    k = (key or "").strip()
+    if not k:
+        return "EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY boş"
+    if _is_service_key_material(k):
+        return "mobil publishable alanı service_role/secret içeriyor"
+    return None
+
+
 def organize_mobile(
     backend_existing: dict[str, str],
     mobile_existing: dict[str, str],
@@ -226,6 +246,14 @@ def main() -> int:
     print("✅ niyetsen-backend/.env düzenlendi")
     if MOBILE_ENV.exists():
         print("✅ mobile/.env düzenlendi")
+        mobile_parsed = _parse_env_lines(MOBILE_ENV)
+        mobile_key_err = _validate_mobile_publishable(
+            mobile_parsed.get("EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY", "")
+        )
+        if mobile_key_err:
+            print(f"❌ Mobil Supabase anahtarı: {mobile_key_err}")
+            return 1
+        print("✅ Mobil env: yalnızca publishable/anon (service_role yok)")
     print(f"   GEMINI_API_KEY: {'dolu' if settings.GEMINI_API_KEY else 'boş'}")
     print(f"   SUPABASE_URL: {'dolu' if settings.SUPABASE_URL else 'boş'}")
     print(f"   SUPABASE_SERVICE_KEY: {'dolu' if settings.SUPABASE_SERVICE_KEY else 'boş'}")

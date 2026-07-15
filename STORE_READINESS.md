@@ -9,7 +9,7 @@
 |------|-------|-----|
 | Backend prod (Railway) | ✅ | `https://api-production-86f1.up.railway.app` |
 | Supabase (Auth + DB + Storage) | ✅ | Prod migration'lar uygulanmalı |
-| Cron (gün sonu + bildirim) | ✅ | `CRON_SECRET` + `API_BASE_URL` eşleşmeli |
+| Cron (gün sonu + bildirim) | ⚠️ | Direct mod kod+env hazır; dashboard `railway.cron.toml` path |
 | Gemini 2.5 Flash / Pro | ✅ | Plan=Pro, chat/kanıt=Flash |
 | RevenueCat webhook | ✅ | `REVENUECAT_WEBHOOK_SECRET` prod zorunlu |
 | Mobil bundle ID | ✅ | `com.niyetsen.app` |
@@ -76,9 +76,11 @@ Aşağıdaki adımlar yapı hazır olduktan sonra:
 - `CORS_ALLOWED_ORIGINS` (web istemcisi varsa)
 - `SENTRY_DSN` (opsiyonel)
 
-### Railway Cron
-- `API_BASE_URL=https://api-production-86f1.up.railway.app`
-- `CRON_SECRET` (API ile aynı)
+### Railway Cron (direct mod — önerilen)
+- `CRON_EXECUTION_MODE=direct`
+- `USE_SUPABASE_DB=true`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
+- `CRON_SKIP_PUSH=true` (ilk stabil tur; sonra `false`)
+- Config-as-code: **`/railway.cron.toml`** (api'nin `railway.toml`'u değil)
 
 ### Mobil EAS Secrets
 - `EXPO_PUBLIC_API_URL`
