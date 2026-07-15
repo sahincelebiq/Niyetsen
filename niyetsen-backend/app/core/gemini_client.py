@@ -97,13 +97,30 @@ async def generate_text(
     last_err: Exception | None = None
     for attempt in range(retry_limit + 1):
         try:
-            resp = await asyncio.to_thread(
-                client.models.generate_content,
-                model=resolved_model,
-                contents=contents,
-                config=config,
+            # Takılan tek bir SDK çağrısı tüm isteği süresiz bekletmesin:
+            # her deneme GEMINI_TIMEOUT_SEC ile sınırlanır (mobil istemcinin
+            # sohbet zaman aşımıyla uyumlu üst sınır).
+            resp = await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.models.generate_content,
+                    model=resolved_model,
+                    contents=contents,
+                    config=config,
+                ),
+                timeout=settings.GEMINI_TIMEOUT_SEC,
             )
             return resp.text or ""
+        except asyncio.TimeoutError as e:
+            last_err = e
+            if attempt >= retry_limit:
+                break
+            log.warning(
+                "Gemini zaman aşımı (%s, deneme %s): %ss sınırı aşıldı",
+                resolved_model,
+                attempt + 1,
+                settings.GEMINI_TIMEOUT_SEC,
+            )
+            continue
         except Exception as e:  # noqa: BLE001 — SDK sürümüne göre hata tipleri değişir
             last_err = e
             if not _is_retryable(e):
