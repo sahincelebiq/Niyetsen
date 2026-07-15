@@ -86,14 +86,14 @@ def main() -> int:
     if mode == "direct" or (
         cron_vars.get("USE_SUPABASE_DB", "").lower() == "true"
         and cron_vars.get("SUPABASE_URL")
-        and cron_vars.get("SUPABASE_SERVICE_KEY")
+        and (cron_vars.get("SUPABASE_SERVICE_KEY") or cron_vars.get("SUPABASE_SECRET_KEY"))
     ):
         if cron_vars.get("USE_SUPABASE_DB", "").lower() != "true":
             issues.append("Direct mod için cron USE_SUPABASE_DB=true olmalı")
         if not cron_vars.get("SUPABASE_URL"):
             issues.append("Direct mod için cron SUPABASE_URL eksik")
-        if not cron_vars.get("SUPABASE_SERVICE_KEY"):
-            issues.append("Direct mod için cron SUPABASE_SERVICE_KEY eksik")
+        if not cron_vars.get("SUPABASE_SERVICE_KEY") and not cron_vars.get("SUPABASE_SECRET_KEY"):
+            issues.append("Direct mod için cron SUPABASE_SERVICE_KEY veya SUPABASE_SECRET_KEY eksik")
         mode_label = "direct"
     else:
         api_base = cron_vars.get("API_BASE_URL", "").rstrip("/")

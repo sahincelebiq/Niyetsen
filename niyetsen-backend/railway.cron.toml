@@ -3,6 +3,6 @@ builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "python scripts/cron_paused.py"
+startCommand = "python scripts/run_scheduled_jobs.py"
 cronSchedule = "*/5 * * * *"
 restartPolicyType = "NEVER"

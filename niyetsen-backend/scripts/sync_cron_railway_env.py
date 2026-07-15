@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Railway API servisindeki env'leri cron servisine kopyalar (direct mod zorunlu)."""
+"""Railway api + cron env senkronu (Supabase direct mod, çökmez cron)."""
 from __future__ import annotations
 
 import json
@@ -16,14 +16,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 TOKEN_FILE = ROOT / ".railway-project-token"
 BACKEND_ENV = ROOT / ".env"
 
-COPY_KEYS = (
-    "ENV",
-    "USE_SUPABASE_DB",
-    "SUPABASE_URL",
-    "SUPABASE_SERVICE_KEY",
-    "API_BASE_URL",
-    "CRON_SECRET",
-)
+SERVICE_NAMES = ("api", "cron")
 
 
 def _token() -> str:
@@ -73,9 +66,7 @@ def _service_variables(service_id: str) -> dict[str, str]:
         },
     )
     raw = data.get("variables")
-    if isinstance(raw, dict):
-        return raw
-    return {}
+    return raw if isinstance(raw, dict) else {}
 
 
 def _parse_env(path: pathlib.Path) -> dict[str, str]:
@@ -87,7 +78,16 @@ def _parse_env(path: pathlib.Path) -> dict[str, str]:
         if not s or s.startswith("#") or "=" not in s:
             continue
         key, _, value = s.partition("=")
-        out[key.strip()] = value.strip()
+        out[key.strip()] = value.strip().strip('"')
+    return out
+
+
+def _normalize(source: dict[str, str]) -> dict[str, str]:
+    out = dict(source)
+    if not out.get("SUPABASE_URL"):
+        out["SUPABASE_URL"] = out.get("NEXT_PUBLIC_SUPABASE_URL", "")
+    if not out.get("SUPABASE_SERVICE_KEY"):
+        out["SUPABASE_SERVICE_KEY"] = out.get("SUPABASE_SECRET_KEY", "")
     return out
 
 
@@ -111,36 +111,48 @@ def _railway_upsert(service_name: str, variables: dict[str, str]) -> None:
     )
 
 
+def _build_vars(source: dict[str, str], *, for_cron: bool) -> dict[str, str]:
+    base = {
+        "ENV": source.get("ENV", "prod"),
+        "USE_SUPABASE_DB": source.get("USE_SUPABASE_DB", "true"),
+        "SUPABASE_URL": source.get("SUPABASE_URL", ""),
+        "SUPABASE_SERVICE_KEY": source.get("SUPABASE_SERVICE_KEY", ""),
+        "SUPABASE_TIMEOUT_SEC": source.get("SUPABASE_TIMEOUT_SEC", "120"),
+        "CRON_SECRET": source.get("CRON_SECRET", ""),
+    }
+    if for_cron:
+        base.update({
+            "CRON_EXECUTION_MODE": "direct",
+            "CRON_SKIP_PUSH": source.get("CRON_SKIP_PUSH", "true"),
+            "API_BASE_URL": source.get(
+                "API_BASE_URL",
+                "https://api-production-86f1.up.railway.app",
+            ),
+        })
+    return {k: v for k, v in base.items() if v}
+
+
 def main() -> int:
     api_vars = _service_variables(API_SERVICE_ID)
-    local = _parse_env(BACKEND_ENV)
+    local = _normalize(_parse_env(BACKEND_ENV))
+    source = _normalize({**local, **{k: v for k, v in api_vars.items() if v}})
 
-    source = {**local, **{k: v for k, v in api_vars.items() if v}}
     missing = [
-        key for key in ("SUPABASE_URL", "SUPABASE_SERVICE_KEY", "CRON_SECRET")
-        if not source.get(key)
+        name for name in ("SUPABASE_URL", "SUPABASE_SERVICE_KEY", "CRON_SECRET")
+        if not source.get(name)
     ]
     if missing:
-        print(f"❌ Kaynak env eksik (API Railway veya .env): {', '.join(missing)}")
+        print(f"❌ Eksik env (.env veya Railway api): {', '.join(missing)}")
+        print("   SUPABASE_SECRET_KEY → SUPABASE_SERVICE_KEY olarak da kabul edilir.")
         return 1
 
-    cron_vars = {key: source[key] for key in COPY_KEYS if source.get(key)}
-    cron_vars["ENV"] = source.get("ENV", "prod")
-    cron_vars["USE_SUPABASE_DB"] = source.get("USE_SUPABASE_DB", "true")
-    cron_vars["CRON_EXECUTION_MODE"] = "direct"
-    cron_vars["CRON_SKIP_PUSH"] = "true"
-    cron_vars["SUPABASE_TIMEOUT_SEC"] = source.get("SUPABASE_TIMEOUT_SEC", "120")
-    cron_vars.setdefault(
-        "API_BASE_URL",
-        "https://api-production-86f1.up.railway.app",
-    )
-
-    print("Railway cron ← api env senkronu (direct mod)…")
-    _railway_upsert("cron", cron_vars)
-    print("✓ cron servisi güncellendi ve redeploy tetiklendi")
-    print(f"  USE_SUPABASE_DB={cron_vars.get('USE_SUPABASE_DB')}")
-    print(f"  SUPABASE_URL={'set' if cron_vars.get('SUPABASE_URL') else 'MISSING'}")
-    print(f"  CRON_EXECUTION_MODE=direct")
+    for name in SERVICE_NAMES:
+        vars_payload = _build_vars(source, for_cron=(name == "cron"))
+        print(f"Railway {name} env yazılıyor…")
+        _railway_upsert(name, vars_payload)
+        print(f"✓ {name}: SUPABASE_URL set, SERVICE_KEY set, USE_SUPABASE_DB=true")
+        if name == "cron":
+            print(f"  CRON_EXECUTION_MODE=direct, CRON_SKIP_PUSH={vars_payload.get('CRON_SKIP_PUSH')}")
 
     subprocess.run(
         [sys.executable, "-m", "scripts.railway_redeploy"],
