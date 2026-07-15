@@ -958,6 +958,15 @@ h3 { font-size: 1.22rem; margin: 0 0 0.5rem; }
   align-items: start;
 }
 
+.early-access-honey {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .early-access-form {
   display: grid;
   gap: 0.85rem;

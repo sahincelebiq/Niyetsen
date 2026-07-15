@@ -30,12 +30,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
-  <link rel="stylesheet" href="/css/style.css?v=20260714-1">
+  <link rel="stylesheet" href="/css/style.css?v=20260715-1">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebPage","name":"Geliştirme Günlüğü — Niyetsen","description":"Niyetsen geliştirme güncellemeleri, faz ilerlemesi ve ürün yol haritası.","url":"https://niyetsen.com/gelistirme.html","inLanguage":"tr","isPartOf":{"@type":"WebSite","name":"Niyetsen","url":"https://niyetsen.com/"}}
   </script>
-  <script src="/js/site-config.js?v=20260714-1" defer></script>
-  <script src="/js/marketing.js?v=20260714-1" defer></script>
+  <script src="/js/site-config.js?v=20260715-1" defer></script>
+  <script src="/js/marketing.js?v=20260715-1" defer></script>
 </head>
 <body>
   <header>
@@ -65,17 +65,17 @@
 
     <div class="phase-card">
       <span class="status-tag progress">Şu an</span>
-      <h2>Faz 3 — Görev motoru</h2>
+      <h2>Faz 5 — Paywall, analitik & uyum</h2>
 
       <div class="phase-status">
-        <span class="phase-number">Güncel faz: <strong>3</strong> / 6</span>
+        <span class="phase-number">Güncel faz: <strong>5</strong> / 6</span>
         <div class="phase-progress-wrap">
           <div class="phase-progress-label">
-            <span>Faz 3 ilerlemesi</span>
-            <span>2 / 4 tamamlandı</span>
+            <span>Faz 5 ilerlemesi</span>
+            <span>5 / 8 tamamlandı</span>
           </div>
-          <div class="phase-progress-bar" role="progressbar" aria-valuenow="2" aria-valuemin="0" aria-valuemax="4" aria-label="Faz 3 ilerlemesi">
-            <div class="phase-progress-fill" style="width: 50%;"></div>
+          <div class="phase-progress-bar" role="progressbar" aria-valuenow="5" aria-valuemin="0" aria-valuemax="8" aria-label="Faz 5 ilerlemesi">
+            <div class="phase-progress-fill" style="width: 62%;"></div>
           </div>
         </div>
       </div>
@@ -84,45 +84,96 @@
         <li class="done">Faz 0 ✓</li>
         <li class="done">Faz 1 ✓</li>
         <li class="done">Faz 2 ✓</li>
-        <li class="current">Faz 3</li>
-        <li>Faz 4</li>
-        <li>Faz 5</li>
+        <li class="done">Faz 3 ✓</li>
+        <li class="done">Faz 4 ✓</li>
+        <li class="current">Faz 5</li>
         <li>Faz 6</li>
       </ul>
 
       <p class="lead">
-        Kimlik ve kalıcılık altyapısı tamamlandı. Şimdi oyunun kalbi devrede:
-        fotoğraf kanıtı, puan sistemi ve zincir mekanizması. AI modeli Gemini 2.5 Pro’ya yükseltildi.
+        Görev motoru ve rehber kişiliği tamamlandı. Şimdi ürünü sürdürülebilir kılma aşamasındayız:
+        7 günlük deneme, abonelik kilidi, mağaza içi ödeme ve kullanım analitiği.
       </p>
 
-      <p class="phase-summary"><strong>Faz 3 — tamamlananlar</strong></p>
+      <p class="phase-summary"><strong>Faz 5 — tamamlananlar</strong></p>
       <ul class="phase-checklist">
         <li>
           <span class="check done" aria-hidden="true">✓</span>
-          <span><strong>Fotoğraf kanıtı:</strong> Uygulama içi kamera, Gemini Vision doğrulama ve yükleme akışı backend + mobilde çalışıyor.</span>
+          <span><strong>Deneme & kilit:</strong> İlk plan + 7 gün deneme; süre bitince paywall kilidi (sohbet, kanıt, bonus).</span>
         </li>
         <li>
           <span class="check done" aria-hidden="true">✓</span>
-          <span><strong>Puan & ceza:</strong> +50 görev, sessiz kaçırma katlanması (tavan 200), mazeret yolu (−25 sabit), puan tabanı 0.</span>
+          <span><strong>Abonelik API:</strong> Durum sorgusu ve mağaza webhook altyapısı backend'de hazır.</span>
+        </li>
+        <li>
+          <span class="check done" aria-hidden="true">✓</span>
+          <span><strong>Paywall ekranı:</strong> Fiyatlar, geri yükle, kullanım koşulları ve gizlilik linkleri mobilde.</span>
+        </li>
+        <li>
+          <span class="check done" aria-hidden="true">✓</span>
+          <span><strong>RevenueCat SDK:</strong> Mağaza içi satın alma entegrasyonu mobil tarafta bağlandı.</span>
+        </li>
+        <li>
+          <span class="check done" aria-hidden="true">✓</span>
+          <span><strong>PostHog iskeleti:</strong> Ürün olayları için analitik altyapısı hazır (anahtar prod'da).</span>
         </li>
       </ul>
 
-      <p class="phase-summary" style="margin-top: 1rem;"><strong>Faz 3 — devam eden</strong></p>
+      <p class="phase-summary" style="margin-top: 1rem;"><strong>Faz 5 — devam eden</strong></p>
       <ul class="phase-checklist">
         <li>
           <span class="check progress" aria-hidden="true">…</span>
-          <span><strong>Zincir & gece cron:</strong> Günlük ceza işleme, jeton kontrolü ve streak güncellemesi.</span>
+          <span><strong>Mağaza IAP ürünleri:</strong> App Store / Play Console'da aylık ve yıllık paketlerin oluşturulması.</span>
         </li>
         <li>
           <span class="check progress" aria-hidden="true">…</span>
-          <span><strong>Rank ekranı:</strong> 6 kategori rütbe görünümü ve zincir sayacının mobil arayüzü.</span>
+          <span><strong>Sandbox uçtan uca:</strong> Satın alma → webhook → abonelik aktif → geri yükle → iptal akışının doğrulanması.</span>
+        </li>
+        <li>
+          <span class="check progress" aria-hidden="true">…</span>
+          <span><strong>KAPI 5:</strong> Funnel olaylarının analitikte akması ve tüm kilitlerin mağaza ödemesiyle açılması.</span>
         </li>
       </ul>
 
       <p class="phase-summary" style="margin-top: 1.25rem;">
-        <strong>Faz 3 kapanış kapısı:</strong> Görevi fotoğrafla → puan işlensin → rank ekranında görünsün; sessiz kaçırma gece cron’u ile işlensin.
+        <strong>Faz 5 kapanış kapısı:</strong> Sandbox'ta satın al → abonelik aktif → kilitler açılsın → Geri Yükle çalışsın → iptal edince paywall geri gelsin.
       </p>
     </div>
+
+    <section class="section-spaced">
+      <span class="section-label">Site denetimi</span>
+      <h2>niyetsen.com — güvenlik, hız & SEO (15 Temmuz 2026)</h2>
+      <p class="lead">
+        Statik tanıtım sitesi Hostinger üzerinde canlı. Uygulama backend'i ayrı katmanda;
+        bu sayfada yalnızca kamuya açık web varlıkları değerlendirildi.
+      </p>
+      <div class="grid-2">
+        <article class="card">
+          <h3>Güvenlik durumu</h3>
+          <p><span class="status-tag done">İyi</span> HTTPS zorunlu (<code>upgrade-insecure-requests</code>), statik dosya sunumu, backend sırları sitede yok. Erken erişim formunda honeypot; reklam/analitik etiketleri KVKK çerez onayına bağlı.</p>
+        </article>
+        <article class="card">
+          <h3>Hostinger bağlantısı</h3>
+          <p><span class="status-tag done">Aktif</span> Domain <code>niyetsen.com</code> Hostinger CDN (hcdn) üzerinden yanıt veriyor. Statik deploy + önbellek temizleme akışı çalışıyor.</p>
+        </article>
+        <article class="card">
+          <h3>Masaüstü hız</h3>
+          <p><span class="status-tag done">93 / 100</span> Lighthouse Performance. SEO ve en iyi uygulamalar 100. Erişilebilirlik 91.</p>
+        </article>
+        <article class="card">
+          <h3>Mobil hız</h3>
+          <p><span class="status-tag progress">75 / 100</span> Performance; LCP ~4,7 sn (Google Fonts kaynaklı). SEO 100. Font self-hosting ile iyileştirme sırada.</p>
+        </article>
+        <article class="card">
+          <h3>SEO</h3>
+          <p><span class="status-tag done">100 / 100</span> Sitemap (14 URL), robots.txt, canonical, OG/Twitter, JSON-LD, Search Console doğrulandı. Blog iç link ağı aktif.</p>
+        </article>
+        <article class="card">
+          <h3>İyileştirme önerileri</h3>
+          <p>GA4 Measurement ID eklenmesi, fontların yerel barındırılması, blog kapak görsellerinde <code>fetchpriority</code> / lazy-load ince ayarı.</p>
+        </article>
+      </div>
+    </section>
 
     <section class="section-spaced">
       <span class="section-label">Web sitesi</span>
@@ -134,7 +185,7 @@
       <div class="grid-2">
         <article class="card">
           <h3>Erken erişim formu</h3>
-          <p><span class="status-tag done">Tamamlandı</span> Ana sayfa + geliştirme sayfasında form; FormSubmit ile <code>ai@niyetsen.com</code>'a otomatik iletim. FormSubmit aktivasyonu tamamlandı — talepler gelen kutusuna düşüyor.</p>
+          <p><span class="status-tag done">Tamamlandı</span> Ana sayfa + geliştirme sayfasında form; FormSubmit JSON AJAX + hash/e-posta çift endpoint; honeypot spam koruması. Talepler <code>ai@niyetsen.com</code>'a iletilir.</p>
         </article>
         <article class="card">
           <h3>Altı kategori blog serisi</h3>
@@ -169,8 +220,8 @@
           <span><strong>Font self-hosting:</strong> Google Fonts yerine yerel barındırma — mobil LCP iyileştirmesi.</span>
         </li>
         <li>
-          <span class="check progress" aria-hidden="true">…</span>
-          <span><strong>FormSubmit hash ID:</strong> E-posta yerine güvenli endpoint hash'i (spam koruması).</span>
+          <span class="check done" aria-hidden="true">✓</span>
+          <span><strong>FormSubmit hash ID:</strong> Aktivasyon hash'i + JSON AJAX gönderim; e-posta endpoint yedek.</span>
         </li>
       </ul>
     </section>
@@ -219,7 +270,13 @@
         dönüş ve davetler bu kanaldan yapılır.
       </p>
       <div class="early-access" style="max-width: 640px;">
-        <form class="early-access-form" id="early-access-form" novalidate>
+        <form class="early-access-form" id="early-access-form" action="https://formsubmit.co/ai@niyetsen.com" method="POST" novalidate>
+          <input type="hidden" name="_subject" value="Niyetsen — Erken erişim talebi">
+          <input type="hidden" name="_captcha" value="false">
+          <input type="hidden" name="_template" value="table">
+          <input type="hidden" name="_next" value="https://niyetsen.com/gelistirme.html?erken-erisim=basarili">
+          <input type="hidden" name="_autoresponse" value="Talebin alındı. Niyetsen ekibi en kısa sürede ai@niyetsen.com üzerinden dönüş yapacak.">
+          <input type="text" name="_honey" class="early-access-honey" tabindex="-1" autocomplete="off" aria-hidden="true">
           <label>
             Adın
             <input type="text" name="name" autocomplete="name" placeholder="Adın veya takma adın" required maxlength="80">
@@ -276,12 +333,12 @@
             </tr>
             <tr>
               <td>Google Search Console</td>
-              <td><code>google-site-verification=…</code> <span class="status-active">Doğrulandı</span></td>
-              <td>DNS TXT kaydı ile doğrulandı. Yedek HTML meta etiketi site-config'ten enjekte edilir.</td>
+              <td><span class="status-active">Doğrulandı</span></td>
+              <td>DNS TXT kaydı ile doğrulandı. HTML meta yedek olarak site-config üzerinden enjekte edilir.</td>
             </tr>
             <tr>
               <td>Pinterest</td>
-              <td><code>1d27322d358bf294f1e1da3a23a8acdb</code> <span class="status-active">Aktif</span></td>
+              <td><span class="status-active">Doğrulandı</span></td>
               <td><code>p:domain_verify</code> meta etiketi tüm sayfalarda.</td>
             </tr>
             <tr>
@@ -300,9 +357,9 @@
               <td>Her sayfada canonical URL, Open Graph ve Twitter Card meta etiketleri.</td>
             </tr>
             <tr>
-              <td>Erken erişim e-posta</td>
-              <td><code>ai@niyetsen.com</code> <span class="status-active">Aktif</span></td>
-              <td>FormSubmit AJAX — aktivasyon tamamlandı, talepler gelen kutusuna iletiliyor.</td>
+              <td>Erken erişim formu</td>
+              <td><span class="status-active">Aktif</span></td>
+              <td>FormSubmit + honeypot; AJAX ve native POST yedek. Talepler <code>ai@niyetsen.com</code>'a iletilir.</td>
             </tr>
             <tr>
               <td>Site içi reklam</td>
@@ -328,35 +385,55 @@
         </article>
         <article class="card">
           <h3>Önbellek bust</h3>
-          <p>CSS/JS dosyalarında <code>?v=20260714-1</code> sürüm parametresi — CDN güncellemesi için.</p>
+          <p>CSS/JS dosyalarında sürüm parametresi (<code>?v=…</code>) — CDN güncellemesi için.</p>
         </article>
       </div>
     </section>
 
     <section class="section-spaced">
       <span class="section-label">Sırada</span>
-      <h2>Faz 4 — Bildirim & rehber kişiliği</h2>
+      <h2>Faz 6 — Store yayını</h2>
       <p class="lead">
-        Görev motoru kapandıktan sonra kullanıcıyı günlük ritmine bağlayacak
-        bildirimler ve kişiselleştirilmiş AI rehberliği devreye girecek.
+        Paywall kapısı kapanınca mağaza hesapları, EAS build, ekran görüntüleri ve
+        review notları hazırlanarak iOS + Android'de yayına geçilecek.
       </p>
       <div class="grid-3">
         <article class="card">
-          <h3>Push bildirimler</h3>
-          <p>Kullanıcının seçtiği saatte görev hatırlatıcısı; iOS ve Android izin akışları.</p>
+          <h3>Developer hesapları</h3>
+          <p>Apple Developer + Google Play Console onayları (günler sürebilir — erken başlatılacak).</p>
         </article>
         <article class="card">
-          <h3>Kişisel bellek</h3>
-          <p>AI, zincirini, geçmiş görevlerini ve kategorilerini bilerek konuşur.</p>
+          <h3>EAS Build & prod</h3>
+          <p>Production backend, prod ortam değişkenleri, Sentry hata izleme ve HTTPS doğrulaması.</p>
         </article>
         <article class="card">
-          <h3>Bonus görev hub’ı</h3>
-          <p>Fotoğraf kanıtı istemeyen mikro görevlerle ek motivasyon (+10 bonus puan).</p>
+          <h3>Store varlıkları</h3>
+          <p>Ekran görüntüleri, TR store metinleri, gizlilik formları, TestFlight / Internal test.</p>
         </article>
       </div>
     </section>
 
     <div class="timeline">
+      <article class="timeline-entry">
+        <div class="timeline-date">15 Temmuz 2026</div>
+        <h3>Faz 5'e geçiş & site denetimi</h3>
+        <p><span class="status-tag done">Tamamlandı</span></p>
+        <ul>
+          <li><strong>Geliştirme günlüğü:</strong> Güncel faz 5 olarak güncellendi; paywall, abonelik ve analitik ilerlemesi yansıtıldı.</li>
+          <li><strong>Site denetimi:</strong> Lighthouse masaüstü Performance 93, mobil 75; SEO 100; Hostinger CDN aktif.</li>
+          <li><strong>Güvenlik:</strong> Statik sitede backend sırrı yok; HTTPS, honeypot form, KVKK çerez kapısı doğrulandı.</li>
+        </ul>
+      </article>
+      <article class="timeline-entry">
+        <div class="timeline-date">14 Temmuz 2026 — gece (2)</div>
+        <h3>Erken erişim formu düzeltmesi</h3>
+        <p><span class="status-tag done">Tamamlandı</span></p>
+        <ul>
+          <li><strong>FormSubmit:</strong> FormData AJAX + 15s timeout; başarısız olursa native POST yedek (<code>_next</code> redirect).</li>
+          <li><strong>Spam:</strong> Gizli honeypot alanı (<code>_honey</code>) eklendi.</li>
+          <li><strong>Cache:</strong> Statik asset sürümü <code>20260714-4</code> — tarayıcı önbelleği kırıldı.</li>
+        </ul>
+      </article>
       <article class="timeline-entry">
         <div class="timeline-date">14 Temmuz 2026 — gece</div>
         <h3>Web optimizasyonu & FormSubmit aktivasyonu</h3>
@@ -442,7 +519,7 @@
         <ul>
           <li><strong>Blog kart görselleri:</strong> Dar şerit halinde kırpılıyordu — her yazı için ayrı 800×450 kapak görseli eklendi.</li>
           <li><strong>Google favicon:</strong> Arama sonuçlarında gri dünya ikonu — ICO/PNG seti eklendi; 12 Temmuz’da 48px logo kaynaklı favicon yenilendi (Google güncellemesi bekleniyor).</li>
-          <li><strong>JWT doğrulama:</strong> Eski HS256 secret kaldırıldı; Supabase JWKS (RS256) ile güvenli doğrulamaya geçildi.</li>
+          <li><strong>Kimlik doğrulama:</strong> Backend oturum doğrulaması modern standartlara yükseltildi (JWKS tabanlı imza kontrolü).</li>
           <li><strong>Expo Go uyumu:</strong> SDK 54'e düşürüldü; App Store onayı bekleyen Expo Go sürümüyle test engeli giderildi.</li>
           <li><strong>Plan görselleri:</strong> Unsplash anahtarı henüz yok — kategori bazlı yedek görseller kullanılıyor (iyileştirme sırada).</li>
           <li><strong>Çerez banner (mobil):</strong> “Kabul et” tıklanıyor ama kapanmıyordu — event dinleyicisi ve DOM kaldırma düzeltildi.</li>
@@ -485,12 +562,13 @@
       </article>
 
       <article class="timeline-entry">
-        <div class="timeline-date">Sonrasında</div>
-        <h3>Faz 4–6 — Bildirim, paywall, store</h3>
+        <div class="timeline-date">Temmuz 2026</div>
+        <h3>Faz 4–5 — Bildirim, paywall & analitik</h3>
         <p>
-          <span class="status-tag next">Planlanıyor</span>
-          Push bildirimler, RevenueCat abonelik (450 TL/ay, 3.600 TL/yıl), PostHog
-          analitik, App Store & Play Store yayını. Fal modülü v2'ye ertelendi.
+          <span class="status-tag progress">Devam ediyor</span>
+          Push bildirimler, kriz filtresi ve bonus görev hub'ı tamamlandı (Faz 4).
+          Deneme süresi, paywall ekranı, RevenueCat SDK ve PostHog iskeleti devrede (Faz 5).
+          Mağaza IAP sandbox testi ve KAPI 5 sırada. Fal modülü v2'ye ertelendi.
         </p>
       </article>
     </div>
@@ -562,7 +640,7 @@
       </div>
     </div>
   </footer>
-  <script src="/js/scroll-target.js?v=20260714-1" defer></script>
-  <script src="/js/early-access.js?v=20260714-1" defer></script>
+  <script src="/js/scroll-target.js?v=20260715-1" defer></script>
+  <script src="/js/early-access.js?v=20260715-1" defer></script>
 </body>
 </html>
