@@ -1,0 +1,25 @@
+{
+  "mcpServers": {
+    "manus-mcp": {
+      "command": "npx",
+      "args": ["-y", "manus-mcp"],
+      "env": {
+        "MANUS_MCP_API_KEY": "YOUR_MANUS_API_KEY_HERE"
+      }
+    },
+    "supabase": {
+      "type": "http",
+      "url": "https://mcp.supabase.com/mcp?project_ref=ktweahgrrppmxpdhohdh"
+    },
+    "railway-remote": {
+      "url": "https://mcp.railway.com"
+    },
+    "railway": {
+      "command": "/usr/local/bin/node",
+      "args": [
+        "/Users/haze/.npm-global/lib/node_modules/@railway/cli/bin/railway.js",
+        "mcp"
+      ]
+    }
+  }
+}

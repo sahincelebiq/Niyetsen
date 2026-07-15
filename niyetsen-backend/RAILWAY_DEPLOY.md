@@ -31,8 +31,61 @@ Niyetsen uses two Railway services from the same repository and backend root.
 The cron process must exit after each run. `scripts/cron_paused.py` geçici
 duraklatma içindir (exit 0, mail yok). Normal iş için `run_scheduled_jobs.py`.
 
-**Cron duraklatma:** `railway.cron.toml` → `startCommand = python scripts/cron_paused.py`
-**Cron devam:** `startCommand = python scripts/run_scheduled_jobs.py` + redeploy
+**Cron duraklatma (mail kes):**
+```bash
+cd niyetsen-backend
+python -m scripts.pause_railway_cron   # toml → cron_paused + redeploy
+git add railway.cron.toml && git commit -m "chore: cron duraklat" && git push
+```
+**Cron devam:**
+```bash
+python -m scripts.resume_railway_cron
+git add railway.cron.toml && git commit -m "faz4: cron direct devam" && git push
+```
+
+## Cursor Railway MCP (kırmızı / Error)
+
+**Sebep:** Cursor Railway eklentisi `railway mcp` çalıştırır. CLI yoksa veya Cursor'un PATH'i
+`~/.npm-global/bin` içermiyorsa log: `spawn railway ENOENT`.
+
+### Seçenek A — Remote MCP (CLI gerekmez, önerilen)
+
+Proje `.cursor/mcp.json` içinde:
+```json
+"railway-remote": { "url": "https://mcp.railway.com" }
+```
+Cursor → Settings → Tools & MCP → **railway-remote** → Connect (OAuth).
+
+### Seçenek B — Local MCP (CLI + tam yol)
+
+```bash
+npm install -g @railway/cli
+railway login
+```
+
+`~/.cursor/mcp.json` (veya proje `.cursor/mcp.json`) — **sadece `railway` komutu yetmez**;
+Cursor minimal PATH kullanır. Node ile tam yol kullan:
+
+```json
+"railway": {
+  "command": "/usr/local/bin/node",
+  "args": [
+    "/Users/haze/.npm-global/lib/node_modules/@railway/cli/bin/railway.js",
+    "mcp"
+  ]
+}
+```
+
+`railway mcp install --agent cursor` da ekler ama ENOENT devam ederse yukarıdaki tam yolu kullan.
+**Reload Window** (`Cmd+Shift+P`). Eski kırmızı **Railway plugin** duplicate ise birini kapat.
+
+### CLI yokken alternatif
+
+Repo scriptleri (Project-Access-Token `.railway-project-token`):
+- `python -m scripts.verify_cron_config`
+- `python -m scripts.sync_cron_railway_env`
+- `python -m scripts.railway_redeploy`
+- `python -m scripts.pause_railway_cron`
 
 ## Verification
 
