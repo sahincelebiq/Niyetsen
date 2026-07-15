@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import json
 import os
+import signal
 import sys
 import time
 import traceback
@@ -101,10 +102,16 @@ def run_jobs() -> list[str]:
         traceback.print_exc()
         return warnings
 
+    # Railway cron 5 dk'da bir tetikler; tur asla pencereyi taşmasın.
+    budget_sec = float(os.environ.get("CRON_TIME_BUDGET_SEC", "240"))
+    deadline_ts = time.monotonic() + budget_sec
+
     try:
         close_result = _run_with_retry(
             "close-day",
-            lambda: task_lifecycle_service.close_due_users(repo),
+            lambda: task_lifecycle_service.close_due_users(
+                repo, deadline_ts=deadline_ts
+            ),
         )
         _print_result("close-day", close_result)
         failed = close_result.get("failed_users", 0)
@@ -150,7 +157,21 @@ def run_jobs() -> list[str]:
     return warnings
 
 
+def _graceful_exit(signum: int, _frame) -> None:
+    """Railway redeploy/limit SIGTERM gönderirse süreç 143 ile ölmesin.
+
+    Nonzero exit Railway'de 'Deploy Crashed' maili üretir; işler idempotent
+    olduğundan yarım kalan tur bir sonraki 5 dk tetiklemesinde tamamlanır.
+    """
+    print(f"cron: sinyal alındı ({signum}) — temiz çıkış (exit 0)", file=sys.stderr)
+    sys.stdout.flush()
+    sys.stderr.flush()
+    os._exit(0)
+
+
 def main() -> None:
+    signal.signal(signal.SIGTERM, _graceful_exit)
+    signal.signal(signal.SIGINT, _graceful_exit)
     print("cron modu: direct")
     _log_env_diagnostic()
 
@@ -177,4 +198,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except BaseException:  # noqa: BLE001 — cron ASLA nonzero exit vermez
+        traceback.print_exc()
+        print("cron: beklenmeyen üst seviye hata — yine de exit 0", file=sys.stderr)
+    sys.exit(0)

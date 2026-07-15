@@ -8,6 +8,7 @@ parti çağrılır (generate_batch aynı fonksiyondur, start_day kaydırılır).
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import uuid
 from datetime import date, timedelta
@@ -66,6 +67,9 @@ async def generate_batch(
         system_instruction=prompts.SYSTEM_PROMPT,
         model=settings.GEMINI_MODEL_PLAN,
         max_output_tokens=8192,
+        # Pro model 8192 token planı 30s'ye sığdıramıyordu; ayrılmış plan
+        # zaman aşımı (varsayılan 90s) artık gerçekten kullanılıyor.
+        timeout_sec=settings.GEMINI_PLAN_TIMEOUT_SEC,
     )
 
     raw_days = (data.get("days") or [])[:batch]
@@ -98,19 +102,34 @@ async def generate_batch(
         interests=collected.interests,
     )
 
+    # Görselleri SIRALI değil, sınırlı eşzamanlılıkla paralel çek:
+    # 7 gün × 5 görev = 35 sıralı çağrı isteği dakikalarca bekletiyordu.
+    image_semaphore = asyncio.Semaphore(5)
+
+    async def _fetch_image(index: int) -> "object":
+        day_no, theme, task_payload, categories, keyword, task_type = pending_meta[index]
+        title = str(task_payload.get("title") or "").strip()
+        search_query = enriched_queries[index] if index < len(enriched_queries) else keyword
+        async with image_semaphore:
+            return await get_image_async(
+                search_query,
+                categories=categories,
+                title=title,
+                city=collected.city,
+                interests=collected.interests,
+                task_type=task_type,
+            )
+
+    images = await asyncio.gather(
+        *(_fetch_image(index) for index in range(len(pending_meta)))
+    )
+
     day_tasks: dict[int, list[Task]] = {}
     day_themes: dict[int, str] = {}
     for index, (day_no, theme, task_payload, categories, keyword, task_type) in enumerate(pending_meta):
         title = str(task_payload.get("title") or "").strip()
         search_query = enriched_queries[index] if index < len(enriched_queries) else keyword
-        image = await get_image_async(
-            search_query,
-            categories=categories,
-            title=title,
-            city=collected.city,
-            interests=collected.interests,
-            task_type=task_type,
-        )
+        image = images[index]
         task = Task(
             id=uuid.uuid4().hex[:12],
             day=day_no,

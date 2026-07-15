@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time as time_mod
 from datetime import date, datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -76,21 +77,27 @@ def close_user_day(
     user_id: str,
     day: date,
 ) -> dict:
-    tasks = _tasks_for_day(repository, user_id, day)
-    if not tasks:
-        return {
-            "user_id": user_id,
-            "day": day.isoformat(),
-            "streak": "skipped",
-            "penalized_tasks": 0,
-        }
-
+    # Önce state (3 sorgu): gün zaten kapandıysa görev sorgusuna hiç girme.
+    # Cron 5 dk'da bir TÜM kullanıcıları tarar; en sık yol budur.
     state = repository.get_state(user_id)
     if state.last_active_date == day:
         return {
             "user_id": user_id,
             "day": day.isoformat(),
             "streak": "noop",
+            "penalized_tasks": 0,
+        }
+
+    tasks = _tasks_for_day(repository, user_id, day)
+    if not tasks:
+        # Görevsiz günlerde de aylık Zincir Koruma Jetonu işlensin —
+        # aksi hâlde görevsiz geçen ay jeton hiç verilmiyordu.
+        if scoring_service.grant_monthly_freeze(state, day):
+            repository.save_state(state)
+        return {
+            "user_id": user_id,
+            "day": day.isoformat(),
+            "streak": "skipped",
             "penalized_tasks": 0,
         }
 
@@ -130,11 +137,29 @@ def latest_closed_day(now_utc: datetime, timezone_name: str) -> date:
     return local_now.date() - timedelta(days=1)
 
 
-def close_due_users(repository: Repository, now_utc: datetime | None = None) -> dict:
+def close_due_users(
+    repository: Repository,
+    now_utc: datetime | None = None,
+    deadline_ts: float | None = None,
+) -> dict:
+    """deadline_ts (time.monotonic tabanlı): aşıldığında temiz durur.
+
+    İşler idempotent — kalan kullanıcılar bir sonraki cron turunda kapanır.
+    Böylece Railway'in 5 dk cron penceresi asla taşmaz.
+    """
     now_utc = now_utc or datetime.now(timezone.utc)
     results: list[dict] = []
     user_errors: list[dict] = []
-    for cron_user in repository.list_cron_users():
+    deferred_users = 0
+    cron_users = repository.list_cron_users()
+    for index, cron_user in enumerate(cron_users):
+        if deadline_ts is not None and time_mod.monotonic() >= deadline_ts:
+            deferred_users = len(cron_users) - index
+            log.warning(
+                "Gün sonu kapanışı süre bütçesini doldurdu — %d kullanıcı "
+                "sonraki tura bırakıldı", deferred_users
+            )
+            break
         try:
             results.append(
                 close_user_day(
@@ -154,6 +179,7 @@ def close_due_users(repository: Repository, now_utc: datetime | None = None) -> 
     return {
         "processed_users": len(results),
         "failed_users": len(user_errors),
+        "deferred_users": deferred_users,
         "penalized_tasks": sum(row["penalized_tasks"] for row in results),
         "results": results,
         "user_errors": user_errors,

@@ -71,15 +71,18 @@ async def generate_text(
     max_retries: Optional[int] = None,
     response_schema: Optional[dict] = None,
     disable_thinking: bool = False,
+    timeout_sec: Optional[int] = None,
 ) -> str:
     """
     Dayanıklı çağrı: settings.GEMINI_MAX_RETRIES kez exponential backoff.
     contents: str | list (google-genai formatında parça listesi — vision dahil).
+    timeout_sec: deneme başına zaman aşımı (plan gibi uzun işler için yükseltilir).
     """
     from google.genai import types
 
     resolved_model = _resolve_model(model)
     retry_limit = settings.GEMINI_MAX_RETRIES if max_retries is None else max_retries
+    attempt_timeout = timeout_sec or settings.GEMINI_TIMEOUT_SEC
     config_kwargs: dict[str, Any] = {
         "system_instruction": system_instruction,
         "response_mime_type": "application/json" if force_json else None,
@@ -107,7 +110,7 @@ async def generate_text(
                     contents=contents,
                     config=config,
                 ),
-                timeout=settings.GEMINI_TIMEOUT_SEC,
+                timeout=attempt_timeout,
             )
             return resp.text or ""
         except asyncio.TimeoutError as e:
@@ -118,7 +121,7 @@ async def generate_text(
                 "Gemini zaman aşımı (%s, deneme %s): %ss sınırı aşıldı",
                 resolved_model,
                 attempt + 1,
-                settings.GEMINI_TIMEOUT_SEC,
+                attempt_timeout,
             )
             continue
         except Exception as e:  # noqa: BLE001 — SDK sürümüne göre hata tipleri değişir
@@ -152,6 +155,7 @@ async def generate_json(
     json_retries: int = 2,
     response_schema: Optional[dict] = None,
     disable_thinking: bool = False,
+    timeout_sec: Optional[int] = None,
 ) -> dict:
     """JSON zorla + güvenli parse. Bozuk JSON'da sınırlı tekrar."""
     last_raw = ""
@@ -165,6 +169,7 @@ async def generate_json(
             max_retries=max_retries,
             response_schema=response_schema,
             disable_thinking=disable_thinking,
+            timeout_sec=timeout_sec,
         )
         last_raw = raw
         try:

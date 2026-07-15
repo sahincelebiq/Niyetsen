@@ -7,6 +7,7 @@ Cursor notu (v2): Pinterest'e geçilirse SADECE bu dosya değişir; sözleşme
 """
 from __future__ import annotations
 
+import asyncio
 import hashlib
 import logging
 import re
@@ -336,7 +337,8 @@ async def _get_gemini_image(
     )
     try:
         image_bytes, mime_type = await generate_image_bytes(prompt)
-        public_url = _upload_plan_image(image_bytes, mime_type)
+        # Senkron Supabase upload'u event loop'u kilitlemesin.
+        public_url = await asyncio.to_thread(_upload_plan_image, image_bytes, mime_type)
         if not public_url:
             log.warning("Nano Banana görseli depolanamadı — Unsplash'a düşülüyor")
             return None
@@ -380,7 +382,10 @@ async def get_image_async(
         if gemini_image is not None:
             return gemini_image
 
-    unsplash_image = _get_unsplash_image(
+    # _get_unsplash_image senkron httpx.get kullanır (10s'e kadar bloklar);
+    # event loop'u kilitlememesi için ayrı thread'de çalıştırılır.
+    unsplash_image = await asyncio.to_thread(
+        _get_unsplash_image,
         keyword,
         categories=categories,
         title=title,

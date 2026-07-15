@@ -270,6 +270,7 @@ async def chat(
     # İstemci bugün tüm geçmişi gönderiyor. Her mesajın kalıcı kimliği sayesinde
     # retry/eşzamanlı istekler ikinci kayıt oluşturmaz. Eski istemciler için
     # rol+metin+sıra tabanlı deterministik bir kimlik üretilir.
+    to_persist: list[ChatMessage] = []
     for index, message in enumerate(req.messages):
         if not message.id:
             message = message.model_copy(update={
@@ -277,16 +278,17 @@ async def chat(
                     user_id, index, message.role, message.content
                 )
             })
-        repo.append_chat_message(user_id, message)
+        to_persist.append(message)
 
     assistant_id = _legacy_message_id(
         user_id, len(req.messages), "assistant", response.reply
     )
     response.message_id = assistant_id
-    repo.append_chat_message(
-        user_id,
-        ChatMessage(id=assistant_id, role="assistant", content=response.reply),
+    to_persist.append(
+        ChatMessage(id=assistant_id, role="assistant", content=response.reply)
     )
+    # Tek toplu upsert: eski hâli mesaj başına 4+ Supabase sorgusuydu (N+1).
+    repo.append_chat_messages(user_id, to_persist)
     repo.save_intent(
         user_id,
         response.collected,
@@ -353,7 +355,10 @@ async def ingest_chat_attachment(
     """PDF/DOCX metin çıkarımı veya PNG/JPEG kısa görsel özeti."""
     _require_consent(user_id, "chat")
     _require_premium(user_id)
-    data = await file.read()
+    # 5MB üstünü belleğe hiç okumadan reddet (proof upload ile aynı kural).
+    if file.size is not None and file.size > attachment_service.MAX_ATTACHMENT_BYTES:
+        raise HTTPException(status_code=400, detail="Dosya 5MB'den büyük olamaz.")
+    data = await file.read(attachment_service.MAX_ATTACHMENT_BYTES + 1)
     mime_type = file.content_type or ""
     filename = file.filename or "ek"
     try:
@@ -513,7 +518,11 @@ async def upload_proof(
     if not task:
         raise HTTPException(status_code=404, detail="Görev bulunamadı.")
 
-    image_bytes = await photo.read()
+    # 5MB sınırını TAMAMINI belleğe okumadan zorla: en fazla limit+1 bayt oku.
+    # Aksi hâlde devasa bir gövde RAM'i doldurabilirdi (DoS).
+    if photo.size is not None and photo.size > settings.PROOF_MAX_BYTES:
+        raise HTTPException(status_code=400, detail="Fotoğraf 5MB'den büyük olamaz.")
+    image_bytes = await photo.read(settings.PROOF_MAX_BYTES + 1)
     mime_type = photo.content_type or ""
     try:
         proof_service.validate_upload(image_bytes, mime_type)
@@ -790,7 +799,7 @@ async def revenuecat_webhook(
     if not secret:
         raise HTTPException(status_code=503, detail="Webhook sırrı yapılandırılmamış.")
     expected = f"Bearer {secret}"
-    if authorization != expected:
+    if not authorization or not secrets.compare_digest(authorization, expected):
         raise HTTPException(status_code=401, detail="Geçersiz webhook sırrı.")
     event = payload.event or {}
     app_user_id = event.get("app_user_id")

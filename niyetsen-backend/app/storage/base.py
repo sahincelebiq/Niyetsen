@@ -122,6 +122,11 @@ class Repository(ABC):
     @abstractmethod
     def append_chat_message(self, user_id: str, message: ChatMessage) -> None: ...
 
+    def append_chat_messages(self, user_id: str, messages: list[ChatMessage]) -> None:
+        """Toplu ekleme — varsayılan tek tek; Supabase tek upsert'e indirger."""
+        for message in messages:
+            self.append_chat_message(user_id, message)
+
     @abstractmethod
     def get_chat_history(self, user_id: str) -> list[ChatMessage]: ...
 

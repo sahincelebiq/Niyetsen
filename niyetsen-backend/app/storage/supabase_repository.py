@@ -541,36 +541,55 @@ class SupabaseRepository(Repository):
     # ------------------------------------------------------------------
     # Sohbet geçmişi + niyet (Faz 2)
     # ------------------------------------------------------------------
-    def append_chat_message(self, user_id: str, message: ChatMessage) -> None:
-        self._ensure_user(user_id)
-        summaries = self.list_plan_summaries(user_id)
-        plan_id = next((item.id for item in summaries if item.is_active), None)
+    def _active_plan_id_or_draft(self, user_id: str) -> str:
+        """Aktif plan id — plan sayaç sorguları (list_plan_summaries) olmadan.
+
+        Sohbet yolunda her mesaj başına özet+count sorgusu N+1'e dönüyordu.
+        """
+        plan_id = self._active_plan_id(user_id)
         if not plan_id:
             plan_id = self.create_draft_plan(user_id, name="Plan 1", slot_no=1)
-        row = {
-            "user_id": user_id,
-            "client_message_id": message.id,
-            "role": message.role,
-            "content": message.content,
-            "plan_id": plan_id,
-        }
-        if message.id:
+        return plan_id
+
+    def append_chat_message(self, user_id: str, message: ChatMessage) -> None:
+        self.append_chat_messages(user_id, [message])
+
+    def append_chat_messages(self, user_id: str, messages: list[ChatMessage]) -> None:
+        """Tek istekte toplu ekleme: plan id 1 kez çözülür, tek upsert atılır."""
+        if not messages:
+            return
+        self._ensure_user(user_id)
+        plan_id = self._active_plan_id_or_draft(user_id)
+        upsert_rows: list[dict] = []
+        insert_rows: list[dict] = []
+        for message in messages:
+            row = {
+                "user_id": user_id,
+                "client_message_id": message.id,
+                "role": message.role,
+                "content": message.content,
+                "plan_id": plan_id,
+            }
+            (upsert_rows if message.id else insert_rows).append(row)
+        if upsert_rows:
             self._db.table("chat_msgs").upsert(
-                row,
+                upsert_rows,
                 on_conflict="user_id,client_message_id",
                 ignore_duplicates=True,
             ).execute()
-        else:
-            self._db.table("chat_msgs").insert(row).execute()
+        if insert_rows:
+            self._db.table("chat_msgs").insert(insert_rows).execute()
 
     def get_chat_history(self, user_id: str) -> list[ChatMessage]:
-        summaries = self.list_plan_summaries(user_id)
-        plan_id = next((item.id for item in summaries if item.is_active), None)
+        plan_id = self._active_plan_id(user_id)
         if not plan_id:
             return []
         rows = (
             self._db.table("chat_msgs").select("id,client_message_id,role,content")
-            .eq("user_id", user_id).eq("plan_id", plan_id).order("created_at").execute().data
+            .eq("user_id", user_id).eq("plan_id", plan_id)
+            # Toplu insert'te created_at aynı olabilir; id ikincil anahtar
+            # sıralamayı deterministik yapar.
+            .order("created_at").order("id").execute().data
         )
         return [
             ChatMessage(
@@ -589,10 +608,7 @@ class SupabaseRepository(Repository):
         ready_for_plan: bool = False,
     ) -> None:
         self._ensure_user(user_id)
-        summaries = self.list_plan_summaries(user_id)
-        plan_id = next((item.id for item in summaries if item.is_active), None)
-        if not plan_id:
-            plan_id = self.create_draft_plan(user_id, name="Plan 1", slot_no=1)
+        plan_id = self._active_plan_id_or_draft(user_id)
         payload = json.dumps({
             "collected": collected.model_dump(mode="json"),
             "ready_for_plan": ready_for_plan,
@@ -617,8 +633,7 @@ class SupabaseRepository(Repository):
             }).execute()
 
     def get_active_intent(self, user_id: str) -> tuple[CollectedIntent, bool] | None:
-        summaries = self.list_plan_summaries(user_id)
-        plan_id = next((item.id for item in summaries if item.is_active), None)
+        plan_id = self._active_plan_id(user_id)
         if not plan_id:
             return None
         active = _maybe_single(
@@ -638,8 +653,7 @@ class SupabaseRepository(Repository):
             return CollectedIntent(), False
 
     def complete_active_intent(self, user_id: str) -> None:
-        summaries = self.list_plan_summaries(user_id)
-        plan_id = next((item.id for item in summaries if item.is_active), None)
+        plan_id = self._active_plan_id(user_id)
         if not plan_id:
             return
         self._db.table("intents").update({"status": "done"}).eq(
@@ -721,10 +735,22 @@ class SupabaseRepository(Repository):
         }).eq("user_id", user_id).eq("token", token).execute()
 
     def list_notification_recipients(self) -> list[NotificationRecipient]:
-        rows = self._db.table("push_tokens").select(
-            "user_id,token,last_task_reminder_date,last_bonus_offer_date,"
-            "users!inner(timezone,notif_hour,notif_minute)"
-        ).eq("enabled", True).execute().data
+        # PostgREST varsayılanı 1000 satırda keser — sayfalamadan 1000+
+        # kullanıcıda bildirimler sessizce kaybolurdu (list_cron_users ile aynı desen).
+        rows: list[dict] = []
+        page_size = 1000
+        while True:
+            page = (
+                self._db.table("push_tokens").select(
+                    "user_id,token,last_task_reminder_date,last_bonus_offer_date,"
+                    "users!inner(timezone,notif_hour,notif_minute)"
+                ).eq("enabled", True)
+                .range(len(rows), len(rows) + page_size - 1)
+                .execute().data
+            )
+            rows.extend(page)
+            if len(page) < page_size:
+                break
         return [
             NotificationRecipient(
                 user_id=row["user_id"],

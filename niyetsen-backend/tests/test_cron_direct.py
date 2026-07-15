@@ -1,27 +1,32 @@
 """Tests for crash-safe Railway cron direct execution."""
 from __future__ import annotations
 
+from datetime import datetime, timezone
+
 import scripts.run_scheduled_jobs as cron_jobs
 from app.models.schemas import GameState, Plan, PlanDay, Task, UserProfile
+from app.services.task_lifecycle_service import latest_closed_day
 from app.storage.repository import InMemoryRepository
-from datetime import date
 
 
 def test_run_jobs_completes_with_in_memory_repo(monkeypatch, capsys):
     repository = InMemoryRepository()
     user_id = "cron-direct"
-    repository.save_profile(user_id, UserProfile(timezone="Europe/Istanbul"))
+    tz = "Europe/Istanbul"
+    now_utc = datetime.now(timezone.utc)
+    closed_day = latest_closed_day(now_utc, tz)
+    repository.save_profile(user_id, UserProfile(timezone=tz))
     repository.save_plan(user_id, Plan(
         id="plan-cron",
         duration_days=1,
         batch_generated_until=1,
-        start_date=date(2026, 7, 14),
+        start_date=closed_day,
         days=[PlanDay(day=1, tasks=[Task(
-            id="task-14",
+            id="task-due",
             day=1,
-            title="Dün",
+            title="Kapanacak gün",
             categories=["İrade"],
-            date=date(2026, 7, 14),
+            date=closed_day,
         )])],
     ))
     repository.save_state(GameState(user_id=user_id))
@@ -31,7 +36,7 @@ def test_run_jobs_completes_with_in_memory_repo(monkeypatch, capsys):
     captured = capsys.readouterr()
 
     assert "close-day" in captured.out
-    assert repository.get_task(user_id, "task-14").status == "missed_silent"
+    assert repository.get_task(user_id, "task-due").status == "missed_silent"
 
 
 def test_main_always_exits_zero_even_on_job_error(monkeypatch):
