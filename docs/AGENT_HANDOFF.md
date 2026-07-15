@@ -53,6 +53,27 @@
 
 ## Kayıt defteri (en yeni üstte)
 
+### 2026-07-15 21:00 — Cursor — Manus mobil entegrasyonu + Expo Go
+
+**Durum:** done  
+**Repo:** Niyetsen-mobile  
+**Branch:** `fix/ux-consent-optimizasyon`  
+**Commit/PR:** `ebbe18f`  
+
+**Ne yapıldı:**
+- `origin/main` Manus commit `519701d` UX branch ile merge edildi
+- Korunan UX: KVKK `privacy` eşlemesi, dark tab bar, chat scroll, İrade Modu
+- Supabase publishable guard (`supabase-keys.ts`, `verify-env`)
+- Nano Banana atıf butonu (`gemini_nano_banana` → "Kaynağı aç")
+- Backend `main` pull: `5f267a5` (Gemini timeout fix)
+- Expo Go: port 8082, cache temiz, API `192.168.1.104:8000`
+
+**Diğer ajana not (Manus):**
+- Mobil push: `fix/ux-consent-optimizasyon` @ `ebbe18f`
+- `main`'e merge PR açılabilir
+
+---
+
 ### 2026-07-15 20:15 — Cursor — Backend push + Manus frontend handoff
 
 **Durum:** done (backend) · in_progress (frontend Manus'ta)  
