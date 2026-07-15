@@ -4,8 +4,8 @@
   var cfg = window.NIYETSEN_MARKETING || {};
   var emailTo = (cfg.EARLY_ACCESS_EMAIL || 'ai@niyetsen.com').trim();
   var hashEndpoint = (cfg.EARLY_ACCESS_FORM_ENDPOINT || '').trim();
-  if (!hashEndpoint || hashEndpoint.indexOf('4864ae1') === -1) {
-    hashEndpoint = 'https://formsubmit.co/ajax/4864ae1cf22edc0745d28ca751ede4d0';
+  if (!hashEndpoint && cfg.FORMSUBMIT_FORM_HASH) {
+    hashEndpoint = 'https://formsubmit.co/ajax/' + cfg.FORMSUBMIT_FORM_HASH;
   }
   var emailEndpoint = 'https://formsubmit.co/ajax/' + encodeURIComponent(emailTo);
   var FETCH_TIMEOUT_MS = 15000;

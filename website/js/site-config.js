@@ -10,7 +10,7 @@ window.NIYETSEN_MARKETING = {
   PINTEREST_VERIFICATION: '1d27322d358bf294f1e1da3a23a8acdb',
   // Erken erişim talepleri bu adrese gider
   EARLY_ACCESS_EMAIL: 'ai@niyetsen.com',
-  // FormSubmit — aktivasyon sonrası hash (e-posta kaynak kodda görünmez)
+  // FormSubmit — aktivasyon hash (yalnızca form gönderimi için; geliştirme sayfasında gösterilmez)
   FORMSUBMIT_FORM_HASH: '4864ae1cf22edc0745d28ca751ede4d0',
   EARLY_ACCESS_FORM_ENDPOINT: 'https://formsubmit.co/ajax/4864ae1cf22edc0745d28ca751ede4d0'
 };
