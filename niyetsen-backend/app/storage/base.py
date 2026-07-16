@@ -132,6 +132,13 @@ class Repository(ABC):
     def get_chat_history(self, user_id: str) -> list[ChatMessage]: ...
 
     @abstractmethod
+    def clear_chat_history(self, user_id: str) -> int:
+        """Aktif planın sohbet geçmişini temizler; silinen mesaj sayısını döner.
+
+        'Yeni sohbet başlat': arayüz sıfırlanır, plan/niyet/puanlara DOKUNULMAZ.
+        """
+
+    @abstractmethod
     def save_intent(
         self,
         user_id: str,
@@ -224,3 +231,7 @@ class Repository(ABC):
     def get_fortune_for_day(
         self, user_id: str, fortune_type: str, day: dt_date
     ) -> Optional[FortuneRecord]: ...
+
+    @abstractmethod
+    def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
+        """Fal geçmişi — en yeniden eskiye."""

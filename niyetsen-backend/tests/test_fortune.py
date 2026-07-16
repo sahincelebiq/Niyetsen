@@ -175,6 +175,27 @@ def test_horoscope_with_profile_and_daily_cache():
     assert second.json()["interpretation"] == first.json()["interpretation"]
 
 
+# ---------------- Geçmiş ----------------
+def test_fortune_history_lists_recent_first():
+    user = "history_user"
+    grant_all_consents(user)
+    client.post("/fortune/tarot", headers={"X-User-Id": user}, json={})
+    _upload(user, "kahve")
+
+    resp = client.get("/fortune/history", headers={"X-User-Id": user})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 2
+    assert body[0]["type"] == "kahve"  # en yeni önce
+    assert body[1]["type"] == "tarot"
+    assert body[1]["result"]["cards"]
+
+
+def test_fortune_history_requires_consent():
+    resp = client.get("/fortune/history", headers={"X-User-Id": "hist_no_consent"})
+    assert resp.status_code == 403
+
+
 # ---------------- Haklar ----------------
 def test_rights_endpoint_free_user():
     user = "rights_user"

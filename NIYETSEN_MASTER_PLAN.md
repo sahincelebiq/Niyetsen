@@ -515,12 +515,19 @@ Yapılanlar (2026-07-16, backend 148 test yeşil):
       fal istemcisi. tsc 0 hata.
 - [x] Testler: `test_fortune.py` (18) + `test_rag.py` (6) — toplam 148 yeşil.
 
-Açık kalanlar (sonraki dalgalar — detay FAZ7 dokümanında):
-- [ ] Supabase'de migration'ı çalıştır + prod'da uçtan uca fal testi (Şahin cihaz).
+Dalga 2 + 2.5 (2026-07-17, tamamlandı — detay FAZ7 dokümanında):
 - [x] 06:01 "Günlük Tarot" push'u (algoritma §4) — notification_service'e eklendi.
-- [ ] Tarot çekim animasyonu + kart görselleri (mobil polish).
-- [ ] Küçük Arkana 56 kartın doldurulması (knowledge/tarot.md şablonu hazır).
-- [ ] Fal sonuçları geçmişi ekranı (`fortune_log` listesi).
+- [x] Tarot çekim animasyonu (deste sahnesi + kademeli kart açılışı, Reanimated).
+- [x] Küçük Arkana 56 kart dolduruldu — deste 78 kart.
+- [x] Fal geçmişi: GET /fortune/history + `fal-gecmisi.tsx` (mystic hub bağlantılı).
+- [x] Rehber tekrar sorunu düzeltildi (DOĞALLIK KURALLARI — burç/kalıp/İngilizce).
+- [x] Yeni Sohbet Başlat: POST /chat/reset + drawer butonu (plan korunur).
+- [x] Geliştirici hesabı: DEV_ACCOUNT_EMAILS → abonelik kısa devresi (yalnız Şahin).
+- Backend 156 test yeşil; mobil tsc 0 hata.
+
+Açık kalanlar:
+- [ ] Supabase'de migration'ları çalıştır (fortune_log + last_tarot_push_date)
+      + prod'da uçtan uca fal testi (Şahin cihaz).
 - [ ] Chroma kalıcı backend değerlendirmesi (lokal) + Pinterest görsel değerlendirmesi.
 - [ ] Leaderboard v3 (dokunma — ayrı faz).
 

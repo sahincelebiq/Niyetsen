@@ -124,6 +124,11 @@ class Settings:
     FORTUNE_RATE_LIMIT_PER_MIN: int = int(
         os.environ.get("FORTUNE_RATE_LIMIT_PER_MIN", "6")
     )
+    # Geliştirici hesapları (virgülle ayrılmış e-posta): mağaza satın alması
+    # olmadan tam erişim. Yalnız Şahin'in hesabı; normal kullanıcı etkilenmez.
+    DEV_ACCOUNT_EMAILS: list[str] = _csv("DEV_ACCOUNT_EMAILS") or [
+        "kutluadalarr7@gmail.com"
+    ]
 
 
 settings = Settings()

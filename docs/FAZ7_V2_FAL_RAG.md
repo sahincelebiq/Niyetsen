@@ -101,12 +101,35 @@
 
 ## Sonraki dalgalar (öncelik sırasıyla)
 
-### Dalga 2 — Fal UX tamamlama
+### Dalga 2 — Fal UX tamamlama ✅ TAMAMLANDI (2026-07-17)
 - [x] 06:01 "Günlük Tarot" push'u (algoritma §4) — `notification_service`'e
       `last_tarot_push_date` deseniyle eklendi (görev hatırlatıcısı +1 dk).
-- [ ] Tarot kart görselleri + çekim animasyonu (mobil).
-- [ ] Fal geçmişi: `GET /fortune/history` + mobil liste ekranı.
-- [ ] Küçük Arkana 56 kart (knowledge/tarot.md şablonu doldurulacak).
+- [x] Tarot çekim animasyonu: yüzü kapalı deste sahnesi → kademeli FlipInEasyY
+      kart açılışı → gecikmeli yorum FadeIn (Reanimated, yeni bağımlılık yok).
+- [x] Fal geçmişi: `GET /fortune/history?limit=` + `fal-gecmisi.tsx` ekranı
+      (tip rozetleri, genişleyen yorum; mystic hub kartları "Yakında"→"Keşfet"
+      ve hub'a geçmiş bağlantısı eklendi).
+- [x] Küçük Arkana 56 kart — knowledge/tarot.md dolduruldu; deste 78 kart
+      (parser testi geçti).
+
+### Dalga 2.5 — Sohbet kalitesi + platform ✅ (2026-07-17, Şahin'in ekran
+görüntüleriyle bildirdiği sorunlara karşılık)
+- [x] **Rehber tekrarları düzeltildi:** SYSTEM/GUIDE prompt'a "DOĞALLIK
+      KURALLARI" eklendi: burçtan yalnız kullanıcı açarsa söz et, görev
+      adlarını birebir alıntılamak yasak, açılış/kapanış kalıp tekrarı yasak,
+      yalnız Türkçe ("pending" ❌ "bekleyen" ✅), önce sorulan soruya cevap.
+      (Sorun: her mesajda "Yengeç burcunun verdiği azimle…" tekrarı.)
+- [x] **Yeni Sohbet Başlat:** `POST /chat/reset` — aktif planın sohbet
+      mesajlarını siler, plan/görev/puan korunur; drawer'da (☰) "Yeni Niyet
+      Başlat"ın üstünde ikinci buton + onay diyaloğu. İstemci artık en fazla
+      son 40 mesajı gönderiyor (uzun sohbet istek şişmesi bitti).
+- [x] **Geliştirici hesabı:** `DEV_ACCOUNT_EMAILS` env (varsayılan:
+      kutluadalarr7@gmail.com) — JWT'deki doğrulanmış e-posta eşleşirse
+      abonelik kısa devresi (status=active, paywall yok). Normal
+      kullanıcılar ve Expo Go testçileri standart deneme→paywall akışında;
+      arayüzde geliştirici izi yok. `app/core/dev_accounts.py`.
+- [x] Testler: **156 yeşil** (chat reset, dev hesabı, fal geçmişi dahil);
+      mobil tsc 0 hata.
 
 ### Dalga 3 — RAG derinleştirme
 - [ ] Chroma kalıcı backend (lokal `chroma_db/`) — opsiyonel bağımlılık olarak.

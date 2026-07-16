@@ -20,13 +20,14 @@ from fastapi import (
 from jwt import PyJWKClient
 
 from app.config import BONUS_POINTS, CATEGORIES, settings
+from app.core import dev_accounts
 from app.core.gemini_client import GeminiUnavailable
 from app.core.rate_limit import limiter
 from app.models.schemas import (
     AttachmentIngestResponse, BonusCompletionRequest, BonusOfferResponse, ChatMessage,
     ChatGreetingResponse, ChatRequest, ChatResponse, ChatSessionResponse, CollectedIntent,
-    ConsentStatus, ConsentUpdate, DailyTaskItem, FortuneRightsResponse, HoroscopeResponse,
-    PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
+    ConsentStatus, ConsentUpdate, DailyTaskItem, FortuneRecord, FortuneRightsResponse,
+    HoroscopeResponse, PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
     PlanSummary, ProfileUpdate, ProofRecord, ProofResult, PushTokenRecord,
     PushTokenRegistration, RevenueCatWebhookPayload, StateResponse, SubscriptionInfo,
     TarotDrawRequest, TarotDrawResponse, UserProfile,
@@ -181,6 +182,9 @@ def get_current_user(
     user_id = payload.get("sub")
     if not user_id:
         raise AUTH_ERROR
+    # Geliştirici hesabı: doğrulanmış e-posta allowlist'teyse işaretle
+    # (abonelik kısa devresi — normal kullanıcılar etkilenmez).
+    dev_accounts.register_if_dev(user_id, payload.get("email"))
     return user_id
 
 
@@ -304,6 +308,19 @@ async def chat(
 def chat_history(user_id: str = Depends(get_current_user)) -> list[ChatMessage]:
     """Uygulama yeniden açılınca / yeni cihazda sohbeti kaldığı yerden göstermek için."""
     return repo.get_chat_history(user_id)
+
+
+@router.post("/chat/reset", response_model=ChatGreetingResponse)
+def chat_reset(user_id: str = Depends(get_current_user)) -> ChatGreetingResponse:
+    """Yeni sohbet başlat: aktif planın sohbet geçmişini temizler.
+
+    Plan, niyet, görevler ve puanlara DOKUNULMAZ — yalnız konuşma sıfırlanır.
+    Uzun geçmiş hem uygulamayı yoruyor hem modeli aynı kalıplara kilitliyordu.
+    Dönen değer: taze karşılama mesajı (istemci doğrudan gösterir).
+    """
+    removed = repo.clear_chat_history(user_id)
+    log.info("Sohbet sıfırlandı (user=%s, silinen=%d)", user_id, removed)
+    return chat_greeting(user_id)
 
 
 @router.get("/chat/greeting", response_model=ChatGreetingResponse)
@@ -922,6 +939,16 @@ async def fortune_photo(
         raise HTTPException(status_code=400, detail=str(exc))
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+
+
+@router.get("/fortune/history", response_model=list[FortuneRecord])
+def fortune_history(
+    limit: int = 30,
+    user_id: str = Depends(get_current_user),
+) -> list[FortuneRecord]:
+    """Fal geçmişi — en yeniden eskiye (tarot/kahve/el/burç)."""
+    _require_consent(user_id, "chat")
+    return repo.list_fortunes(user_id, limit=max(1, min(limit, 100)))
 
 
 @router.get("/fortune/horoscope", response_model=HoroscopeResponse)

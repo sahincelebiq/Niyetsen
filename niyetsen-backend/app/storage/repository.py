@@ -380,6 +380,11 @@ class InMemoryRepository(Repository):
         plan_id = self._ensure_active_plan_id(user_id)
         return list(self._chat_history.get((user_id, plan_id), []))
 
+    def clear_chat_history(self, user_id: str) -> int:
+        plan_id = self._ensure_active_plan_id(user_id)
+        removed = self._chat_history.pop((user_id, plan_id), [])
+        return len(removed)
+
     def save_intent(
         self,
         user_id: str,
@@ -591,6 +596,14 @@ class InMemoryRepository(Repository):
             if record.type == fortune_type and record.day == day:
                 return record
         return None
+
+    def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
+        records = sorted(
+            self._fortunes.get(user_id, []),
+            key=lambda r: r.created_at,
+            reverse=True,
+        )
+        return records[:limit]
 
     def get_subscription_row(self, user_id: str) -> dict:
         profile = self._profiles.get(user_id, UserProfile())

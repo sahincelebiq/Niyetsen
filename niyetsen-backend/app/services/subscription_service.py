@@ -91,6 +91,18 @@ def build_subscription_info(
 
 
 def get_subscription(repo: Repository, user_id: str) -> SubscriptionInfo:
+    # Geliştirici hesabı (JWT e-postası allowlist'te): mağaza satın alması
+    # olmadan tam erişim. Normal kullanıcı akışı DEĞİŞMEZ.
+    from app.core import dev_accounts
+
+    if dev_accounts.is_dev(user_id):
+        return SubscriptionInfo(
+            status="active",
+            trial_started_at=None,
+            trial_days_remaining=0,
+            has_premium_access=True,
+            show_paywall=False,
+        )
     row = repo.get_subscription_row(user_id)
     has_plan = repo.get_plan(user_id) is not None
     return build_subscription_info(

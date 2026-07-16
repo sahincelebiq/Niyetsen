@@ -600,6 +600,17 @@ class SupabaseRepository(Repository):
             for row in rows
         ]
 
+    def clear_chat_history(self, user_id: str) -> int:
+        """Yeni sohbet: aktif planın mesajlarını sil (plan/niyet/puan korunur)."""
+        plan_id = self._active_plan_id(user_id)
+        if not plan_id:
+            return 0
+        response = (
+            self._db.table("chat_msgs").delete(count="exact")
+            .eq("user_id", user_id).eq("plan_id", plan_id).execute()
+        )
+        return int(response.count or 0)
+
     def save_intent(
         self,
         user_id: str,
@@ -924,3 +935,23 @@ class SupabaseRepository(Repository):
             id=row["id"], type=row["type"], day=row["day"], result=result,
             created_at=row.get("created_at") or datetime.now(timezone.utc),
         )
+
+    def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
+        rows = (
+            self._db.table("fortune_log")
+            .select("id,type,day,result_json,created_at")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True).limit(limit)
+            .execute().data
+        )
+        records: list[FortuneRecord] = []
+        for row in rows:
+            try:
+                result = json.loads(row.get("result_json") or "{}")
+            except (TypeError, ValueError):
+                result = {}
+            records.append(FortuneRecord(
+                id=row["id"], type=row["type"], day=row["day"], result=result,
+                created_at=row.get("created_at") or datetime.now(timezone.utc),
+            ))
+        return records
