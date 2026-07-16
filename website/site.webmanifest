@@ -28,7 +28,7 @@
       "type": "image/png"
     },
     {
-      "src": "/images/logo.png",
+      "src": "/favicon-512x512.png",
       "sizes": "512x512",
       "type": "image/png"
     }
