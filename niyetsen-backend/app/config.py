@@ -113,6 +113,18 @@ class Settings:
     # --- Gözlemlenebilirlik (FAZ 6) ---
     SENTRY_DSN: str = os.environ.get("SENTRY_DSN", "")
 
+    # --- V2: RAG + Fal modülü (FAZ 7, 2026-07-16'da Şahin onayıyla başladı) ---
+    RAG_ENABLED: bool = _bool("RAG_ENABLED", "true")
+    # Embedding kapatılırsa keyword fallback çalışır (maliyet/kota kontrolü).
+    RAG_EMBEDDINGS_ENABLED: bool = _bool("RAG_EMBEDDINGS_ENABLED", "true")
+    RAG_TOP_K: int = int(os.environ.get("RAG_TOP_K", "4"))
+    GEMINI_EMBED_MODEL: str = os.environ.get(
+        "GEMINI_EMBED_MODEL", "gemini-embedding-001"
+    )
+    FORTUNE_RATE_LIMIT_PER_MIN: int = int(
+        os.environ.get("FORTUNE_RATE_LIMIT_PER_MIN", "6")
+    )
+
 
 settings = Settings()
 
@@ -140,3 +152,13 @@ RANK_LADDER = [
 RANK_UNRANKED = "Çaylak"      # 1000 altı
 
 FREEZE_TOKENS_PER_MONTH = 1   # Zincir Koruma Jetonu: ayda 1 otomatik
+
+# --- V2 Fal hak sayaçları (docs/niyetsen-03-algoritma.md §5, günlük sıfırlanır) ---
+# el_falı: ücretsiz 1, ücretli +2 · kahve: ücretsiz 1, ücretli +2 ("+ek" = +2
+# yorumlandı, Şahin değiştirebilir) · tarot: herkese 1, EK YOK · burç: sınırsız.
+FORTUNE_DAILY_RIGHTS = {
+    "el":    {"free": 1, "premium": 3},
+    "kahve": {"free": 1, "premium": 3},
+    "tarot": {"free": 1, "premium": 1},
+}
+TAROT_CARDS_PER_DRAW = 3      # geçmiş · şimdi · niyetin yönü

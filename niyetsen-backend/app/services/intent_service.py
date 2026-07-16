@@ -5,11 +5,13 @@ Hazırlık kararını MODELE bırakma: kod tarafında da doğrula (çifte kilit)
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 
 from app.config import settings
 from app.core import prompt_builder, prompts, tools
 from app.core.gemini_client import generate_function_calls, generate_json
+from app.services import rag_service
 from app.models.schemas import (
     ChatRequest, ChatResponse, CollectedIntent, GameState, ToolCall,
 )
@@ -131,8 +133,20 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
         mood_notes=mood_notes,
     )
     history = [m.model_dump() for m in req.messages[-CHAT_HISTORY_LIMIT:]]
+
+    # V2 RAG: rehber felsefe/motivasyon/kişisel gelişim bilgi tabanıyla,
+    # bağlama göre konuşur. Hata/gecikme sohbeti asla düşürmez; embedding
+    # senkron olduğundan event loop'u kilitlememek için thread'de çalışır.
+    rag_chunks: list[str] = []
+    try:
+        rag_chunks = await asyncio.to_thread(
+            rag_service.retrieve_for_chat, last_user_msg
+        )
+    except Exception:  # noqa: BLE001
+        log.warning("RAG bağlamı atlandı", exc_info=True)
+
     contents = prompt_builder.build_chat_contents(
-        context=prompt_builder.build_context(memory),
+        context=prompt_builder.build_context(memory, rag_chunks),
         history=history,
         extra_instructions=(
             (

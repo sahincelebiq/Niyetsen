@@ -15,7 +15,9 @@ puan düşüren oyunlaştırılmış yaşam asistanı.
 2. `docs/uygulama-promt.md` — ürün şartnamesi (rank tablosu, araçlar)
 3. `docs/niyetsen-02-mimari.md` — mimari
 4. `prompts/chat_system_prompt.md` — sohbet sistem promptu
-5. `knowledge/` — RAG bilgi tabanı (V2 fal modülü için, ŞİMDİ DEĞİL)
+5. `niyetsen-backend/knowledge/` — RAG bilgi tabanı (**FAZ 7 ile AKTİF,
+   2026-07-16**; Railway'e deploy için backend kökünde yaşar)
+6. `docs/FAZ7_V2_FAL_RAG.md` — aktif v2 fazı: fal + RAG durumu ve sonraki dalgalar
 
 ## Stack (kilitli)
 - Backend: Python 3.11+, FastAPI
@@ -23,7 +25,8 @@ puan düşüren oyunlaştırılmış yaşam asistanı.
 - AI: Gemini API — `gemini-2.5-flash` (multimodal, function calling).
   **v1'de fine-tuning YOK.** Prod'da ücretli katman.
 - DB: Supabase (Postgres + Auth + Storage). Dev'de SQLite olabilir, şema aynı.
-- Vektör DB: Chroma (local) — sadece V2 fal modülünde devreye girer.
+- RAG: `rag_service.py` — Gemini embedding + in-memory kosinüs (varsayılan);
+  Chroma opsiyonel yuva (requirements'a eklenmedi, Railway imaj boyutu).
 - Abonelik: RevenueCat (yalnız IAP). Analitik: PostHog. Hata: Sentry.
 
 ## Güvenlik kuralları (taviz yok)
@@ -62,8 +65,15 @@ Bunların dışında araç YOK (bilet, ödeme, dosya işlemi yasak).
 - DB şemasını uydurma — MASTER_PLAN §2 neyse o.
 - Kararsızlıkta: MASTER_PLAN §1 → yoksa Şahin'e sor. UYDURMA.
 
+## Fal modülü (FAZ 7 — AKTİF, 2026-07-16'da Şahin onayıyla başladı)
+- Fal = AYNA, kader değil. Korku satmak, tıbbi/hukuki/finansal tavsiye YASAK.
+- Hak sayaçları günlük (config.FORTUNE_DAILY_RIGHTS): el 1/+2, kahve 1/+2,
+  tarot 1 (ek yok), burç sınırsız. Kriz sinyalinde fal DURUR.
+- İkinci system prompt: `prompts.FORTUNE_SYSTEM_PROMPT`. Yanlış fotoğraf hak yakmaz.
+- Her fal yanıtında "eğlence amaçlıdır" disclaimer'ı (store uyumu).
+
 ## Yapma
-- Fine-tuning (v1). Fal modülü / RAG (v2'den önce). Leaderboard (v3).
+- Fine-tuning (v1). Leaderboard (v3). Pinterest (v3 değerlendirmesi).
 - Tanımlı araçların dışında araç çağrısı.
 - Plan uydurma — her görev kullanıcının chat'te anlattığı hayattan türer.
 - Suçlama/utandırma tonu: kayıp hissi + kimlik ✅ ("23 günlük zincirin seni

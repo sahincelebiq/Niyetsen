@@ -13,8 +13,9 @@ from typing import Optional
 
 from app.models.schemas import (
     BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, DailyTaskItem,
-    GameState, NotificationRecipient, Plan, PlanSummary, PointLogRecord, ProofAttemptClaim,
-    ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task, UserProfile,
+    FortuneRecord, GameState, NotificationRecipient, Plan, PlanSummary, PointLogRecord,
+    ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task,
+    UserProfile,
 )
 
 
@@ -177,6 +178,11 @@ class Repository(ABC):
     ) -> None: ...
 
     @abstractmethod
+    def mark_tarot_push_sent(
+        self, user_id: str, token: str, day: dt_date
+    ) -> None: ...
+
+    @abstractmethod
     def get_bonus_for_day(self, user_id: str, day: dt_date) -> BonusOffer | None: ...
 
     @abstractmethod
@@ -204,3 +210,17 @@ class Repository(ABC):
 
     @abstractmethod
     def delete_account(self, user_id: str) -> None: ...
+
+    # --- V2: Fal modülü (FAZ 7) ---
+    @abstractmethod
+    def save_fortune(self, user_id: str, record: FortuneRecord) -> None: ...
+
+    @abstractmethod
+    def count_fortunes_for_day(
+        self, user_id: str, fortune_type: str, day: dt_date
+    ) -> int: ...
+
+    @abstractmethod
+    def get_fortune_for_day(
+        self, user_id: str, fortune_type: str, day: dt_date
+    ) -> Optional[FortuneRecord]: ...

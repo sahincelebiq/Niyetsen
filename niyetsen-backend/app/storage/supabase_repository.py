@@ -18,9 +18,9 @@ from supabase import Client, ClientOptions, create_client
 from app.config import CATEGORIES, settings
 from app.models.schemas import (
     BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, DailyTaskItem,
-    GameState, NotificationRecipient, Plan, PlanDay, PlanSummary, PointLogRecord,
-    ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task,
-    UserProfile,
+    FortuneRecord, GameState, NotificationRecipient, Plan, PlanDay, PlanSummary,
+    PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord,
+    ScoreEvent, Task, UserProfile,
 )
 from app.storage.base import Repository
 
@@ -743,6 +743,7 @@ class SupabaseRepository(Repository):
             page = (
                 self._db.table("push_tokens").select(
                     "user_id,token,last_task_reminder_date,last_bonus_offer_date,"
+                    "last_tarot_push_date,"
                     "users!inner(timezone,notif_hour,notif_minute)"
                 ).eq("enabled", True)
                 .range(len(rows), len(rows) + page_size - 1)
@@ -760,6 +761,9 @@ class SupabaseRepository(Repository):
                 ),
                 last_bonus_offer_date=_parse_optional_date(
                     row.get("last_bonus_offer_date")
+                ),
+                last_tarot_push_date=_parse_optional_date(
+                    row.get("last_tarot_push_date")
                 ),
                 timezone=(row.get("users") or {}).get("timezone") or "Europe/Istanbul",
                 notif_hour=(row.get("users") or {}).get("notif_hour") or 8,
@@ -780,6 +784,13 @@ class SupabaseRepository(Repository):
     ) -> None:
         self._db.table("push_tokens").update({
             "last_bonus_offer_date": day.isoformat(),
+        }).eq("user_id", user_id).eq("token", token).execute()
+
+    def mark_tarot_push_sent(
+        self, user_id: str, token: str, day: dt_date
+    ) -> None:
+        self._db.table("push_tokens").update({
+            "last_tarot_push_date": day.isoformat(),
         }).eq("user_id", user_id).eq("token", token).execute()
 
     def get_bonus_for_day(self, user_id: str, day: dt_date) -> BonusOffer | None:
@@ -869,3 +880,47 @@ class SupabaseRepository(Repository):
             raise RuntimeError(
                 "Veriler silindi ancak Auth hesabı silinemedi; yönetici kontrolü gerekli."
             ) from exc
+
+    # ------------------------------------------------------------------
+    # V2: Fal modülü (FAZ 7) — fortune_log (MASTER_PLAN §2)
+    # ------------------------------------------------------------------
+    def save_fortune(self, user_id: str, record: FortuneRecord) -> None:
+        self._ensure_user(user_id)
+        self._db.table("fortune_log").insert({
+            "id": record.id,
+            "user_id": user_id,
+            "type": record.type,
+            "day": record.day.isoformat(),
+            "result_json": json.dumps(record.result, ensure_ascii=False),
+        }).execute()
+
+    def count_fortunes_for_day(
+        self, user_id: str, fortune_type: str, day: dt_date
+    ) -> int:
+        response = (
+            self._db.table("fortune_log").select("id", count="exact")
+            .eq("user_id", user_id).eq("type", fortune_type)
+            .eq("day", day.isoformat()).limit(1).execute()
+        )
+        return int(response.count or 0)
+
+    def get_fortune_for_day(
+        self, user_id: str, fortune_type: str, day: dt_date
+    ) -> Optional[FortuneRecord]:
+        row = _maybe_single(
+            self._db.table("fortune_log")
+            .select("id,type,day,result_json,created_at")
+            .eq("user_id", user_id).eq("type", fortune_type)
+            .eq("day", day.isoformat())
+            .order("created_at", desc=True).limit(1)
+        )
+        if not row:
+            return None
+        try:
+            result = json.loads(row.get("result_json") or "{}")
+        except (TypeError, ValueError):
+            result = {}
+        return FortuneRecord(
+            id=row["id"], type=row["type"], day=row["day"], result=result,
+            created_at=row.get("created_at") or datetime.now(timezone.utc),
+        )

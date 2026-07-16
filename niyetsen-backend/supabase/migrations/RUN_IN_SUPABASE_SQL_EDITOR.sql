@@ -39,3 +39,24 @@ create index if not exists tasks_date_status_idx
 create index if not exists tasks_date_pending_idx
   on public.tasks(date)
   where status = 'pending';
+
+-- ============================================================
+-- FAZ 7 (V2): Fal modülü — fortune_log (2026-07-16)
+-- ============================================================
+create table if not exists public.fortune_log (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null references public.users(id) on delete cascade,
+  type text not null check (type in ('tarot', 'kahve', 'el', 'burc')),
+  day date not null,
+  result_json jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+create index if not exists fortune_log_user_type_day_idx
+  on public.fortune_log(user_id, type, day);
+alter table public.fortune_log enable row level security;
+
+-- ============================================================
+-- FAZ 7 Dalga 2: Günlük Tarot push idempotency (2026-07-17)
+-- ============================================================
+alter table public.push_tokens
+  add column if not exists last_tarot_push_date date;

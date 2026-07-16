@@ -116,13 +116,66 @@ def test_notification_cron_is_timezone_and_token_idempotent(monkeypatch):
 
     assert first == {
         "task_reminders_sent": 1,
+        "tarot_pushes_sent": 1,
         "bonus_offers_sent": 1,
         "delivery_errors": 0,
     }
     assert second == {
         "task_reminders_sent": 0,
+        "tarot_pushes_sent": 0,
         "bonus_offers_sent": 0,
         "delivery_errors": 0,
     }
-    assert {message.data["url"] for message in sent} == {"/daily", "/bonus"}
+    assert {message.data["url"] for message in sent} == {"/daily", "/tarot", "/bonus"}
     assert bonus_service.active_offer(repository, user_id) is not None
+
+
+def test_tarot_push_is_one_minute_after_task_slot_and_idempotent(monkeypatch):
+    repository = InMemoryRepository()
+    user_id = "tarot-push-user"
+    today = date(2026, 7, 11)
+    repository.save_profile(
+        user_id,
+        UserProfile(timezone="Europe/Istanbul", notif_hour=8, notif_minute=0),
+    )
+    repository.upsert_push_token(PushTokenRecord(
+        user_id=user_id,
+        token="ExpoPushToken[tarot-test]",
+        platform="ios",
+    ))
+    sent: list[push_service.PushMessage] = []
+
+    def fake_send(messages, timeout=15):
+        sent.extend(messages)
+        return [{"status": "ok"} for _ in messages]
+
+    monkeypatch.setattr(push_service, "send", fake_send)
+
+    before_slot = datetime(2026, 7, 11, 4, 59, tzinfo=timezone.utc)  # 07:59 Istanbul
+    assert notification_service.run_due_notifications(repository, before_slot) == {
+        "task_reminders_sent": 0,
+        "tarot_pushes_sent": 0,
+        "bonus_offers_sent": 0,
+        "delivery_errors": 0,
+    }
+    assert sent == []
+
+    at_slot = datetime(2026, 7, 11, 5, 1, tzinfo=timezone.utc)  # 08:01 Istanbul
+    first = notification_service.run_due_notifications(repository, at_slot)
+    second = notification_service.run_due_notifications(repository, at_slot)
+
+    assert first == {
+        "task_reminders_sent": 0,
+        "tarot_pushes_sent": 1,
+        "bonus_offers_sent": 0,
+        "delivery_errors": 0,
+    }
+    assert second == {
+        "task_reminders_sent": 0,
+        "tarot_pushes_sent": 0,
+        "bonus_offers_sent": 0,
+        "delivery_errors": 0,
+    }
+    assert len(sent) == 1
+    assert sent[0].data["url"] == "/tarot"
+    assert sent[0].title == "Bugünün kartı seni bekliyor"

@@ -25,16 +25,17 @@ from app.core.rate_limit import limiter
 from app.models.schemas import (
     AttachmentIngestResponse, BonusCompletionRequest, BonusOfferResponse, ChatMessage,
     ChatGreetingResponse, ChatRequest, ChatResponse, ChatSessionResponse, CollectedIntent,
-    ConsentStatus, ConsentUpdate, DailyTaskItem, Plan, PlanGenerateRequest, PlanRenameRequest,
+    ConsentStatus, ConsentUpdate, DailyTaskItem, FortuneRightsResponse, HoroscopeResponse,
+    PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
     PlanSummary, ProfileUpdate, ProofRecord, ProofResult, PushTokenRecord,
     PushTokenRegistration, RevenueCatWebhookPayload, StateResponse, SubscriptionInfo,
-    UserProfile,
+    TarotDrawRequest, TarotDrawResponse, UserProfile,
 )
 from app.services import (
-    attachment_service, bonus_service, consent_service, greeting_service, intent_service,
-    notification_service, plan_service, profile_service, project_service,
-    proof_service, push_service, scoring_service, subscription_service,
-    task_lifecycle_service, tool_service,
+    attachment_service, bonus_service, consent_service, fortune_service,
+    greeting_service, intent_service, notification_service, plan_service,
+    profile_service, project_service, proof_service, push_service, scoring_service,
+    subscription_service, task_lifecycle_service, tool_service,
 )
 from app.services.bonus_pool import is_completion_message
 from app.storage.repository import repo
@@ -822,6 +823,130 @@ async def revenuecat_webhook(
         event_type=event_type,
         expiration_at=expiration_at,
     )
+
+
+# ------------------------------------------------------------------
+# V2: Fal modülü (FAZ 7) — tarot / kahve / el / burç
+# Hak sayaçları günlük; free katman fal haklarına sahiptir (paywall gate YOK,
+# premium yalnız EK hak açar — algoritma §5).
+# ------------------------------------------------------------------
+def _fortune_context(user_id: str) -> tuple[UserProfile, bool, str]:
+    """profil + premium bilgisi + bellek bloğu (yorum kişiselleştirme)."""
+    from app.core import prompt_builder
+
+    profile = repo.get_profile(user_id)
+    subscription_service.sync_expired_trials(repo, user_id)
+    info = subscription_service.get_subscription(repo, user_id)
+    state = repo.get_state(user_id)
+    memory = prompt_builder.build_memory_block(
+        state=state,
+        name=profile.name or "",
+        birth_date=profile.birth_date.isoformat() if profile.birth_date else "",
+        zodiac=profile.zodiac_sign or "",
+    )
+    return profile, info.has_premium_access, memory
+
+
+@router.get("/fortune/rights", response_model=FortuneRightsResponse)
+def fortune_rights(user_id: str = Depends(get_current_user)) -> FortuneRightsResponse:
+    profile = repo.get_profile(user_id)
+    subscription_service.sync_expired_trials(repo, user_id)
+    info = subscription_service.get_subscription(repo, user_id)
+    return fortune_service.get_rights(
+        repo, user_id, profile.timezone, info.has_premium_access
+    )
+
+
+@router.post("/fortune/tarot", response_model=TarotDrawResponse)
+@limiter.limit(f"{settings.FORTUNE_RATE_LIMIT_PER_MIN}/minute")
+async def fortune_tarot(
+    request: Request,
+    req: TarotDrawRequest,
+    user_id: str = Depends(get_current_user),
+) -> TarotDrawResponse:
+    """Günlük tarot: herkese 1 çekim; aynı gün ikinci istekte kayıtlı sonuç döner."""
+    _require_consent(user_id, "chat")
+    profile, is_premium, memory = _fortune_context(user_id)
+    try:
+        return await fortune_service.draw_tarot(
+            repo, user_id,
+            question=req.question,
+            timezone_name=profile.timezone,
+            is_premium=is_premium,
+            memory_block=memory,
+        )
+    except fortune_service.FortuneRightsExhausted as exc:
+        raise HTTPException(status_code=429, detail=str(exc))
+    except fortune_service.FortuneError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except GeminiUnavailable:
+        raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+
+
+@router.post("/fortune/photo/{kind}", response_model=PhotoFortuneResponse)
+@limiter.limit(f"{settings.FORTUNE_RATE_LIMIT_PER_MIN}/minute")
+async def fortune_photo(
+    request: Request,
+    kind: str,
+    photo: UploadFile = File(...),
+    user_id: str = Depends(get_current_user),
+) -> PhotoFortuneResponse:
+    """Kahve/el falı: in-app kamera fotoğrafı → Gemini Vision yorumu."""
+    if kind not in ("kahve", "el"):
+        raise HTTPException(status_code=404, detail="Bilinmeyen fal türü.")
+    _require_consent(user_id, "chat")
+    _require_consent(user_id, "proof")  # fotoğraf işleme rızası (KVKK)
+    if photo.size is not None and photo.size > settings.PROOF_MAX_BYTES:
+        raise HTTPException(status_code=400, detail="Fotoğraf 5MB'den büyük olamaz.")
+    image_bytes = await photo.read(settings.PROOF_MAX_BYTES + 1)
+    mime_type = photo.content_type or ""
+    try:
+        proof_service.validate_upload(image_bytes, mime_type)
+    except proof_service.ProofRejected as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+    profile, is_premium, memory = _fortune_context(user_id)
+    try:
+        return await fortune_service.read_photo_fortune(
+            repo, user_id,
+            kind=kind,
+            image_bytes=image_bytes,
+            mime_type=mime_type,
+            timezone_name=profile.timezone,
+            is_premium=is_premium,
+            memory_block=memory,
+        )
+    except fortune_service.FortuneRightsExhausted as exc:
+        raise HTTPException(status_code=429, detail=str(exc))
+    except fortune_service.FortuneError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except GeminiUnavailable:
+        raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+
+
+@router.get("/fortune/horoscope", response_model=HoroscopeResponse)
+@limiter.limit(f"{settings.FORTUNE_RATE_LIMIT_PER_MIN}/minute")
+async def fortune_horoscope(
+    request: Request,
+    user_id: str = Depends(get_current_user),
+) -> HoroscopeResponse:
+    """Günlük burç: sınırsız (günlük önbellekli — maliyet kontrolü)."""
+    _require_consent(user_id, "chat")
+    profile, _, memory = _fortune_context(user_id)
+    sign = profile.zodiac_sign or (
+        profile_service.zodiac_for(profile.birth_date) if profile.birth_date else ""
+    )
+    try:
+        return await fortune_service.daily_horoscope(
+            repo, user_id,
+            sign=sign,
+            timezone_name=profile.timezone,
+            memory_block=memory,
+        )
+    except fortune_service.FortuneError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    except GeminiUnavailable:
+        raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
 
 
 @router.get("/me/consent", response_model=ConsentStatus)

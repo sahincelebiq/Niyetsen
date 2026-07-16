@@ -302,6 +302,7 @@ class PushTokenRecord(PushTokenRegistration):
     enabled: bool = True
     last_task_reminder_date: Optional[dt_date] = None
     last_bonus_offer_date: Optional[dt_date] = None
+    last_tarot_push_date: Optional[dt_date] = None
 
 
 class NotificationRecipient(BaseModel):
@@ -312,6 +313,7 @@ class NotificationRecipient(BaseModel):
     token: str
     last_task_reminder_date: Optional[dt_date] = None
     last_bonus_offer_date: Optional[dt_date] = None
+    last_tarot_push_date: Optional[dt_date] = None
 
 
 BonusStatus = Literal["offered", "completed", "expired"]
@@ -343,3 +345,65 @@ class BonusOfferResponse(BaseModel):
     day: dt_date
     status: BonusStatus
     points: int
+
+
+# ---------- V2: Fal modülü (FAZ 7) ----------
+FortuneType = Literal["tarot", "kahve", "el", "burc"]
+
+FORTUNE_DISCLAIMER = (
+    "Bu içerik eğlence amaçlıdır; kader tayini, tıbbi, hukuki veya finansal "
+    "tavsiye değildir."
+)
+
+
+class TarotCardResult(BaseModel):
+    name: str
+    position: str                     # geçmiş | şimdi | niyetin yönü
+    reversed: bool = False
+    meaning: str = ""
+
+
+class FortuneRecord(BaseModel):
+    id: str
+    type: FortuneType
+    day: dt_date
+    result: dict = Field(default_factory=dict)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class FortuneRightsItem(BaseModel):
+    limit: int                        # -1 = sınırsız
+    used: int
+    remaining: int                    # -1 = sınırsız
+
+
+class FortuneRightsResponse(BaseModel):
+    is_premium: bool
+    rights: dict[str, FortuneRightsItem]
+    disclaimer: str = FORTUNE_DISCLAIMER
+
+
+class TarotDrawRequest(BaseModel):
+    question: str = Field(default="", max_length=280)
+
+
+class TarotDrawResponse(BaseModel):
+    cards: list[TarotCardResult]
+    interpretation: str
+    already_drawn_today: bool = False
+    disclaimer: str = FORTUNE_DISCLAIMER
+
+
+class PhotoFortuneResponse(BaseModel):
+    kind: Literal["kahve", "el"]
+    symbols: list[str] = Field(default_factory=list)
+    interpretation: str
+    remaining_today: int
+    disclaimer: str = FORTUNE_DISCLAIMER
+
+
+class HoroscopeResponse(BaseModel):
+    sign: str
+    day: dt_date
+    interpretation: str
+    disclaimer: str = FORTUNE_DISCLAIMER

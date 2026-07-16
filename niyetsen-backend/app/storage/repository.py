@@ -17,8 +17,9 @@ from typing import Optional
 from app.config import BONUS_POINTS, settings
 from app.models.schemas import (
     BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, DailyTaskItem,
-    GameState, NotificationRecipient, Plan, PlanSummary, PointLogRecord, ProofAttemptClaim,
-    ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task, UserProfile,
+    FortuneRecord, GameState, NotificationRecipient, Plan, PlanSummary, PointLogRecord,
+    ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task,
+    UserProfile,
 )
 from app.storage.base import Repository
 
@@ -45,6 +46,7 @@ class InMemoryRepository(Repository):
         self._push_tokens: dict[str, PushTokenRecord] = {}
         self._bonus_offers: dict[str, BonusOffer] = {}
         self._subscriptions: dict[str, dict] = {}
+        self._fortunes: dict[str, list[FortuneRecord]] = {}
 
     def get_state(self, user_id: str) -> GameState:
         if user_id not in self._states:
@@ -454,6 +456,7 @@ class InMemoryRepository(Repository):
                 token=token.token,
                 last_task_reminder_date=token.last_task_reminder_date,
                 last_bonus_offer_date=token.last_bonus_offer_date,
+                last_tarot_push_date=token.last_tarot_push_date,
             ))
         return recipients
 
@@ -470,6 +473,13 @@ class InMemoryRepository(Repository):
         existing = self._push_tokens.get(token)
         if existing and existing.user_id == user_id:
             existing.last_bonus_offer_date = day
+
+    def mark_tarot_push_sent(
+        self, user_id: str, token: str, day: dt_date
+    ) -> None:
+        existing = self._push_tokens.get(token)
+        if existing and existing.user_id == user_id:
+            existing.last_tarot_push_date = day
 
     def get_bonus_for_day(self, user_id: str, day: dt_date) -> BonusOffer | None:
         return next((
@@ -560,6 +570,27 @@ class InMemoryRepository(Repository):
             key: value for key, value in self._attempts.items() if key[0] != user_id
         }
         self._subscriptions.pop(user_id, None)
+        self._fortunes.pop(user_id, None)
+
+    # --- V2: Fal modülü (FAZ 7) ---
+    def save_fortune(self, user_id: str, record: FortuneRecord) -> None:
+        self._fortunes.setdefault(user_id, []).append(record)
+
+    def count_fortunes_for_day(
+        self, user_id: str, fortune_type: str, day: dt_date
+    ) -> int:
+        return sum(
+            1 for r in self._fortunes.get(user_id, [])
+            if r.type == fortune_type and r.day == day
+        )
+
+    def get_fortune_for_day(
+        self, user_id: str, fortune_type: str, day: dt_date
+    ) -> Optional[FortuneRecord]:
+        for record in reversed(self._fortunes.get(user_id, [])):
+            if record.type == fortune_type and record.day == day:
+                return record
+        return None
 
     def get_subscription_row(self, user_id: str) -> dict:
         profile = self._profiles.get(user_id, UserProfile())

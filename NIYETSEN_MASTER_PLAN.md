@@ -395,9 +395,7 @@ direct mod kodu hazır (ops ince ayarı KAPI 3'ü bloklamaz).
       (iOS + Android 13+) gerçek cihazda elle test edilmesi HENÜZ yapılmadı.
 - [x] Zamanlanmış bildirimler: `notification_service.run_due_notifications`
       (Railway cron ile tetikleniyor) — kullanıcının seçtiği saat → görev
-      bildirimi; Günlük Tarot bildirimi kararlaştırıldığı gibi KAPALI. Kod +
-      test doğrulandı. ⚠️ Gerçek cihazda seçilen saatte bildirimin gelip doğru
-      ekranı açtığı HENÜZ elle doğrulanmadı.
+      bildirimi; seçilen saat +1 dk → Günlük Tarot bildirimi. Kod + test doğrulandı.
 - [x] Puan düşünce duygusal bildirim: `push_service.emotional_penalty_body()`
       — ton kuralına uygun ("N günlük zincirin seni bekliyor", suçlama yok).
 - [x] `core/prompt_builder.py` mevcut ve kullanılıyor.
@@ -481,13 +479,50 @@ Yayın:
 
 ---
 
-### FAZ 7 — YAYIN SONRASI / v2 (kapsam dışı, yuva hazır)
+### FAZ 7 — v2: FAL MODÜLÜ + RAG
 
-Fal modülü (kahve/el fotoğrafı → Gemini multimodal, tarot çekimi + animasyon,
-günlük burç), `services/fortune_service.py` + ikinci duygusal system prompt +
-`knowledge/` RAG devreye girer (Chroma). Fal hak sayaçları
-docs/niyetsen-03-algoritma.md §5'e göre. Pinterest değerlendirmesi. Leaderboard v3.
-**Kural değişmedi: retention verisi gelmeden v2'ye başlama.**
+> 🚧 **BAŞLADI (2026-07-16, Şahin'in talimatıyla — "retention beklemeden v2'ye
+> geç" kararı Şahin'e ait).** İlk dalga Claude Cowork tarafından inşa edildi;
+> detaylı durum + sonraki adımlar: [`docs/FAZ7_V2_FAL_RAG.md`](docs/FAZ7_V2_FAL_RAG.md).
+> FAZ 5/6'nın açık kalemleri (mağaza IAP, store yayını) Şahin'in elinde paralel yürür.
+
+Yapılanlar (2026-07-16, backend 148 test yeşil):
+- [x] `niyetsen-backend/knowledge/` bilgi tabanı: tarot, burçlar, motivasyon,
+      atomik alışkanlıklar (+ felsefe) — docx'lerden markdown'a çıkarıldı.
+      **NOT: knowledge/ backend köküne taşındı** (Railway root=/niyetsen-backend
+      olduğu için repo kökünde deploy edilmiyordu). Dockerfile COPY eklendi.
+- [x] `services/rag_service.py`: başlık bazlı chunk + Gemini embedding
+      (`gemini-embedding-001`) + kosinüs; anahtar yoksa keyword fallback;
+      Chroma OPSİYONEL (`RAG_BACKEND` yuvası, chromadb requirements'a EKLENMEDİ —
+      Railway imaj boyutu). Env: `RAG_ENABLED`, `RAG_EMBEDDINGS_ENABLED`, `RAG_TOP_K`.
+- [x] RAG ana sohbete bağlandı (`intent_service`): rehber felsefe + motivasyon +
+      atomik alışkanlıklar bağlamıyla konuşur; tarot/burç tetikleyicisinde mistik
+      kaynaklar eklenir. Etiketli CONTEXT bloğu (injection önlemi) korunur.
+- [x] `services/fortune_service.py` + `prompts.FORTUNE_SYSTEM_PROMPT` (ikinci,
+      duygusal system prompt): tarot (günlük 1, idempotent — aynı gün ikinci
+      istek kayıtlı sonucu döner), kahve/el (Gemini Vision, yanlış fotoğraf hak
+      YAKMAZ), günlük burç (sınırsız, günlük önbellek). Kriz sinyalinde fal durur.
+- [x] Hak sayaçları algoritma §5: el 1/+2, kahve 1/+2, tarot 1 (ek yok), burç
+      sınırsız. `FORTUNE_DAILY_RIGHTS` config'de.
+- [x] Endpoint'ler: `GET /fortune/rights`, `POST /fortune/tarot`,
+      `POST /fortune/photo/{kahve|el}`, `GET /fortune/horoscope` — JWT + consent
+      (chat; foto falında ek olarak proof_photo) + rate limit (6/dk).
+- [x] `fortune_log` tablosu (§2'deki v2 tablosu): migration
+      `20260716120000_faz7_fortune_log.sql` (+ RUN_IN_SUPABASE_SQL_EDITOR.sql'e
+      eklendi) — **Supabase SQL Editor'da çalıştırılmalı (Şahin)**.
+- [x] Mobil: `tarot.tsx`, `astroloji.tsx`, `fal.tsx` placeholder'dan gerçek akışa
+      (MysticColors teması, in-app kamera, hak göstergesi, disclaimer). `api.ts`
+      fal istemcisi. tsc 0 hata.
+- [x] Testler: `test_fortune.py` (18) + `test_rag.py` (6) — toplam 148 yeşil.
+
+Açık kalanlar (sonraki dalgalar — detay FAZ7 dokümanında):
+- [ ] Supabase'de migration'ı çalıştır + prod'da uçtan uca fal testi (Şahin cihaz).
+- [x] 06:01 "Günlük Tarot" push'u (algoritma §4) — notification_service'e eklendi.
+- [ ] Tarot çekim animasyonu + kart görselleri (mobil polish).
+- [ ] Küçük Arkana 56 kartın doldurulması (knowledge/tarot.md şablonu hazır).
+- [ ] Fal sonuçları geçmişi ekranı (`fortune_log` listesi).
+- [ ] Chroma kalıcı backend değerlendirmesi (lokal) + Pinterest görsel değerlendirmesi.
+- [ ] Leaderboard v3 (dokunma — ayrı faz).
 
 ---
 
