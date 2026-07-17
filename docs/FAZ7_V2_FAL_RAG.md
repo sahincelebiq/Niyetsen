@@ -99,6 +99,23 @@
 2. Railway'e push sonrası `/fortune/rights`'ı gerçek cihazdan dene.
 3. İstersen `RAG_EMBEDDINGS_ENABLED=false` ile maliyetsiz (keyword) modda başlat.
 
+## Dalga 3 öncesi güçlendirme (2026-07-17, ikinci tur)
+- [x] **Store güvenlik katmanı** (`app/main.py`): 10MB mutlak gövde tavanı,
+      güvenlik başlıkları (nosniff, X-Frame-Options DENY, Referrer-Policy,
+      no-store, prod'da HSTS), işlenmeyen hatalarda iç detay sızdırmayan
+      500 + Sentry/log.
+- [x] **iOS export compliance**: `ITSAppUsesNonExemptEncryption=false`
+      (app.json) — TestFlight yüklemelerinde şifreleme sorusu otomatik geçer.
+- [x] **Hızlı yanıt çipleri**: ChatResponse.suggestions (≤3 kısa öneri) —
+      model her sorusuyla tek dokunuşluk cevaplar üretir; mobil mevcut
+      ChatQuickReplies bileşeniyle gösterir, dokunuş direkt gönderir.
+      Plan sonrası sohbette de devam önerileri gelir.
+- [x] **Plan tempo kuralları** (PLAN_JSON_INSTRUCTIONS): ilk 3 gün garantili
+      kazanım, haftada 1 hafif gün, kademeli zorluk (+%10), zor gün sonrası
+      toparlanma, kategori çeşitliliği, görevlerin birbirine zincirlenmesi —
+      "kullanıcıyı yormadan potansiyele taşı".
+- Doğrulama: backend 156 test, mobil tsc 0 hata.
+
 ## Sonraki dalgalar (öncelik sırasıyla)
 
 ### Dalga 2 — Fal UX tamamlama ✅ TAMAMLANDI (2026-07-17)

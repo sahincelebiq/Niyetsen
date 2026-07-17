@@ -52,6 +52,8 @@ class ChatResponse(BaseModel):
     crisis: bool = False  # true ise istemci güvenli mod UI gösterir
     message_id: Optional[str] = None
     tool_calls: list[ToolCall] = Field(default_factory=list)
+    # Tek dokunuşluk hızlı yanıtlar (FAZ 7.5) — kullanıcıyı yazarak yormadan akış.
+    suggestions: list[str] = Field(default_factory=list)
 
 
 class ChatSessionResponse(BaseModel):

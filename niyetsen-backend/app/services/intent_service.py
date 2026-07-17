@@ -187,9 +187,17 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
         "Niyetini biraz daha anlat: bu yıl hayatında neyin değişmesini istiyorsun? ✨"
     )
 
+    # Hızlı yanıt çipleri: kısa, tekil, en fazla 3 (model fazlasını verirse kes).
+    suggestions = [
+        str(item).strip()
+        for item in (data.get("suggestions") or [])
+        if str(item).strip()
+    ][:3]
+
     return ChatResponse(
         reply=reply,
         ready_for_plan=ready,
         collected=merged,
         tool_calls=tool_calls,
+        suggestions=suggestions,
     )

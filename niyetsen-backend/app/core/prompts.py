@@ -10,6 +10,11 @@ CHAT_RESPONSE_SCHEMA = {
     "type": "object",
     "properties": {
         "reply": {"type": "string"},
+        "suggestions": {
+            "type": "array",
+            "items": {"type": "string"},
+            "maxItems": 3,
+        },
         "ready_for_plan": {"type": "boolean"},
         "collected": {
             "type": "object",
@@ -101,6 +106,7 @@ abartma. Liste/madde kullanma, akıcı konuş."""
 INTENT_JSON_INSTRUCTIONS = """GÖREV: Kullanıcının niyetini netleştir. SADECE şu JSON'u döndür:
 {
   "reply": "<kullanıcıya kısa, sıcak Türkçe cevabın (karakterine uygun)>",
+  "suggestions": ["<en fazla 3 kısa hızlı yanıt — kullanıcının TEK DOKUNUŞLA verebileceği cevaplar>"],
   "ready_for_plan": <true|false>,
   "collected": {
     "city": <string|null>, "interests": [<string>...],
@@ -121,12 +127,17 @@ KURALLAR:
 - reply alanı TEK SATIR olsun (satır sonu yok); JSON geçerli ve parse edilebilir kalsın.
 - duration_days sorulmadıysa varsayılan 365 kabul et ama kullanıcıya 30/90/180
   seçeneklerini bir kez hatırlat.
+- "suggestions": Sorduğun soruya kullanıcının vereceği en olası 2-3 KISA cevabı
+  yaz (her biri en fazla 4-5 kelime; kullanıcı ağzından, ör. "İstanbul'dayım",
+  "Haftada 5 saat", "Spor ve kitap"). Soru yoksa boş bırak. Yazmayı sevmeyen
+  kullanıcı tek dokunuşla ilerleyebilmeli.
 - JSON dışında hiçbir şey yazma."""
 
 GUIDE_JSON_INSTRUCTIONS = """GÖREV: Aktif planı olan kullanıcıya, KULLANICI BELLEĞİ ve
 sohbet geçmişini kullanarak kişisel rehberlik et. SADECE şu JSON'u döndür:
 {
   "reply": "<2-5 cümlelik kısa, sıcak, kullanıcıya özel Türkçe cevap>",
+  "suggestions": ["<en fazla 3 kısa hızlı yanıt; anlamlı devam yoksa boş dizi>"],
   "ready_for_plan": false,
   "collected": {}
 }
@@ -137,6 +148,9 @@ KURALLAR:
 - Görev başlıklarını birebir alıntılama; kısaca, doğal Türkçeyle an (bir kez).
 - Önceki cevaplarındaki kalıpları tekrarlama: farklı açılış, farklı kapanış.
 - Yalnızca Türkçe kelimeler ("pending" değil "bekleyen").
+- "suggestions": Kullanıcının bir sonraki doğal hamlesini 2-3 kısa seçenek
+  olarak sun (ör. "Bugünkü görevimi göster", "Küçük bir adım öner",
+  "Motivasyona ihtiyacım var"). Anlamlı devam yoksa boş dizi.
 - Aktif plan varken şehir/ilgi/zaman gibi onboarding sorularını yeniden sorma.
 - Kullanıcı yeni/kapsamlı plan isterse: mevcut planı sürdürmeyi öner; tamamen yeni
   niyet için ☰ menüden "Yeni Niyet Başlat" yolunu nazikçe hatırlat.
@@ -175,6 +189,19 @@ KURALLAR:
 - weekly_hours bütçesine saygı duy: günlük toplam görev süresi bu bütçeyi aşmasın.
 - Günde 1-{max_tasks} görev; zorluk yavaş artsın (1. gün en kolay).
 - Her görevin tiny_version'ı ZORUNLU (2 dakika kuralı).
+
+TEMPO (kullanıcıyı YORMADAN potansiyeline taşı — bırakma sebebi #1 aşırı yük):
+- İlk 3 gün "kesin kazanılır" görevler: kısa (≤15 dk), somut, aynı gün
+  bitirilebilir. Amaç yetenek testi değil, zincir hissini tattırmak.
+- Haftada en az 1 HAFİF gün bırak (tek görev, ≤10 dk): nefes alma alanı.
+- Zorluğu %10'luk adımlarla artır; iki zor günü art arda koyma —
+  zor günün ertesi toparlanma görevi olsun.
+- Çeşit karışımı: her hafta hızlı kazanım (kısa/pratik) + 1 anlamlı meydan
+  okuma (kullanıcıyı biraz aşan ama tiny_version'ı olan görev).
+- Aynı görev tipini üst üste 3+ gün tekrarlama; kategori dağılımını dengele
+  (bir hafta içinde en az 3 farklı kategori işlenmiş olsun).
+- Görevler birbirine ZİNCİR gibi bağlansın: bugünkü görev dünkünün üstüne
+  koysun (ör. gün 2 "dün belirlediğin kitaptan 5 sayfa"), kopuk ada olmasın.
 - Kategori adlarını AYNEN verilen 6'dan seç, yenisini uydurma.
 - image_keyword MUTLAKA İngilizce, küçük harfli, somut ve 2-4 kelime olsun.
   Fotoğrafta görülebilecek eylem/ortamı tarif et; "motivation", "success",

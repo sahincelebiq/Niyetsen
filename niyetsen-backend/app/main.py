@@ -5,8 +5,9 @@ Swagger:   http://127.0.0.1:8000/docs
 """
 import logging
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
@@ -64,5 +65,48 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- Store-hazırlık güvenlik katmanı (FAZ 7.5) ---------------------------
+# 1) Gövde boyutu tavanı: multipart uçları kendi 5MB sınırını koyuyor; bu
+#    katman TÜM uçlar için mutlak tavan (bellek DoS'una karşı ikinci hat).
+MAX_REQUEST_BYTES = 10 * 1024 * 1024  # 10 MB
+
+
+@app.middleware("http")
+async def security_layer(request: Request, call_next):
+    content_length = request.headers.get("content-length")
+    if content_length and content_length.isdigit() and int(content_length) > MAX_REQUEST_BYTES:
+        return JSONResponse(
+            status_code=413,
+            content={"detail": "İstek gövdesi çok büyük."},
+        )
+    response = await call_next(request)
+    # 2) Güvenlik başlıkları (API yanıtları için düşük maliyet, store/pentest
+    #    kontrol listelerinde standart).
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("X-Frame-Options", "DENY")
+    response.headers.setdefault("Referrer-Policy", "no-referrer")
+    if request.url.path != "/health":
+        # Kişisel veri taşıyan API yanıtları ara katmanlarda önbelleklenmesin.
+        response.headers.setdefault("Cache-Control", "no-store")
+    if settings.ENV == "prod":
+        response.headers.setdefault(
+            "Strict-Transport-Security", "max-age=63072000; includeSubDomains"
+        )
+    return response
+
+
+# 3) Güvenli hata yanıtı: beklenmeyen exception'lar iç detay sızdırmaz;
+#    tam iz log + Sentry'ye gider (observability init'te bağlı).
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    logging.getLogger("niyetsen.app").exception(
+        "İşlenmeyen hata: %s %s", request.method, request.url.path
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Beklenmeyen bir sorun oluştu. Birazdan tekrar dene."},
+    )
+
 
 app.include_router(router)
