@@ -175,6 +175,24 @@ def test_horoscope_with_profile_and_daily_cache():
     assert second.json()["interpretation"] == first.json()["interpretation"]
 
 
+def test_weekly_horoscope_separate_cache():
+    user = "burc_hafta"
+    grant_chat_consent(user, client)
+    client.put(
+        "/me/profile",
+        headers={"X-User-Id": user},
+        json={"name": "Şahin", "birth_date": "1995-04-05"},
+    )
+    daily = client.get("/fortune/horoscope?period=daily", headers={"X-User-Id": user})
+    weekly = client.get("/fortune/horoscope?period=weekly", headers={"X-User-Id": user})
+    assert daily.status_code == 200
+    assert weekly.status_code == 200
+    assert weekly.json()["sign"] == "Koç"
+
+    invalid = client.get("/fortune/horoscope?period=aylik", headers={"X-User-Id": user})
+    assert invalid.status_code == 400
+
+
 # ---------------- Geçmiş ----------------
 def test_fortune_history_lists_recent_first():
     user = "history_user"

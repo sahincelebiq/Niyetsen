@@ -148,11 +148,16 @@ görüntüleriyle bildirdiği sorunlara karşılık)
 - [x] Testler: **156 yeşil** (chat reset, dev hesabı, fal geçmişi dahil);
       mobil tsc 0 hata.
 
-### Dalga 3 — RAG derinleştirme
-- [ ] Chroma kalıcı backend (lokal `chroma_db/`) — opsiyonel bağımlılık olarak.
-- [ ] Embedding disk önbelleği (Railway yeniden başlatmalarında yeniden
-      embedding maliyetini kes).
-- [ ] Burç yorumunda haftalık/aylık görünüm.
+### Dalga 3 — RAG derinleştirme ✅ TAMAMLANDI (2026-07-17)
+- [x] Embedding disk önbelleği: `.rag_embed_cache.json` (gitignore'da) —
+      chunk hash'i anahtar; içerik değişince otomatik tazelenir; süreç
+      yeniden başlasa bile aynı chunk için Gemini'ye tekrar gidilmez.
+- [x] Burç yorumunda haftalık görünüm: `GET /fortune/horoscope?period=weekly`
+      (haftanın pazartesisine çapalı önbellek) + mobilde Bugün/Bu Hafta
+      geçiş düğmeleri. Geçersiz period → 400.
+- [~] Chroma kalıcı backend: BİLİNÇLİ ERTELENDİ — in-memory + disk önbelleği
+      mevcut ölçekte yeterli; chromadb Railway imajını ~100MB büyütür.
+      Kullanıcı/knowledge büyüyünce yeniden değerlendir (v3 adayı).
 
 ### Dalga 4 — v3 adayları (dokunma)
 - Leaderboard, Pinterest görsel kaynağı (`image_service` sözleşmesi hazır),

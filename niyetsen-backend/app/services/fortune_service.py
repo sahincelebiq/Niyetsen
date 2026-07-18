@@ -17,7 +17,7 @@ import logging
 import random
 import re
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -305,24 +305,39 @@ async def daily_horoscope(
     sign: str,
     timezone_name: str = "Europe/Istanbul",
     memory_block: str = "",
+    period: str = "daily",          # daily | weekly (Dalga 3)
 ) -> HoroscopeResponse:
     if not sign:
         raise FortuneError(
             "Burcunu bilmem için doğum tarihine ihtiyacım var — profilinden ekleyebilirsin."
         )
-    day = _local_today(timezone_name)
+    if period not in ("daily", "weekly"):
+        raise FortuneError("Geçersiz dönem — daily veya weekly.")
+    today = _local_today(timezone_name)
+    # Haftalık görünüm haftanın pazartesisine çapalanır: hafta boyunca tek
+    # üretim (maliyet) + kararlı önbellek anahtarı.
+    day = today - timedelta(days=today.weekday()) if period == "weekly" else today
 
     cached = repository.get_fortune_for_day(user_id, "burc", day)
-    if cached is not None and cached.result.get("sign") == sign:
+    if (
+        cached is not None
+        and cached.result.get("sign") == sign
+        and cached.result.get("period", "daily") == period
+    ):
         return HoroscopeResponse(
             sign=sign, day=day,
             interpretation=cached.result.get("interpretation", ""),
         )
 
     rag_chunks = rag_service.retrieve(f"{sign} burcu", sources=["burclar"])
+    period_note = (
+        "Bu HAFTALIK bir yorum: haftanın genel enerjisi + haftaya yayılan "
+        "2-3 küçük adım öner." if period == "weekly" else ""
+    )
     contents = "\n\n".join(filter(None, [
         "\n".join(rag_chunks) if rag_chunks else "",
         memory_block,
+        period_note,
         prompts.HOROSCOPE_JSON_INSTRUCTIONS.format(sign=sign, day=day.isoformat()),
     ]))
     try:
@@ -345,7 +360,7 @@ async def daily_horoscope(
         id=str(uuid.uuid4()),
         type="burc",
         day=day,
-        result={"sign": sign, "interpretation": interpretation},
+        result={"sign": sign, "interpretation": interpretation, "period": period},
     )
     repository.save_fortune(user_id, record)
     return HoroscopeResponse(sign=sign, day=day, interpretation=interpretation)

@@ -955,9 +955,10 @@ def fortune_history(
 @limiter.limit(f"{settings.FORTUNE_RATE_LIMIT_PER_MIN}/minute")
 async def fortune_horoscope(
     request: Request,
+    period: str = "daily",
     user_id: str = Depends(get_current_user),
 ) -> HoroscopeResponse:
-    """Günlük burç: sınırsız (günlük önbellekli — maliyet kontrolü)."""
+    """Burç yorumu: günlük veya haftalık (period=weekly) — önbellekli."""
     _require_consent(user_id, "chat")
     profile, _, memory = _fortune_context(user_id)
     sign = profile.zodiac_sign or (
@@ -969,6 +970,7 @@ async def fortune_horoscope(
             sign=sign,
             timezone_name=profile.timezone,
             memory_block=memory,
+            period=period,
         )
     except fortune_service.FortuneError as exc:
         raise HTTPException(status_code=400, detail=str(exc))

@@ -15,6 +15,8 @@ Tasarım kararları (MASTER_PLAN §1.9 maliyet + Railway kısıtları):
 """
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
 import math
 import re
@@ -30,6 +32,10 @@ log = logging.getLogger("niyetsen.rag")
 # knowledge/ backend kökünde yaşar (Railway root = /niyetsen-backend olduğu
 # için repo köküne konursa prod'a deploy OLMAZ).
 _KNOWLEDGE_DIR = Path(__file__).resolve().parents[2] / "knowledge"
+# Embedding disk önbelleği (Dalga 3): süreç yeniden başlasa bile aynı chunk
+# için Gemini embedding API'sine tekrar gidilmez (maliyet + soğuk başlangıç).
+# Dosya gitignore'da; içerik değişirse anahtar (hash) değişir, otomatik tazelenir.
+_EMBED_CACHE_PATH = Path(__file__).resolve().parents[2] / ".rag_embed_cache.json"
 
 _CHUNK_MAX_CHARS = 900
 
@@ -127,16 +133,54 @@ def _embed(texts: list[str]) -> list[list[float]] | None:
         return None
 
 
+def _cache_key(chunk: _Chunk) -> str:
+    raw = f"{settings.GEMINI_EMBED_MODEL}:{chunk.heading}:{chunk.text}"
+    return hashlib.sha256(raw.encode()).hexdigest()
+
+
+def _load_embed_cache() -> dict[str, list[float]]:
+    try:
+        if _EMBED_CACHE_PATH.is_file():
+            return json.loads(_EMBED_CACHE_PATH.read_text())
+    except (OSError, ValueError) as exc:
+        log.warning("Embedding önbelleği okunamadı: %s", exc)
+    return {}
+
+
+def _save_embed_cache(cache: dict[str, list[float]]) -> None:
+    try:
+        _EMBED_CACHE_PATH.write_text(json.dumps(cache))
+    except OSError as exc:  # disk yazılamazsa RAG yine çalışır (yalnız cache yok)
+        log.warning("Embedding önbelleği yazılamadı: %s", exc)
+
+
 def _ensure_embeddings(chunks: list[_Chunk]) -> bool:
     pending = [c for c in chunks if c.embedding is None]
     if not pending:
         return True
-    vectors = _embed([f"{c.heading}\n{c.text}" for c in pending])
-    if vectors is None or len(vectors) != len(pending):
-        return False
+
+    # 1) Disk önbelleğinden doldur (API çağrısı yok).
+    cache = _load_embed_cache()
+    still_pending: list[_Chunk] = []
     with _lock:
-        for chunk, vector in zip(pending, vectors):
+        for chunk in pending:
+            cached = cache.get(_cache_key(chunk))
+            if cached:
+                chunk.embedding = cached
+            else:
+                still_pending.append(chunk)
+    if not still_pending:
+        return True
+
+    # 2) Kalanlar için Gemini embedding + önbelleğe yaz.
+    vectors = _embed([f"{c.heading}\n{c.text}" for c in still_pending])
+    if vectors is None or len(vectors) != len(still_pending):
+        return all(c.embedding is not None for c in chunks)
+    with _lock:
+        for chunk, vector in zip(still_pending, vectors):
             chunk.embedding = vector
+            cache[_cache_key(chunk)] = vector
+    _save_embed_cache(cache)
     return True
 
 

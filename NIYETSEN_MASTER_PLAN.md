@@ -525,10 +525,25 @@ Dalga 2 + 2.5 (2026-07-17, tamamlandı — detay FAZ7 dokümanında):
 - [x] Geliştirici hesabı: DEV_ACCOUNT_EMAILS → abonelik kısa devresi (yalnız Şahin).
 - Backend 156 test yeşil; mobil tsc 0 hata.
 
+Dalga 3 + güçlendirme turu (2026-07-17, tamamlandı):
+- [x] Store güvenlik katmanı: 10MB gövde tavanı, güvenlik başlıkları
+      (nosniff/X-Frame-Options/no-store/HSTS), sızdırmayan 500 + Sentry.
+- [x] iOS export compliance (ITSAppUsesNonExemptEncryption=false).
+- [x] Hızlı yanıt çipleri: ChatResponse.suggestions → tek dokunuşlu sohbet.
+- [x] Plan tempo kuralları: ilk 3 gün garantili kazanım, haftalık hafif gün,
+      kademeli zorluk, görev zincirleme ("yormadan potansiyele taşı").
+- [x] RAG embedding disk önbelleği (.rag_embed_cache.json, gitignore'da).
+- [x] Haftalık burç: /fortune/horoscope?period=weekly + mobil geçiş düğmeleri.
+- Backend 157 test yeşil; mobil tsc 0 hata; 35 endpoint doğrulandı.
+
+**AKTİF DURUM: FAZ 7 kod tarafı TAMAM (Dalga 1-3 kapalı).** Kalan işler kod
+dışı (Şahin): Supabase migration'ları + mağaza IAP (KAPI 5) + store yayını
+(FAZ 6). Koddan sonraki büyük adım = Dalga 4 / v3 adayları.
+
 Açık kalanlar:
 - [ ] Supabase'de migration'ları çalıştır (fortune_log + last_tarot_push_date)
       + prod'da uçtan uca fal testi (Şahin cihaz).
-- [ ] Chroma kalıcı backend değerlendirmesi (lokal) + Pinterest görsel değerlendirmesi.
+- [ ] Chroma kalıcı backend (ertelendi — imaj boyutu) + Pinterest değerlendirmesi (v3).
 - [ ] Leaderboard v3 (dokunma — ayrı faz).
 
 ---

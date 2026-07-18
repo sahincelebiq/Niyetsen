@@ -9,3 +9,4 @@ __pycache__/
 .pytest_cache/
 chroma_db/
 niyetsen.db
+.rag_embed_cache.json
