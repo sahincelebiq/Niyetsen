@@ -3,6 +3,9 @@ mobile/
 
 # Eski arşiv (zip yedekleri) — versiyon kontrolüne gerek yok.
 _arsiv/
+_tmp_assets/
+website_*.zip
+website_*_maintenance/
 
 # Editör / araç yerel durumu
 .DS_Store
