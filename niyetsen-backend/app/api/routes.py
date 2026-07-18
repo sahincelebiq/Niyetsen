@@ -26,7 +26,8 @@ from app.core.rate_limit import limiter
 from app.models.schemas import (
     AttachmentIngestResponse, BonusCompletionRequest, BonusOfferResponse, ChatMessage,
     ChatGreetingResponse, ChatRequest, ChatResponse, ChatSessionResponse, CollectedIntent,
-    ConsentStatus, ConsentUpdate, DailyTaskItem, FortuneRecord, FortuneRightsResponse,
+    ChatThread, ConsentStatus, ConsentUpdate, DailyTaskItem, FortuneRecord,
+    FortuneRightsResponse,
     HoroscopeResponse, PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
     PlanSummary, ProfileUpdate, ProofRecord, ProofResult, PushTokenRecord,
     PushTokenRegistration, RevenueCatWebhookPayload, StateResponse, SubscriptionInfo,
@@ -208,9 +209,14 @@ async def chat(
     req: ChatRequest,
     user_id: str = Depends(get_current_user),
 ) -> ChatResponse:
-    """Çekirdek halka 1/2: niyet toplama sohbeti."""
+    """Çekirdek halka 1/2: niyet toplama sohbeti.
+
+    FAZ 7.6 karar değişikliği (Şahin, 2026-07-17): asistan sohbeti ÜCRETSİZ
+    sürümde SINIRSIZ — paywall kalktı (pazarlama: sohbet bağı kurulmadan
+    abonelik istenmez). Premium kilit plan/kanıt/bonus/İdol tarafında sürer.
+    Rate limit (10/dk) kötüye kullanımı frenlemeye devam eder.
+    """
     _require_consent(user_id, "chat")
-    _require_premium(user_id)
     state = repo.get_state(user_id)
     profile = repo.get_profile(user_id)
     active = repo.get_active_intent(user_id)
@@ -312,15 +318,31 @@ def chat_history(user_id: str = Depends(get_current_user)) -> list[ChatMessage]:
 
 @router.post("/chat/reset", response_model=ChatGreetingResponse)
 def chat_reset(user_id: str = Depends(get_current_user)) -> ChatGreetingResponse:
-    """Yeni sohbet başlat: aktif planın sohbet geçmişini temizler.
+    """Yeni sohbet başlat (FAZ 7.6): YENİ OTURUM açar — eski sohbet SİLİNMEZ.
 
-    Plan, niyet, görevler ve puanlara DOKUNULMAZ — yalnız konuşma sıfırlanır.
-    Uzun geçmiş hem uygulamayı yoruyor hem modeli aynı kalıplara kilitliyordu.
-    Dönen değer: taze karşılama mesajı (istemci doğrudan gösterir).
+    Geçmiş oturumlar başlıklarıyla ☰ panelde listelenir ve geri dönülebilir
+    (retention/pazarlama verisi korunur — Şahin'in kararı). Plan, niyet,
+    görevler ve puanlara dokunulmaz. Dönen değer: taze karşılama mesajı.
     """
-    removed = repo.clear_chat_history(user_id)
-    log.info("Sohbet sıfırlandı (user=%s, silinen=%d)", user_id, removed)
+    thread = repo.create_chat_thread(user_id)
+    log.info("Yeni sohbet oturumu (user=%s, thread=%s)", user_id, thread.id)
     return chat_greeting(user_id)
+
+
+@router.get("/chat/threads", response_model=list[ChatThread])
+def list_chat_threads(user_id: str = Depends(get_current_user)) -> list[ChatThread]:
+    """Geçmiş sohbet oturumları — başlıklarıyla, en yeniden eskiye."""
+    return repo.list_chat_threads(user_id)
+
+
+@router.post("/chat/threads/{thread_id}/activate", response_model=list[ChatMessage])
+def activate_chat_thread(
+    thread_id: str, user_id: str = Depends(get_current_user)
+) -> list[ChatMessage]:
+    """Geçmiş bir sohbete dön; o oturumun mesajları döner."""
+    if not repo.activate_chat_thread(user_id, thread_id):
+        raise HTTPException(status_code=404, detail="Sohbet bulunamadı.")
+    return repo.get_chat_history(user_id)
 
 
 @router.get("/chat/greeting", response_model=ChatGreetingResponse)
@@ -862,6 +884,19 @@ def _fortune_context(user_id: str) -> tuple[UserProfile, bool, str]:
         zodiac=profile.zodiac_sign or "",
     )
     return profile, info.has_premium_access, memory
+
+
+@router.get("/paths")
+def list_philosophy_paths(user_id: str = Depends(get_current_user)) -> list[dict]:
+    """Felsefe Yolları (İdol Modu) — PREMIUM özellik (Şahin'in kararı).
+
+    Dev hesabı (DEV_ACCOUNT_EMAILS) abonelik kısa devresiyle her zaman erişir.
+    Free kullanıcı 402 alır → istemci paywall'a yönlendirir.
+    """
+    from app.services import path_service
+
+    _require_premium(user_id)
+    return [path.model_dump() for path in path_service.list_paths()]
 
 
 @router.get("/fortune/rights", response_model=FortuneRightsResponse)

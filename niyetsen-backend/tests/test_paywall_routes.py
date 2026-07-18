@@ -27,7 +27,19 @@ def _grant_consents() -> None:
     )
 
 
-def test_expired_trial_blocks_chat() -> None:
+def test_expired_trial_does_not_block_chat(monkeypatch) -> None:
+    """FAZ 7.6 kural değişikliği (Şahin): asistan sohbeti ücretsiz sürümde
+    SINIRSIZ — deneme bitse bile /chat 402 DÖNMEZ. Premium kilit plan/kanıt/
+    bonus/İdol tarafında sürer (aşağıdaki testler)."""
+    from app.models.schemas import ChatResponse, CollectedIntent
+    from app.services import intent_service
+
+    async def fake_handle_chat(*args, **kwargs):
+        return ChatResponse(
+            reply="Buradayım.", ready_for_plan=False, collected=CollectedIntent()
+        )
+
+    monkeypatch.setattr(intent_service, "handle_chat", fake_handle_chat)
     _grant_consents()
     repo.update_subscription(
         USER,
@@ -42,6 +54,19 @@ def test_expired_trial_blocks_chat() -> None:
             "collected": {},
         },
     )
+    assert res.status_code == 200
+    assert res.json()["reply"]
+
+
+def test_expired_trial_blocks_idol_paths() -> None:
+    """Felsefe Yolları (İdol Modu) premium'da kalır."""
+    _grant_consents()
+    repo.update_subscription(
+        USER,
+        subscription_status="trial",
+        trial_started_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
+    )
+    res = client.get("/paths", headers=_auth_headers())
     assert res.status_code == 402
     assert res.json()["detail"]["code"] == "paywall_required"
 

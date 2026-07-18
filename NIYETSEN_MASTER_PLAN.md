@@ -546,6 +546,15 @@ Açık kalanlar:
 - [ ] Chroma kalıcı backend (ertelendi — imaj boyutu) + Pinterest değerlendirmesi (v3).
 - [ ] Leaderboard v3 (dokunma — ayrı faz).
 
+### Dalga 4 — İDOL MODU (Şahin'in kararı 2026-07-17, SIRADAKİ İNŞA)
+"İlham anını sisteme çevir": kullanıcı bir idol söyler (ör. Matthew
+McConaughey), rehber idolün kamuya açık rutinlerinden ilham alan ve
+kullanıcının hayatına ölçeklenmiş 365 günlük plan kurar. Premium özellik.
+Detaylı tasarım + LLM/Supabase analizi: docs/FAZ7_V2_FAL_RAG.md "Dalga 4".
+Özet kararlar: model DEĞİŞMEZ (gemini-2.5-pro + RAG idol profilleri; v2'de
+Google Search grounding), yeni tablo GEREKMEZ, "ilham alır/bağlantısızdır"
+disclaimer'ı zorunlu, Supabase yeterli (Pro'ya lansmanla geç).
+
 ---
 
 ## §4. CURSOR ÇALIŞMA PROTOKOLÜ (kesintisiz ilerleme için)

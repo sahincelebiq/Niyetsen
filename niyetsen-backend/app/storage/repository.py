@@ -16,10 +16,10 @@ from typing import Optional
 
 from app.config import BONUS_POINTS, settings
 from app.models.schemas import (
-    BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, DailyTaskItem,
-    FortuneRecord, GameState, NotificationRecipient, Plan, PlanSummary, PointLogRecord,
-    ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task,
-    UserProfile,
+    BonusOffer, ChatMessage, ChatThread, CollectedIntent, ConsentRecord, CronUser,
+    DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanSummary,
+    PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord,
+    ScoreEvent, Task, UserProfile,
 )
 from app.storage.base import Repository
 
@@ -47,6 +47,9 @@ class InMemoryRepository(Repository):
         self._bonus_offers: dict[str, BonusOffer] = {}
         self._subscriptions: dict[str, dict] = {}
         self._fortunes: dict[str, list[FortuneRecord]] = {}
+        # FAZ 7.6: sohbet oturumları — user -> thread_id -> meta
+        self._threads: dict[str, dict[str, dict]] = {}
+        self._active_thread: dict[str, str] = {}
 
     def get_state(self, user_id: str) -> GameState:
         if user_id not in self._states:
@@ -141,6 +144,16 @@ class InMemoryRepository(Repository):
         if plan_id not in self._user_plans(user_id):
             raise ValueError("Plan bulunamadı.")
         self._active_plan_id[user_id] = plan_id
+        # Plana bağlı en güncel sohbet oturumuna geç (yoksa yeni açılır).
+        candidates = [
+            (meta["updated_at"], thread_id)
+            for thread_id, meta in self._user_threads(user_id).items()
+            if meta.get("plan_id") == plan_id
+        ]
+        if candidates:
+            self._active_thread[user_id] = max(candidates)[1]
+        else:
+            self._create_thread(user_id)
 
     def create_draft_plan(self, user_id: str, *, name: str, slot_no: int) -> str:
         plan_id = str(uuid.uuid4())
@@ -369,21 +382,79 @@ class InMemoryRepository(Repository):
             for user_id in sorted(user_ids)
         ]
 
-    def append_chat_message(self, user_id: str, message: ChatMessage) -> None:
+    # --- FAZ 7.6: Sohbet oturumları (Claude tarzı — yeni sohbet SİLMEZ) ---
+    def _user_threads(self, user_id: str) -> dict[str, dict]:
+        return self._threads.setdefault(user_id, {})
+
+    def _create_thread(self, user_id: str) -> str:
         plan_id = self._ensure_active_plan_id(user_id)
-        history = self._chat_history.setdefault((user_id, plan_id), [])
+        thread_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
+        self._user_threads(user_id)[thread_id] = {
+            "title": "", "plan_id": plan_id, "created_at": now, "updated_at": now,
+        }
+        self._active_thread[user_id] = thread_id
+        return thread_id
+
+    def _ensure_active_thread(self, user_id: str) -> str:
+        thread_id = self._active_thread.get(user_id)
+        if thread_id and thread_id in self._user_threads(user_id):
+            return thread_id
+        return self._create_thread(user_id)
+
+    @staticmethod
+    def _title_from(message: ChatMessage) -> str:
+        text = " ".join(message.content.split())[:42].strip()
+        return text
+
+    def append_chat_message(self, user_id: str, message: ChatMessage) -> None:
+        thread_id = self._ensure_active_thread(user_id)
+        history = self._chat_history.setdefault((user_id, thread_id), [])
         if message.id and any(existing.id == message.id for existing in history):
             return
         history.append(message)
+        meta = self._user_threads(user_id)[thread_id]
+        meta["updated_at"] = datetime.now(timezone.utc)
+        if not meta["title"] and message.role == "user":
+            meta["title"] = self._title_from(message)
 
     def get_chat_history(self, user_id: str) -> list[ChatMessage]:
-        plan_id = self._ensure_active_plan_id(user_id)
-        return list(self._chat_history.get((user_id, plan_id), []))
+        thread_id = self._ensure_active_thread(user_id)
+        return list(self._chat_history.get((user_id, thread_id), []))
 
     def clear_chat_history(self, user_id: str) -> int:
-        plan_id = self._ensure_active_plan_id(user_id)
-        removed = self._chat_history.pop((user_id, plan_id), [])
+        thread_id = self._ensure_active_thread(user_id)
+        removed = self._chat_history.pop((user_id, thread_id), [])
+        self._user_threads(user_id)[thread_id]["title"] = ""
         return len(removed)
+
+    def list_chat_threads(self, user_id: str) -> list[ChatThread]:
+        active = self._active_thread.get(user_id)
+        threads = [
+            ChatThread(
+                id=thread_id,
+                title=meta["title"],
+                is_active=thread_id == active,
+                updated_at=meta["updated_at"],
+            )
+            for thread_id, meta in self._user_threads(user_id).items()
+        ]
+        return sorted(threads, key=lambda t: t.updated_at, reverse=True)
+
+    def create_chat_thread(self, user_id: str) -> ChatThread:
+        thread_id = self._create_thread(user_id)
+        meta = self._user_threads(user_id)[thread_id]
+        return ChatThread(id=thread_id, title="", is_active=True, updated_at=meta["updated_at"])
+
+    def activate_chat_thread(self, user_id: str, thread_id: str) -> bool:
+        if thread_id not in self._user_threads(user_id):
+            return False
+        self._active_thread[user_id] = thread_id
+        # Oturum bir plana bağlıysa o planı da aktive et (bağlam bütünlüğü).
+        plan_id = self._user_threads(user_id)[thread_id].get("plan_id")
+        if plan_id and plan_id in self._user_plans(user_id):
+            self._active_plan_id[user_id] = plan_id
+        return True
 
     def save_intent(
         self,
@@ -576,6 +647,8 @@ class InMemoryRepository(Repository):
         }
         self._subscriptions.pop(user_id, None)
         self._fortunes.pop(user_id, None)
+        self._threads.pop(user_id, None)
+        self._active_thread.pop(user_id, None)
 
     # --- V2: Fal modülü (FAZ 7) ---
     def save_fortune(self, user_id: str, record: FortuneRecord) -> None:

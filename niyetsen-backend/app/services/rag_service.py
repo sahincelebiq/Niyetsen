@@ -251,6 +251,13 @@ _CHAT_DEFAULT_SOURCES = ["felsefe", "motivasyon", "atomik_aliskanliklar", "senar
 _MYSTIC_TRIGGERS = {
     "tarot": ["tarot"],
     "burclar": ["burç", "burc", "astro", "yükselen", "yukselen", "horoskop"],
+    # İdol Modu (Dalga 4): kullanıcı bir idol/felsefe yolu açarsa yol paketleri
+    # bağlama girer — rehber kişi adını felsefe yoluna çevirir.
+    "idoller": [
+        "gibi ol", "idol", "felsefe", "yolu", "greenlights", "kaizen",
+        "stoac", "stoik", "ustalik", "ustalık", "safak yolu", "şafak yolu",
+        "mcconaughey", "rutini", "disiplini gibi",
+    ],
 }
 
 

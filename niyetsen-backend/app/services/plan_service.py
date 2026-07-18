@@ -17,9 +17,33 @@ from app.config import CATEGORIES, settings
 from app.core import prompts
 from app.core.gemini_client import generate_json
 from app.models.schemas import CollectedIntent, Plan, PlanDay, Task
+from app.services import rag_service
 from app.services.image_service import category_fallback_query, enrich_image_keywords_batch, get_image_async
 
 log = logging.getLogger("niyetsen.plan")
+
+# İdol Modu (Dalga 4): ilgi alanlarında bir Felsefe Yolu varsa plan üretimine
+# o yolun felsefe + pratik katmanı bağlam olarak enjekte edilir.
+_PATH_MARKER = "yolu"
+
+
+def _philosophy_path_block(collected: CollectedIntent) -> str:
+    path_interests = [
+        interest for interest in collected.interests
+        if _PATH_MARKER in interest.casefold() or "stoacı yol" in interest.casefold()
+    ]
+    if not path_interests:
+        return ""
+    chunks: list[str] = []
+    for path_name in path_interests[:2]:
+        chunks.extend(rag_service.retrieve(path_name, sources=["idoller"], k=2))
+    if not chunks:
+        return ""
+    return (
+        "FELSEFE YOLU BAĞLAMI (görevler bu yolun felsefesi ve pratiklerinden "
+        "türesin; kişi adları yalnız ilham kaynağıdır, görev başlıklarında "
+        "kişi adı KULLANMA):\n" + "\n".join(chunks)
+    )
 
 
 def _intent_block(collected: CollectedIntent, duration_days: int, start_day: int) -> str:
@@ -61,6 +85,10 @@ async def generate_batch(
         max_tasks=settings.MAX_TASKS_PER_DAY,
         intent_block=_intent_block(collected, duration_days, start_day),
     )
+    # İdol Modu: Felsefe Yolu seçildiyse yol bağlamını talimatlara ekle.
+    path_block = _philosophy_path_block(collected)
+    if path_block:
+        instructions = f"{instructions}\n\n{path_block}"
 
     data = await generate_json(
         instructions,

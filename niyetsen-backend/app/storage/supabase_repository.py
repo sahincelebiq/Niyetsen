@@ -17,10 +17,10 @@ from supabase import Client, ClientOptions, create_client
 
 from app.config import CATEGORIES, settings
 from app.models.schemas import (
-    BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, DailyTaskItem,
-    FortuneRecord, GameState, NotificationRecipient, Plan, PlanDay, PlanSummary,
-    PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord,
-    ScoreEvent, Task, UserProfile,
+    BonusOffer, ChatMessage, ChatThread, CollectedIntent, ConsentRecord, CronUser,
+    DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanDay,
+    PlanSummary, PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult,
+    PushTokenRecord, ScoreEvent, Task, UserProfile,
 )
 from app.storage.base import Repository
 
@@ -280,6 +280,19 @@ class SupabaseRepository(Repository):
         if not self.plan_belongs_to_user(user_id, plan_id):
             raise ValueError("Plan bulunamadı.")
         self._set_active_plan_id(user_id, plan_id)
+        # Plana bağlı en güncel sohbet oturumuna geç (yoksa yeni açılır) —
+        # FAZ 7.6: proje değişince o projenin sohbeti gelir.
+        row = _maybe_single(
+            self._db.table("chat_threads").select("id")
+            .eq("user_id", user_id).eq("plan_id", plan_id)
+            .order("updated_at", desc=True).limit(1)
+        )
+        if row:
+            self._db.table("users").update(
+                {"active_thread_id": row["id"]}
+            ).eq("id", user_id).execute()
+        else:
+            self._create_thread_row(user_id)
 
     def create_draft_plan(self, user_id: str, *, name: str, slot_no: int) -> str:
         self._ensure_user(user_id)
@@ -551,15 +564,52 @@ class SupabaseRepository(Repository):
             plan_id = self.create_draft_plan(user_id, name="Plan 1", slot_no=1)
         return plan_id
 
+    # --- FAZ 7.6: Sohbet oturumları ---
+    def _active_thread_id(self, user_id: str) -> Optional[str]:
+        row = _maybe_single(
+            self._db.table("users").select("active_thread_id").eq("id", user_id)
+        )
+        return row.get("active_thread_id") if row else None
+
+    def _create_thread_row(self, user_id: str) -> str:
+        plan_id = self._active_plan_id(user_id)
+        thread_id = str(uuid.uuid4())
+        self._db.table("chat_threads").insert({
+            "id": thread_id,
+            "user_id": user_id,
+            "plan_id": plan_id,
+        }).execute()
+        self._db.table("users").update(
+            {"active_thread_id": thread_id}
+        ).eq("id", user_id).execute()
+        return thread_id
+
+    def _ensure_active_thread(self, user_id: str) -> str:
+        thread_id = self._active_thread_id(user_id)
+        if thread_id:
+            return thread_id
+        return self._create_thread_row(user_id)
+
+    def _touch_thread(self, user_id: str, thread_id: str, first_user_msg: str) -> None:
+        row = _maybe_single(
+            self._db.table("chat_threads").select("title")
+            .eq("id", thread_id).eq("user_id", user_id)
+        )
+        payload: dict = {"updated_at": datetime.now(timezone.utc).isoformat()}
+        if row is not None and not (row.get("title") or "").strip() and first_user_msg:
+            payload["title"] = " ".join(first_user_msg.split())[:42].strip()
+        self._db.table("chat_threads").update(payload).eq("id", thread_id).execute()
+
     def append_chat_message(self, user_id: str, message: ChatMessage) -> None:
         self.append_chat_messages(user_id, [message])
 
     def append_chat_messages(self, user_id: str, messages: list[ChatMessage]) -> None:
-        """Tek istekte toplu ekleme: plan id 1 kez çözülür, tek upsert atılır."""
+        """Tek istekte toplu ekleme: plan+oturum 1 kez çözülür, tek upsert atılır."""
         if not messages:
             return
         self._ensure_user(user_id)
         plan_id = self._active_plan_id_or_draft(user_id)
+        thread_id = self._ensure_active_thread(user_id)
         upsert_rows: list[dict] = []
         insert_rows: list[dict] = []
         for message in messages:
@@ -569,6 +619,7 @@ class SupabaseRepository(Repository):
                 "role": message.role,
                 "content": message.content,
                 "plan_id": plan_id,
+                "thread_id": thread_id,
             }
             (upsert_rows if message.id else insert_rows).append(row)
         if upsert_rows:
@@ -579,14 +630,58 @@ class SupabaseRepository(Repository):
             ).execute()
         if insert_rows:
             self._db.table("chat_msgs").insert(insert_rows).execute()
+        first_user = next((m.content for m in messages if m.role == "user"), "")
+        self._touch_thread(user_id, thread_id, first_user)
+
+    def list_chat_threads(self, user_id: str) -> list[ChatThread]:
+        active_id = self._active_thread_id(user_id)
+        rows = (
+            self._db.table("chat_threads").select("id,title,updated_at")
+            .eq("user_id", user_id).order("updated_at", desc=True).limit(50)
+            .execute().data
+        )
+        return [
+            ChatThread(
+                id=row["id"],
+                title=row.get("title") or "",
+                is_active=row["id"] == active_id,
+                updated_at=row.get("updated_at") or datetime.now(timezone.utc),
+            )
+            for row in rows
+        ]
+
+    def create_chat_thread(self, user_id: str) -> ChatThread:
+        self._ensure_user(user_id)
+        thread_id = self._create_thread_row(user_id)
+        return ChatThread(
+            id=thread_id, title="", is_active=True,
+            updated_at=datetime.now(timezone.utc),
+        )
+
+    def activate_chat_thread(self, user_id: str, thread_id: str) -> bool:
+        row = _maybe_single(
+            self._db.table("chat_threads").select("id,plan_id")
+            .eq("id", thread_id).eq("user_id", user_id)
+        )
+        if not row:
+            return False
+        self._db.table("users").update(
+            {"active_thread_id": thread_id}
+        ).eq("id", user_id).execute()
+        # Oturum bir plana bağlıysa bağlam bütünlüğü için o planı da aktive et.
+        if row.get("plan_id"):
+            self._db.table("users").update(
+                {"active_plan_id": row["plan_id"]}
+            ).eq("id", user_id).execute()
+        return True
 
     def get_chat_history(self, user_id: str) -> list[ChatMessage]:
-        plan_id = self._active_plan_id(user_id)
-        if not plan_id:
+        thread_id = self._active_thread_id(user_id)
+        if not thread_id:
             return []
         rows = (
             self._db.table("chat_msgs").select("id,client_message_id,role,content")
-            .eq("user_id", user_id).eq("plan_id", plan_id)
+            .eq("user_id", user_id).eq("thread_id", thread_id)
             # Toplu insert'te created_at aynı olabilir; id ikincil anahtar
             # sıralamayı deterministik yapar.
             .order("created_at").order("id").execute().data
@@ -601,14 +696,15 @@ class SupabaseRepository(Repository):
         ]
 
     def clear_chat_history(self, user_id: str) -> int:
-        """Yeni sohbet: aktif planın mesajlarını sil (plan/niyet/puan korunur)."""
-        plan_id = self._active_plan_id(user_id)
-        if not plan_id:
+        """Aktif OTURUMUN mesajlarını sil (diğer oturumlar/plan/puan korunur)."""
+        thread_id = self._active_thread_id(user_id)
+        if not thread_id:
             return 0
         response = (
             self._db.table("chat_msgs").delete(count="exact")
-            .eq("user_id", user_id).eq("plan_id", plan_id).execute()
+            .eq("user_id", user_id).eq("thread_id", thread_id).execute()
         )
+        self._db.table("chat_threads").update({"title": None}).eq("id", thread_id).execute()
         return int(response.count or 0)
 
     def save_intent(

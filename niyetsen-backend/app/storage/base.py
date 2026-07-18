@@ -12,10 +12,10 @@ from datetime import date as dt_date
 from typing import Optional
 
 from app.models.schemas import (
-    BonusOffer, ChatMessage, CollectedIntent, ConsentRecord, CronUser, DailyTaskItem,
-    FortuneRecord, GameState, NotificationRecipient, Plan, PlanSummary, PointLogRecord,
-    ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord, ScoreEvent, Task,
-    UserProfile,
+    BonusOffer, ChatMessage, ChatThread, CollectedIntent, ConsentRecord, CronUser,
+    DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanSummary,
+    PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord,
+    ScoreEvent, Task, UserProfile,
 )
 
 
@@ -133,10 +133,20 @@ class Repository(ABC):
 
     @abstractmethod
     def clear_chat_history(self, user_id: str) -> int:
-        """Aktif planın sohbet geçmişini temizler; silinen mesaj sayısını döner.
+        """Aktif oturumun mesajlarını temizler; silinen mesaj sayısını döner."""
 
-        'Yeni sohbet başlat': arayüz sıfırlanır, plan/niyet/puanlara DOKUNULMAZ.
-        """
+    # --- FAZ 7.6: Sohbet oturumları (yeni sohbet ESKİYİ SİLMEZ) ---
+    @abstractmethod
+    def list_chat_threads(self, user_id: str) -> list[ChatThread]:
+        """Sohbet oturumları — en yeniden eskiye, başlıklarıyla."""
+
+    @abstractmethod
+    def create_chat_thread(self, user_id: str) -> ChatThread:
+        """Yeni oturum açar ve aktif yapar; eski oturumlar korunur."""
+
+    @abstractmethod
+    def activate_chat_thread(self, user_id: str, thread_id: str) -> bool:
+        """Var olan bir oturuma geçer; bulunamazsa False."""
 
     @abstractmethod
     def save_intent(

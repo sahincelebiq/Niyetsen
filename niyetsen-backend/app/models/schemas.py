@@ -409,3 +409,11 @@ class HoroscopeResponse(BaseModel):
     day: dt_date
     interpretation: str
     disclaimer: str = FORTUNE_DISCLAIMER
+
+
+# ---------- FAZ 7.6: Sohbet oturumları (Claude tarzı) ----------
+class ChatThread(BaseModel):
+    id: str
+    title: str = ""                    # boşsa istemci "Yeni sohbet" gösterir
+    is_active: bool = False
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

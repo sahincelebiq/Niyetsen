@@ -159,7 +159,106 @@ görüntüleriyle bildirdiği sorunlara karşılık)
       mevcut ölçekte yeterli; chromadb Railway imajını ~100MB büyütür.
       Kullanıcı/knowledge büyüyünce yeniden değerlendir (v3 adayı).
 
-### Dalga 4 — v3 adayları (dokunma)
+### Dalga 4 — İDOL MODU (yeni ana özellik, Şahin'in kararı 2026-07-17)
+> 🚧 İNŞA BAŞLADI (2026-07-17). Ürün hikâyesi: "Bir film izledin,
+> Matthew McConaughey'nin azmi içine işledi. O his 48 saatte söner — Niyetsen'de
+> sönmez. 'Onun gibi' de; ilham anın 365 günlük bir yola dönüşsün."
+
+**İnşa edilen (Dalga 4.1, 2026-07-17 — 162 test yeşil):**
+- [x] `knowledge/idoller.md`: 5 Felsefe Yolu, iki katmanlı (FELSEFE + PRATİK):
+      Greenlights, Kaizen, Stoacı, Ustalık, Şafak. Kişi adları yalnız kaynak.
+- [x] Sohbet: SYSTEM prompt'a "Felsefe Yolları" yeteneği — kişi adı → yol
+      çevirisi, interests'e yol adı yazılır; RAG tetikleyicileri (idol/felsefe/
+      yol adları/mcconaughey vb.) idoller kaynağını bağlama çeker.
+- [x] Plan motoru: interests'te "... Yolu" varsa `_philosophy_path_block`
+      yolun felsefe+pratik chunk'larını plan talimatına enjekte eder
+      ("görev başlıklarında kişi adı KULLANMA" korumasıyla).
+- [x] Mistik erişim düzeltmesi: sohbet başlığının yanına görünür ☾ düğmesi
+      (normal dokunuş), ayarlardaki ☾ uzun basmadan normal dokunuşa çevrildi.
+      Gizli uzun basma jesti de korunuyor.
+- [x] Testler: `test_idol_mode.py` (5) — kaynak yükleme, sohbet tetikleyici,
+      kişi→yol eşlemesi, plan bağlam enjeksiyonu.
+
+**Dalga 4.2 — TAMAMLANDI (2026-07-17, 163 test yeşil):**
+- [x] `GET /paths` + `app/services/path_service.py`: idoller.md'den
+      yapılandırılmış yol listesi. Yeni yol eklemek = SADECE markdown'a
+      bölüm eklemek; kod değişikliği gerekmez.
+- [x] Mobil `yollar.tsx`: yol kartları (aç/kapa detay + felsefe metni) →
+      "Bu yolla sohbete başla" → mesaj giriş kutusuna hazır konur
+      (`lib/pending-chat.ts` köprüsü; otomatik gönderilmez, kontrol
+      kullanıcıda). Drawer'a (☰) "✦ Felsefe Yolları" girişi.
+- [x] "Düşünüyor" göstergesi cilalandı: mesaj balonu görünümü, sıralı üç
+      nokta (160ms faz), ±3° yumuşak salınım, ReduceMotion desteği,
+      erişilebilirlik etiketi.
+- [x] Website: gelistirme.html'e "Felsefe Yolları (İdol Modu)" duyuru kartı.
+
+## FAZ 7.6 — Sohbet Oturumları + Ticari Kurallar (2026-07-17, Şahin'in kararı)
+> "Yeni sohbet eskiyi silmesin; Claude'daki gibi başlıklı geçmiş sohbetler
+> solda listelensin. Sohbet ücretsiz sürümde sınırsız (pazarlama); İdol Modu
+> premium." — 168 test yeşil.
+
+- [x] **chat_threads mimarisi:** yeni tablo + chat_msgs.thread_id +
+      users.active_thread_id. Migration `20260717150000_chat_threads.sql`
+      (backfill dahil: eski mesajlar plan başına "Önceki sohbet" oturumuna
+      toplanır — HİÇBİR ESKİ SOHBET KAYBOLMAZ). RUN_IN_SUPABASE_SQL_EDITOR'a
+      eklendi — **Şahin SQL Editor'da çalıştırmalı**.
+- [x] **Başlıklar:** oturum başlığı ilk kullanıcı mesajından otomatik türer
+      (42 karakter); boşsa istemci "Yeni sohbet" gösterir.
+- [x] **Endpoint'ler:** GET /chat/threads (liste), POST /chat/threads/{id}/
+      activate (geçmişe dön, mesajları getirir), POST /chat/reset artık YENİ
+      OTURUM açar (silmez). Plan değişince o planın son oturumu aktive olur.
+- [x] **Ticari kurallar:** /chat paywall'suz (ücretsiz sınırsız sohbet;
+      rate limit 10/dk korunur). /paths (İdol Modu) PREMIUM — free 402 →
+      paywall; dev hesabı bypass. Plan/kanıt/bonus kilitleri değişmedi.
+- [x] **Mobil:** ☰ panelde "Sohbetler" bölümü (başlık + aktif işareti,
+      dokun→devam et) + "Niyetlerim" ayrımı; yeni sohbette onay diyaloğu
+      kaldırıldı (artık kayıp yok). Felsefe Yolları ekranı free kullanıcıyı
+      paywall'a yönlendirir.
+- [x] Testler: test_chat_threads.py (4) + paywall testleri yeni kurallara
+      göre güncellendi (sohbet 402 dönmez; /paths döner).
+
+**Sıradaki (Dalga 4.3):**
+- [ ] Premium kapısı (free kullanıcıya 1 yol önizlemesi; İdol Modu abonelikte).
+- [ ] Gemini Search grounding (listede olmayan idoller için doğruluk katmanı).
+- [ ] Website: İdol Modu blog yazısı + ana sayfa anlatısı.
+
+**Tasarım (analiz tamam):**
+- Akış: kullanıcı idol adı/ilham kaynağı söyler → rehber idolün KAMUYA AÇIK
+  rutinlerini (spor, kitaplar, çalışma disiplini, alışkanlıklar) çıkarır →
+  kullanıcının hayatına ölçekler (weekly_hours bütçesi!) → mevcut plan
+  motoruna besler. Yeni tablo GEREKMEZ: intents.text'e idol bağlamı,
+  plans/tasks aynen kullanılır. Ek olarak `knowledge/idoller.md` (arketip
+  profiller: 10-15 hazır idol) RAG'e girer.
+- LLM ANALİZİ: FARKLI MODELE GEREK YOK. gemini-2.5-pro plan üretiminde zaten
+  var; idol bilgisi için doğruluk katmanı = RAG profilleri + (v2 aşaması)
+  Gemini'nin native Google Search grounding aracı (`google_search` tool —
+  aynı API, ek model maliyeti yok, halüsinasyonu keser). Fine-tuning yasak
+  (v1 kuralı) ve gereksiz.
+- HUKUK/STORE (kritik — Şahin'in kararıyla NETLEŞTİ, 2026-07-17):
+  **Paketler FELSEFE ADIYLA sunulur, kişi adıyla DEĞİL.** Örnek:
+  "Greenlights Yolu" (engeli fırsata çevirme felsefesi — McConaughey'nin
+  kitabından; kişi adı yalnız açıklamada KAYNAK olarak geçer: "Bu felsefe
+  Matthew McConaughey'nin 'Greenlights' kitabında anlattığı yaklaşımdan
+  ilham alır"). Bu gri alanı temiz tutar: ürün kişiyi değil FELSEFEYİ
+  satar; kişi adları referans/kaynakça düzeyinde kalır. Onay/ortaklık iması
+  yasak; her pakette "ilham alır, bağlantılı değildir" notu. Kullanıcı
+  sohbette kişi adı yazarsa rehber onu ilgili felsefe paketine çevirir
+  ("McConaughey gibi" → "Greenlights Yolu'nu öneriyorum").
+- HER PAKETTE İKİ KATMAN: (1) FELSEFE — dünya görüşü, ilkeler, zorluğa
+  bakış (rehberin tonuna işler); (2) PRATİK — spor/kitap/rutin/davranış
+  görevleri (plan motoruna işler). knowledge/idoller.md her paket için iki
+  katmanı da taşır. İlk paket adayları: Greenlights Yolu (engel→fırsat),
+  Kaizen Yolu (%1 sürekli iyileşme), Stoacı Yol (kontrol dairesi),
+  Ustalık Yolu (derin pratik), Şafak Yolu (sabah disiplini) — genişler.
+- SUPABASE ANALİZİ: Bu özellik için Supabase FAZLASIYLA yeterli — idol
+  profili birkaç KB metin, plan zaten mevcut şemada. Free tier'ın gerçek
+  riski başka: 1 hafta inaktivitede proje DURAKLATILIR + günlük yedek yok.
+  Öneri: İdol Modu için değil, STORE LANSMANI için Pro'ya ($25/ay) geç —
+  lansman haftasında al, önce değil. Alternatif altyapıya gerek yok.
+- Premium konum: İdol Modu abonelik özelliği (paywall arkasında);
+  free kullanıcı 1 kez önizleme görebilir (dönüşüm kancası).
+
+### Dalga 5 — v3 adayları (dokunma)
 - Leaderboard, Pinterest görsel kaynağı (`image_service` sözleşmesi hazır),
   `harita_yer_getir` aracı.
 
