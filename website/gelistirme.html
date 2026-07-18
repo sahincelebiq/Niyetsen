@@ -30,12 +30,12 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap">
-  <link rel="stylesheet" href="/css/style.css?v=20260716-1">
+  <link rel="stylesheet" href="/css/style.css?v=20260717-1">
   <script type="application/ld+json">
   {"@context":"https://schema.org","@type":"WebPage","name":"Geliştirme Günlüğü — Niyetsen","description":"Niyetsen geliştirme güncellemeleri, faz ilerlemesi ve ürün yol haritası.","url":"https://niyetsen.com/gelistirme.html","inLanguage":"tr","isPartOf":{"@type":"WebSite","name":"Niyetsen","url":"https://niyetsen.com/"}}
   </script>
-  <script src="/js/site-config.js?v=20260716-1" defer></script>
-  <script src="/js/marketing.js?v=20260716-1" defer></script>
+  <script src="/js/site-config.js?v=20260717-1" defer></script>
+  <script src="/js/marketing.js?v=20260717-1" defer></script>
 </head>
 <body>
   <header>
@@ -71,11 +71,11 @@
         <span class="phase-number">Güncel faz: <strong>7</strong> (v2)</span>
         <div class="phase-progress-wrap">
           <div class="phase-progress-label">
-            <span>Faz 7 Dalga 1–1.5</span>
-            <span>Temel altyapı tamam</span>
+            <span>Faz 7 Dalga 1–3</span>
+            <span>Fal UX + sohbet kalitesi tamam</span>
           </div>
-          <div class="phase-progress-bar" role="progressbar" aria-valuenow="7" aria-valuemin="0" aria-valuemax="10" aria-label="Faz 7 ilerlemesi">
-            <div class="phase-progress-fill" style="width: 70%;"></div>
+          <div class="phase-progress-bar" role="progressbar" aria-valuenow="85" aria-valuemin="0" aria-valuemax="10" aria-label="Faz 7 ilerlemesi">
+            <div class="phase-progress-fill" style="width: 85%;"></div>
           </div>
         </div>
       </div>
@@ -88,42 +88,74 @@
       </ul>
 
       <p class="lead">
-        RAG bilgi tabanı ve fal modülü (tarot, kahve/el, burç) backend + mobilde devrede.
-        Dalga 2: tarot görselleri, fal geçmişi ekranı, Küçük Arkana genişlemesi.
+        RAG bilgi tabanı ve fal modülü backend + mobilde devrede. 17 Temmuz'da
+        tarot animasyonu, fal geçmişi, 78 kartlı deste, sohbet doğallığı ve hızlı
+        yanıt çipleri eklendi. Sırada: mağaza yayını (Faz 6) ve v3 adayları.
       </p>
 
-      <p class="phase-summary"><strong>Faz 7 — tamamlananlar (Dalga 1–1.5)</strong></p>
+      <p class="phase-summary"><strong>Faz 7 — tamamlananlar (Dalga 1–3)</strong></p>
       <ul class="phase-checklist">
         <li>
           <span class="check done" aria-hidden="true">✓</span>
-          <span><strong>RAG:</strong> knowledge/ markdown tabanı, embedding + sohbet entegrasyonu, 16 senaryo tabanı.</span>
+          <span><strong>RAG:</strong> knowledge/ tabanı, embedding + disk önbellek, 16 senaryo; sohbet entegrasyonu.</span>
         </li>
         <li>
           <span class="check done" aria-hidden="true">✓</span>
-          <span><strong>Fal API:</strong> Tarot, kahve/el vision, günlük burç; hak sayaçları ve fortune_log.</span>
+          <span><strong>Fal modülü:</strong> Tarot (animasyon + 78 kart), kahve/el vision, günlük/haftalık burç, fal geçmişi ekranı.</span>
         </li>
         <li>
           <span class="check done" aria-hidden="true">✓</span>
-          <span><strong>Mobil:</strong> tarot, astroloji, fal ekranları; responsive düzeltmeleri, tarot push bildirimi.</span>
+          <span><strong>Sohbet kalitesi:</strong> Doğallık kuralları, Yeni Sohbet Başlat, hızlı yanıt çipleri, plan tempo kuralları.</span>
+        </li>
+        <li>
+          <span class="check done" aria-hidden="true">✓</span>
+          <span><strong>Store hazırlık:</strong> API güvenlik katmanı, 156 backend test yeşil; mobil tsc temiz.</span>
         </li>
       </ul>
 
-      <p class="phase-summary" style="margin-top: 1rem;"><strong>Faz 7 — sırada (Dalga 2)</strong></p>
+      <p class="phase-summary" style="margin-top: 1rem;"><strong>Faz 7 — sırada</strong></p>
       <ul class="phase-checklist">
         <li>
           <span class="check progress" aria-hidden="true">…</span>
-          <span><strong>Tarot UX:</strong> Kart görselleri + çekim animasyonu.</span>
+          <span><strong>Prod doğrulama:</strong> Supabase migration + gerçek cihazda uçtan uca test.</span>
         </li>
         <li>
           <span class="check progress" aria-hidden="true">…</span>
-          <span><strong>Fal geçmişi:</strong> GET /fortune/history + mobil geçmiş ekranı.</span>
+          <span><strong>Mağaza (Faz 6):</strong> Developer hesapları, EAS prod build, store varlıkları.</span>
         </li>
         <li>
           <span class="check progress" aria-hidden="true">…</span>
-          <span><strong>Küçük Arkana:</strong> 56 kart genişlemesi (knowledge/tarot.md şablonu).</span>
+          <span><strong>v3 adayları:</strong> Leaderboard, Chroma kalıcı backend değerlendirmesi.</span>
         </li>
       </ul>
     </div>
+
+    <section class="section-spaced">
+      <span class="section-label">Uygulama</span>
+      <h2>Son güncellemeler — iOS & Android</h2>
+      <p class="lead">
+        16–17 Temmuz 2026 mobil ve backend çalışmaları. Fal modülü polish,
+        sohbet kalitesi ve mağaza hazırlığı.
+      </p>
+      <div class="grid-2">
+        <article class="card">
+          <h3>Uygulama yenilikleri (17 Temmuz)</h3>
+          <p><span class="status-tag done">Tamamlandı</span> Tarot çekim animasyonu, fal geçmişi ekranı, 78 kartlı deste (Büyük + Küçük Arkana). Sohbette doğallık kuralları, “Yeni Sohbet Başlat”, hızlı yanıt çipleri. Plan tempo kuralları (aşırı yük önleme). Haftalık burç görünümü, RAG disk önbelleği, store güvenlik katmanı.</p>
+        </article>
+        <article class="card">
+          <h3>Fal modülü (v2) — temel</h3>
+          <p><span class="status-tag done">Tamamlandı</span> Tarot, kahve/el foto falı ve günlük burç — backend API + mobil ekranlar. 06:01 Günlük Tarot push; responsive düzeltmeler ve disclaimer'lar.</p>
+        </article>
+        <article class="card">
+          <h3>RAG rehber sohbeti</h3>
+          <p><span class="status-tag done">Tamamlandı</span> Felsefe, motivasyon ve 16 senaryo tabanından bağlam; tarot/burç tetikleyicisinde mistik kaynaklar. Etiketli CONTEXT — injection önlemi.</p>
+        </article>
+        <article class="card">
+          <h3>Plan görselleri (Nano Banana)</h3>
+          <p><span class="status-tag done">Tamamlandı</span> Unsplash + Gemini hibrit üretim; kaynak atıf rozeti korundu.</p>
+        </article>
+      </div>
+    </section>
 
     <section class="section-spaced">
       <span class="section-label">Site denetimi</span>
@@ -151,7 +183,7 @@
         </article>
         <article class="card">
           <h3>SEO</h3>
-          <p><span class="status-tag done">100 / 100</span> Sitemap (14 URL), robots.txt, canonical, OG/Twitter, JSON-LD, Search Console doğrulandı. Blog iç link ağı aktif.</p>
+          <p><span class="status-tag done">100 / 100</span> Sitemap (15 URL), robots.txt, canonical, OG/Twitter, JSON-LD, Search Console doğrulandı. Blog iç link ağı aktif.</p>
         </article>
         <article class="card">
           <h3>İyileştirme önerileri</h3>
@@ -164,10 +196,14 @@
       <span class="section-label">Web sitesi</span>
       <h2>Son güncellemeler — niyetsen.com</h2>
       <p class="lead">
-        13–16 Temmuz 2026 web çalışmaları. Tasarım ve renk paleti korunarak bakım,
+        13–17 Temmuz 2026 web çalışmaları. Tasarım ve renk paleti korunarak bakım,
         SEO ve performans iyileştirmeleri yapıldı.
       </p>
       <div class="grid-2">
+        <article class="card">
+          <h3>SEO: “Niyetsen nedir?” rehber yazısı (17 Temmuz)</h3>
+          <p><span class="status-tag done">Tamamlandı</span> <a href="/blog/niyetsen-nedir-nasil-calisir.html">Yeni blog yazısı</a> — FAQPage + BlogPosting JSON-LD, altı kategori iç linkleri, sitemap 15 URL. Google “niyetsen nedir” aramaları için hedeflenen içerik.</p>
+        </article>
         <article class="card">
           <h3>Bakım turu (16 Temmuz)</h3>
           <p><span class="status-tag done">Tamamlandı</span> OG görselleri sıkıştırıldı (~8,5 MB → ~0,8 MB JPEG), favicon yolları göreli, manifest 512 ikonu düzeltildi, flow-steps semantik h3, cache <code>20260716-1</code>.</p>
@@ -404,6 +440,16 @@
 
     <div class="timeline">
       <article class="timeline-entry">
+        <div class="timeline-date">17 Temmuz 2026</div>
+        <h3>SEO blog + uygulama yenilikleri</h3>
+        <p><span class="status-tag done">Tamamlandı</span></p>
+        <ul>
+          <li><strong>Web:</strong> “Niyetsen nedir?” rehber yazısı (FAQPage JSON-LD), blog kartı, sitemap 15 URL.</li>
+          <li><strong>Uygulama:</strong> Tarot animasyonu, fal geçmişi, 78 kart, hızlı yanıt çipleri, plan tempo, haftalık burç.</li>
+          <li><strong>Favicon:</strong> Teknik kurulum doğru; Google arama sonucu logosu indeks yenilemesi bekleniyor.</li>
+        </ul>
+      </article>
+      <article class="timeline-entry">
         <div class="timeline-date">16 Temmuz 2026</div>
         <h3>Site bakım turu & Faz 7 günlüğü</h3>
         <p><span class="status-tag done">Tamamlandı</span></p>
@@ -639,7 +685,7 @@
       </div>
     </div>
   </footer>
-  <script src="/js/scroll-target.js?v=20260716-1" defer></script>
-  <script src="/js/early-access.js?v=20260716-1" defer></script>
+  <script src="/js/scroll-target.js?v=20260717-1" defer></script>
+  <script src="/js/early-access.js?v=20260717-1" defer></script>
 </body>
 </html>
