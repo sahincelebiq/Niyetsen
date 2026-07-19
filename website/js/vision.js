@@ -20,35 +20,53 @@
   var centerWords = ["Vizyon", "Misyon", "Niyetsen"];
   var wordIndex = 0;
   var listIndex = 0;
-  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  var stageWidth = 0;
+  var stageHeight = 0;
+  var animating = false;
+  var rafId = 0;
+  var heroVisible = true;
+  var pageVisible = !document.hidden;
 
   function resize() {
     var rect = canvas.parentElement.getBoundingClientRect();
-    canvas.width = rect.width * dpr;
-    canvas.height = rect.height * dpr;
-    canvas.style.width = rect.width + "px";
-    canvas.style.height = rect.height + "px";
+    stageWidth = rect.width;
+    stageHeight = rect.height;
+    canvas.width = stageWidth * dpr;
+    canvas.height = stageHeight * dpr;
+    canvas.style.width = stageWidth + "px";
+    canvas.style.height = stageHeight + "px";
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    initParticles(rect.width, rect.height);
+    initParticles(stageWidth, stageHeight);
   }
 
   function initParticles(w, h) {
     particles = [];
-    var count = Math.floor((w * h) / 12000);
+    var density = window.innerWidth < 768 ? 18000 : 12000;
+    var count = Math.min(Math.floor((w * h) / density), window.innerWidth < 768 ? 32 : 52);
     for (var i = 0; i < count; i++) {
       particles.push({
         x: Math.random() * w,
         y: Math.random() * h,
-        r: Math.random() * 2.2 + 0.6,
-        vy: -(Math.random() * 0.35 + 0.08),
-        vx: (Math.random() - 0.5) * 0.15,
+        r: Math.random() * 2 + 0.6,
+        vy: -(Math.random() * 0.28 + 0.06),
+        vx: (Math.random() - 0.5) * 0.12,
         color: ["155, 140, 245", "245, 221, 208", "212, 232, 220", "196, 184, 255"][Math.floor(Math.random() * 4)],
-        alpha: Math.random() * 0.35 + 0.12
+        alpha: Math.random() * 0.3 + 0.1
       });
     }
   }
 
-  function draw(w, h) {
+  function shouldAnimate() {
+    return !reducedMotion && heroVisible && pageVisible;
+  }
+
+  function tick() {
+    rafId = 0;
+    if (!shouldAnimate()) return;
+
+    var w = stageWidth;
+    var h = stageHeight;
     ctx.clearRect(0, 0, w, h);
     for (var i = 0; i < particles.length; i++) {
       var p = particles[i];
@@ -66,13 +84,25 @@
       ctx.fillStyle = "rgba(" + p.color + ", " + p.alpha + ")";
       ctx.fill();
     }
-    requestAnimationFrame(function () {
-      draw(w, h);
-    });
+    rafId = requestAnimationFrame(tick);
+  }
+
+  function startAnimation() {
+    if (animating || !shouldAnimate()) return;
+    animating = true;
+    if (!rafId) rafId = requestAnimationFrame(tick);
+  }
+
+  function stopAnimation() {
+    animating = false;
+    if (rafId) {
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    }
   }
 
   function cycleCenterWord() {
-    if (!centerWord) return;
+    if (!centerWord || !shouldAnimate()) return;
     centerWord.classList.add("fade");
     setTimeout(function () {
       wordIndex = (wordIndex + 1) % centerWords.length;
@@ -92,13 +122,30 @@
   }
 
   resize();
-  var rect = canvas.parentElement.getBoundingClientRect();
-  if (!reducedMotion) draw(rect.width, rect.height);
-
   if (centerWord) centerWord.textContent = centerWords[0];
 
-  window.addEventListener("resize", resize);
+  window.addEventListener("resize", function () {
+    resize();
+    if (shouldAnimate()) startAnimation();
+  });
+
+  document.addEventListener("visibilitychange", function () {
+    pageVisible = !document.hidden;
+    if (pageVisible && heroVisible) startAnimation();
+    else stopAnimation();
+  });
+
+  if ("IntersectionObserver" in window) {
+    var heroObserver = new IntersectionObserver(function (entries) {
+      heroVisible = entries[0].isIntersecting;
+      if (heroVisible && pageVisible) startAnimation();
+      else stopAnimation();
+    }, { root: null, threshold: 0.05 });
+    heroObserver.observe(canvas.parentElement);
+  }
+
   if (!reducedMotion) {
+    startAnimation();
     setInterval(cycleCenterWord, 4200);
     listItems.forEach(function (_, i) {
       setTimeout(addListItem, 800 + i * 600);
@@ -115,6 +162,7 @@
   var title = document.getElementById("showcase-title");
   var activeSlide = 0;
   var isPaused = false;
+
   function showSlide(index) {
     activeSlide = (index + slides.length) % slides.length;
     slides.forEach(function (slide, slideIndex) {
@@ -148,7 +196,7 @@
 
   if (!reducedMotion) {
     setInterval(function () {
-      if (!isPaused) showSlide(activeSlide + 1);
+      if (!isPaused && pageVisible) showSlide(activeSlide + 1);
     }, 4200);
   }
 })();
