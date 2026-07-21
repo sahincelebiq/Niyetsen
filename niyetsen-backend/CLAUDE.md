@@ -12,12 +12,13 @@ puan düşüren oyunlaştırılmış yaşam asistanı.
 
 ## Önce bunları oku
 1. `NIYETSEN_MASTER_PLAN.md` — aktif faz + kilitli kararlar (§1) + veri modeli (§2)
-2. `docs/uygulama-promt.md` — ürün şartnamesi (rank tablosu, araçlar)
-3. `docs/niyetsen-02-mimari.md` — mimari
-4. `prompts/chat_system_prompt.md` — sohbet sistem promptu
-5. `niyetsen-backend/knowledge/` — RAG bilgi tabanı (**FAZ 7 ile AKTİF,
-   2026-07-16**; Railway'e deploy için backend kökünde yaşar)
-6. `docs/FAZ7_V2_FAL_RAG.md` — aktif v2 fazı: fal + RAG durumu ve sonraki dalgalar
+   + ürün şartnamesi (rank tablosu, araçlar)
+2. `docs/ARCHITECTURE.md` — mimari (backend/mobil katmanları, istek akışı)
+3. `app/core/prompts.py` — sohbet sistem promptu (gerçek kaynak; eski
+   `chat_system_prompt.md` artık `docs/arsiv-planlama/`'da, güncel değil)
+4. `knowledge/` — RAG bilgi tabanı (**FAZ 7 ile AKTİF, 2026-07-16**; Railway'e
+   deploy için backend kökünde yaşar)
+5. `docs/FAZ7_V2_FAL_RAG.md` — aktif v2 fazı: fal + RAG durumu ve sonraki dalgalar
 
 ## Stack (kilitli)
 - Backend: Python 3.11+, FastAPI
@@ -38,7 +39,7 @@ puan düşüren oyunlaştırılmış yaşam asistanı.
 - Kullanıcı mesajı asla system rolüne karışmaz; RAG içeriği etiketli CONTEXT'te.
 
 ## /chat birleştirme sırası (değişmez, `core/prompt_builder.py` tek yerde)
-1. SYSTEM = `prompts/chat_system_prompt.md` (sabit)
+1. SYSTEM = `app/core/prompts.py` (sabit)
 2. CONTEXT = RAG parçaları (v2) + KULLANICI BELLEĞİ bloğu (dinamik)
 3. USER = kullanıcı mesajı
 
