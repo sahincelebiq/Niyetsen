@@ -1,4 +1,4 @@
-/* Fonts loaded via <link> in HTML for non-blocking fetch — see page head */
+/* Fonts: /css/fonts.css (yerel woff2) */
 
 :root {
   --bg: #faf8f5;
@@ -351,7 +351,19 @@ h3 { font-size: 1.22rem; margin: 0 0 0.5rem; }
   color: var(--accent-deep);
 }
 
-/* Phone mockups — light pastel */
+.section,
+.section-spaced,
+.hero-below,
+.blog-grid {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 480px;
+}
+
+.vision-hero {
+  content-visibility: visible;
+  contain: layout style;
+}
+
 .phone-stage {
   position: relative;
   display: flex;
@@ -512,6 +524,7 @@ h3 { font-size: 1.22rem; margin: 0 0 0.5rem; }
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  contain: layout paint;
   border-radius: 32px;
   background:
     radial-gradient(circle at 15% 15%, var(--lavender), transparent 36%),
@@ -1446,7 +1459,8 @@ footer {
   .orbit-word { font-size: 0.85rem; padding: 0.3rem 0.65rem; }
   .vision-hero { min-height: 780px; }
   .showcase { min-height: 500px; border-radius: 24px; }
-  .showcase-stage { transform: scale(0.9); margin: -20px 0; }
+  .orbit-ring { animation-duration: 72s; }
+  .showcase-stage { transform: scale(0.88); margin: -16px 0; }
   .legal { padding: 1.35rem; }
   .legal-info div { grid-template-columns: 1fr; }
   .legal-info dt { padding-bottom: 0.25rem; }
@@ -1467,3 +1481,100 @@ footer {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Hero — dengeli satır kırılımı */
+.vision-hero h1,
+.hero-copy h2,
+.page-hero h1 {
+  text-wrap: balance;
+}
+
+.vision-hero .lead,
+.hero-copy .lead,
+.page-hero .lead {
+  text-wrap: balance;
+}
+
+/* Vitrin mockup'ları — mobil uygulama paleti (theme.ts, 2026-07-18) */
+.showcase {
+  --app-bg: #F1E7D9;
+  --app-surface: #FBF6EF;
+  --app-accent: #B4623C;
+  --app-on-accent: #FCF4EA;
+  --app-text: #2C241C;
+  --app-text-soft: #9C8B72;
+  --app-border: #E0D4C4;
+  --app-tint: #6E7856;
+  --app-success: #56603F;
+  --app-badge-bg: #E5E8D4;
+  --app-points-bg: #F1DECF;
+  background:
+    radial-gradient(circle at 15% 15%, rgba(110, 120, 86, 0.12), transparent 36%),
+    radial-gradient(circle at 85% 85%, rgba(180, 98, 60, 0.1), transparent 36%),
+    var(--app-bg);
+  border-color: var(--app-border);
+}
+
+.showcase::before { background: rgba(229, 232, 212, 0.85); }
+.showcase::after { background: rgba(235, 217, 198, 0.85); }
+
+.showcase .phone {
+  background: var(--app-surface);
+  border-color: var(--app-border);
+}
+
+.showcase .phone-notch { background: var(--app-bg); }
+
+.showcase .phone-screen {
+  background: linear-gradient(180deg, var(--app-bg) 0%, var(--app-surface) 100%);
+}
+
+.showcase .screen-header {
+  color: var(--app-text);
+  border-bottom-color: var(--app-border);
+}
+
+.showcase .chat-bubble.ai {
+  background: var(--app-surface);
+  color: var(--app-text);
+  border: 1px solid var(--app-border);
+}
+
+.showcase .chat-bubble.user {
+  background: var(--app-accent);
+  color: var(--app-on-accent);
+}
+
+.showcase .plan-day {
+  background: var(--app-surface);
+  border-color: var(--app-border);
+}
+
+.showcase .plan-day-label { color: var(--app-tint); }
+.showcase .plan-day-title { color: var(--app-text); }
+.showcase .plan-task { color: var(--app-text-soft); }
+.showcase .task-dot { background: var(--app-accent); }
+.showcase .task-dot.done { background: var(--app-success); }
+
+.showcase .streak-bar {
+  background: var(--app-badge-bg);
+  border-color: var(--app-border);
+  color: var(--app-text-soft);
+}
+
+.showcase .streak-num { color: var(--app-accent); }
+
+.showcase .rank-pill {
+  background: var(--app-surface);
+  border-color: var(--app-border);
+  color: var(--app-text-soft);
+}
+
+.showcase .rank-pill.active {
+  border-color: var(--app-accent);
+  color: var(--app-accent);
+  background: var(--app-points-bg);
+}
+
+.showcase-caption span { color: var(--app-text); }
+.showcase-caption { color: var(--app-text-soft); }

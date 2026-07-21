@@ -5,7 +5,7 @@
 create table if not exists public.chat_threads (
   id uuid primary key default gen_random_uuid(),
   user_id text not null references public.users(id) on delete cascade,
-  plan_id uuid references public.plans(id) on delete set null,
+  plan_id text references public.plans(id) on delete set null,
   title text,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
