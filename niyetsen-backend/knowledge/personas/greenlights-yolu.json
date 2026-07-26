@@ -1,0 +1,49 @@
+{
+  "slug": "greenlights-yolu",
+  "path_name": "Greenlights Yolu",
+  "tagline": "engeli fırsata çevirmek",
+  "category": "sanat",
+  "inspired_by": "Matthew McConaughey",
+  "source_note": "Bu yol Matthew McConaughey'nin 'Greenlights' (2020) kitabında anlattığı kamuya açık yaklaşımdan ilham alır; kendisiyle bağlantılı değildir.",
+  "tags": ["direnç", "engel", "günlük tutma", "kabul", "yeşil ışık"],
+  "dossier": {
+    "why_important": "Hayat kırmızı ve sarı ışıklarla doludur; çoğu insan onları felaket sayıp durur. Bu yolun önerdiği bakış, engelin kendisini bir yön bilgisi olarak okumaktır: bugün seni durduran şey, geriye dönüp baktığında rotanı düzelten şey olabilir. Niyetsen kullanıcısı için değeri şudur — zincir kırıldığında kendini suçlamak yerine 'bu kırmızı ışık bana ne öğretti?' sorusunu sorar ve devam eder.",
+    "core_beliefs": [
+      "Her kırmızı ışık zamanla yeşile döner; mesele o dönüşe hazır konumlanmaktır.",
+      "Zorluk ceza değil, yön bilgisidir.",
+      "Kendine dürüst olmak, kendini affetmenin ön koşuludur.",
+      "Az ama sürekli yapılan şey, çok ama düzensiz yapılandan güçlüdür."
+    ],
+    "mindset": "Kabul ve eylem birlikte yürür: olanı olduğu gibi görmek pasiflik değil, doğru hamlenin ön koşuludur. Şikâyet yerine kayıt tutmak; duyguyu bastırmak yerine yazıya dökmek; başarısızlığı kimlik değil veri saymak. Bu zihin yapısı, uzun soluklu hedeflerde motivasyon dalgası geçtikten sonra devam etmeyi mümkün kılar.",
+    "habits": [
+      "Günlük tutmak: yaşananları ve çıkarılan dersi kısa notlarla kayıt altına almak.",
+      "Zor günü sonradan yeniden okumak için işaretlemek.",
+      "Doğada uzun yürüyüş sırasında sesli düşünmek.",
+      "Hayır demeyi öğrenmek: enerji tüketen bir işi bilinçli bırakmak.",
+      "Küçük riskleri bilerek almak (reddedilmeye alışma pratiği)."
+    ],
+    "daily_routine": "Sabah kısa bir yazma seansıyla gün için niyet belirlemek, gün içinde fiziksel hareketi ihmal etmemek, akşam ise günü tek paragrafla değerlendirmek. Rutinin amacı katı bir program değil, günün başında ve sonunda kendine dönme alışkanlığıdır.",
+    "sports_or_physical_practice": "Düzenli açık hava hareketi ve koşu/yürüyüş temelli dayanıklılık çalışması; performans için değil zihinsel berraklık için yapılan fiziksel pratik.",
+    "reading_profile": "Anlam arayışına ve karakter gelişimine odaklı okuma; hayat hikâyeleri, felsefe ve otobiyografi ağırlıklı. Okurken not alma ve altını çizme alışkanlığı.",
+    "books_read_or_recommended": [
+      "Greenlights — Matthew McConaughey (kendi anlatısı)",
+      "Kendi günlükleri: kişisel not defterleri yıllarca biriktirilmiştir"
+    ],
+    "decision_style": "Uzun vadeli değerlere göre eleme: kısa vadede cazip ama kimliğine uymayan seçenekleri reddetme; kararın maliyetini önceden kabul edip sonrasında geriye bakmama.",
+    "failure_and_recovery": "Başarısızlığı bir 'kırmızı ışık' olarak adlandırıp yazıya dökmek; ondan çıkan tek dersi bir sonraki hamleye taşımak. Toparlanma süresi kısa tutulur çünkü olay kimlikleştirilmez.",
+    "public_quotes": [
+      "Yeşil ışıklar, kırmızı ve sarı ışıkları nasıl okuduğuna bağlıdır. (Greenlights, 2020 — mealen)"
+    ],
+    "lessons_for_users": [
+      "Bugünün engelini tek cümleyle yaz ve altına 'bu bana ne öğretti?' notunu ekle (5 dk).",
+      "Bu hafta seni tüketen bir işe 'hayır' de ve yerine 10 dakikalık bir şey koy.",
+      "Küçük bir risk al: reddedilme ihtimali olan tek bir mesaj/istek gönder.",
+      "Ay sonunda döndürdüğün üç engeli listele — 'yeşil ışık arşivi'.",
+      "Zincirin kırıldığı gün kendini suçlama; o günü işaretle ve ertesi gün en küçük halkayı yap."
+    ],
+    "sources": [
+      "https://greenlights.com/",
+      "https://www.penguinrandomhouse.com/books/575467/greenlights-by-matthew-mcconaughey/"
+    ]
+  }
+}

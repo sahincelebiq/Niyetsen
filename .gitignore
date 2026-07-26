@@ -20,3 +20,6 @@ __pycache__/
 .venv/
 venv/
 .pytest_cache/
+
+# Codex/ajan yerel durumu
+.codex/

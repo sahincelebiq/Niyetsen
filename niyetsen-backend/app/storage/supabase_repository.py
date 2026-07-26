@@ -1032,6 +1032,59 @@ class SupabaseRepository(Repository):
             created_at=row.get("created_at") or datetime.now(timezone.utc),
         )
 
+    # ------------------------------------------------------------------
+    # İdol Modu persona deposu (Dalga 4.3) — yeni idol = deploy YOK
+    # ------------------------------------------------------------------
+    def list_idol_personas(self) -> list[dict]:
+        rows = (
+            self._db.table("idol_personas")
+            .select("slug,path_name,tagline,category,inspired_by,source_note,dossier,tags")
+            .eq("is_active", True).order("path_name").execute().data
+        )
+        personas: list[dict] = []
+        for row in rows:
+            dossier = row.get("dossier")
+            if isinstance(dossier, str):
+                try:
+                    dossier = json.loads(dossier)
+                except (TypeError, ValueError):
+                    dossier = {}
+            personas.append({**row, "dossier": dossier or {}})
+        return personas
+
+    def upsert_idol_persona(self, persona: dict, chunks: list[dict]) -> None:
+        row = {
+            "slug": persona["slug"],
+            "path_name": persona["path_name"],
+            "tagline": persona.get("tagline", ""),
+            "category": persona.get("category", "genel"),
+            "inspired_by": persona.get("inspired_by", ""),
+            "source_note": persona.get("source_note", ""),
+            "dossier": persona.get("dossier", {}),
+            "tags": persona.get("tags", []),
+            "is_active": True,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
+        self._db.table("idol_personas").upsert(row, on_conflict="slug").execute()
+        saved = _maybe_single(
+            self._db.table("idol_personas").select("id").eq("slug", persona["slug"])
+        )
+        if not saved:
+            return
+        persona_id = saved["id"]
+        # Chunk'lar tam yenilenir (dossier güncellenince eski parçalar kalmasın).
+        self._db.table("persona_chunks").delete().eq("persona_id", persona_id).execute()
+        if chunks:
+            self._db.table("persona_chunks").insert([
+                {
+                    "persona_id": persona_id,
+                    "section": chunk["section"],
+                    "chunk_index": chunk["chunk_index"],
+                    "text": chunk["text"],
+                }
+                for chunk in chunks
+            ]).execute()
+
     def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
         rows = (
             self._db.table("fortune_log")

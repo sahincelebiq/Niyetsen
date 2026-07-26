@@ -245,3 +245,12 @@ class Repository(ABC):
     @abstractmethod
     def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
         """Fal geçmişi — en yeniden eskiye."""
+
+    # --- İdol Modu persona deposu (Dalga 4.3) ---
+    def list_idol_personas(self) -> list[dict]:
+        """Aktif persona dosyaları (DB). Varsayılan: boş → dosya kaynağı kullanılır."""
+        return []
+
+    def upsert_idol_persona(self, persona: dict, chunks: list[dict]) -> None:
+        """Persona + RAG parçalarını yazar (ingest scripti kullanır)."""
+        raise NotImplementedError

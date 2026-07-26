@@ -34,6 +34,19 @@ def _philosophy_path_block(collected: CollectedIntent) -> str:
     ]
     if not path_interests:
         return ""
+
+    # Dalga 4.3: önce persona dossier'ı (zengin, alan bazlı bağlam).
+    from app.services import persona_service
+
+    blocks: list[str] = []
+    for path_name in path_interests[:2]:
+        persona = persona_service.get_persona(path_name) or persona_service.match_persona(path_name)
+        if persona is not None:
+            blocks.append(persona_service.context_for(persona))
+    if blocks:
+        return "\n\n".join(blocks)
+
+    # Yedek: markdown RAG parçaları.
     chunks: list[str] = []
     for path_name in path_interests[:2]:
         chunks.extend(rag_service.retrieve(path_name, sources=["idoller"], k=2))

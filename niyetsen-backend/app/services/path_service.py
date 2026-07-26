@@ -41,6 +41,28 @@ def list_paths() -> list[PhilosophyPath]:
     with _lock:
         if _cache is not None:
             return _cache
+
+    # Dalga 4.3: persona deposu (Supabase/JSON dossier) ÖNCELİKLİ; markdown
+    # yolları da listeye eklenir (aynı ada sahip olan dossier sürümü kazanır).
+    persona_paths: list[PhilosophyPath] = []
+    try:
+        from app.services import persona_service
+
+        persona_paths = [
+            PhilosophyPath(
+                name=p.path_name,
+                tagline=p.tagline,
+                philosophy=str(
+                    p.dossier.get("mindset") or p.dossier.get("why_important") or ""
+                )[:600],
+                source_note=p.source_note,
+            )
+            for p in persona_service.list_personas()
+        ]
+    except Exception as exc:  # noqa: BLE001 — markdown yedeğe düş
+        log.info("Persona deposu okunamadı, idoller.md kullanılacak: %s", exc)
+
+    with _lock:
         paths: list[PhilosophyPath] = []
         if _IDOL_FILE.is_file():
             sections = re.split(r"^## ", _IDOL_FILE.read_text(), flags=re.M)[1:]
@@ -58,10 +80,15 @@ def list_paths() -> list[PhilosophyPath]:
                     philosophy=philosophy[:600],
                     source_note=_extract_source_note(philosophy),
                 ))
-        if not paths:
-            log.warning("idoller.md okunamadı veya boş — yol listesi boş dönecek")
-        _cache = paths
-        return paths
+        # Birleştirme: dossier sürümü aynı adlı markdown yolunu EZER.
+        dossier_names = {p.name.casefold() for p in persona_paths}
+        merged = persona_paths + [
+            p for p in paths if p.name.casefold() not in dossier_names
+        ]
+        if not merged:
+            log.warning("Persona/markdown kaynağı boş — yol listesi boş dönecek")
+        _cache = merged
+        return merged
 
 
 def reset_cache() -> None:

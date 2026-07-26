@@ -217,7 +217,33 @@ görüntüleriyle bildirdiği sorunlara karşılık)
 - [x] Testler: test_chat_threads.py (4) + paywall testleri yeni kurallara
       göre güncellendi (sohbet 402 dönmez; /paths döner).
 
-**Sıradaki (Dalga 4.3):**
+## Dalga 4.3 — Persona altyapısı ✅ (2026-07-19, 175 test yeşil)
+- [x] **Supabase persona deposu:** `idol_personas` + `persona_chunks`
+      (migration `20260719120000_idol_personas.sql`, SQL Editor dosyasına da
+      eklendi). Yeni idol eklemek DEPLOY GEREKTİRMEZ.
+- [x] **15 alanlı dossier modeli** (Şahin'in şeması): why_important,
+      core_beliefs, mindset, habits, daily_routine, sports_or_physical_practice,
+      reading_profile, books_read_or_recommended, decision_style,
+      failure_and_recovery, public_quotes, lessons_for_users, sources.
+      Şema + kurallar: `knowledge/personas/_SEMA.md`.
+- [x] `app/services/persona_service.py`: DB öncelikli / JSON yedekli yükleme,
+      kişi adı → yol eşlemesi (`match_persona`), 80-150 kelimelik chunk üretimi,
+      plan/sohbet için etiketli bağlam bloğu. **Disclaimer kodda zorlanır**
+      (source_note'a "bağlantılı değildir" otomatik eklenir).
+- [x] `scripts/ingest_personas.py`: JSON → Supabase besleme + doğrulama
+      (paket adı felsefe adı mı, kişi adı pakette geçiyor mu, disclaimer var mı,
+      zorunlu alanlar ve ≥2 kaynak). `--dry-run` destekli.
+- [x] `/paths` artık dossier + markdown yollarını BİRLEŞTİRİR (aynı ad varsa
+      dossier kazanır); plan motoru dossier bağlamını enjekte eder.
+- [x] İlk dossier: `greenlights-yolu.json` (referans örnek).
+- [x] Yatırımcı README'si: ürünün üç katmanı, İdol Modu hikâyesi, algoritma
+      akışı ve depolama haritası eklendi.
+
+**Sıradaki (Dalga 4.4):**
+- [ ] 10 persona dossier'ı (Cursor promptu hazır — Şahin üretecek).
+- [ ] Mobil yollar ekranında kategori filtresi (girişimci/sporcu/bilim/sanat).
+
+**Eski sıradakiler (Dalga 4.3'ten devir):**
 - [ ] Premium kapısı (free kullanıcıya 1 yol önizlemesi; İdol Modu abonelikte).
 - [ ] Gemini Search grounding (listede olmayan idoller için doğruluk katmanı).
 - [ ] Website: İdol Modu blog yazısı + ana sayfa anlatısı.
