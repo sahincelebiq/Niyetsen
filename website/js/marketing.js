@@ -146,16 +146,22 @@
   function init() {
     if (!hasMarketingIds()) return;
 
-    loadGtag();
-
     var consent = readConsent();
+    // gtag yalnız onaydan SONRA — aksi halde sayfa her ziyarette GTM ile şişer
     if (consent === 'granted') {
+      loadGtag();
       grantConsent();
       return;
     }
     if (consent === 'denied') return;
 
-    renderConsentBar();
+    // Çerez barını idle'da çiz — ilk boyamayı engellemesin
+    var show = function () { renderConsentBar(); };
+    if ("requestIdleCallback" in window) {
+      window.requestIdleCallback(show, { timeout: 2500 });
+    } else {
+      window.setTimeout(show, 1200);
+    }
   }
 
   if (document.readyState === 'loading') {

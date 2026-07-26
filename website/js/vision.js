@@ -2,12 +2,6 @@
   "use strict";
 
   var canvas = document.getElementById("vision-canvas");
-  if (!canvas) return;
-
-  var reducedMotionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
-  var reducedMotion = reducedMotionQuery.matches;
-  var ctx = canvas.getContext("2d");
-  var particles = [];
   var centerWord = document.getElementById("vision-center-word");
   var listEl = document.getElementById("vision-list");
   var listItems = [
@@ -19,139 +13,134 @@
   ];
   var centerWords = ["Vizyon", "Misyon", "Niyetsen"];
   var wordIndex = 0;
-  var listIndex = 0;
-  var dpr = Math.min(window.devicePixelRatio || 1, 1.5);
-  var stageWidth = 0;
-  var stageHeight = 0;
-  var animating = false;
-  var rafId = 0;
-  var heroVisible = true;
-  var pageVisible = !document.hidden;
+  var reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var saveData = !!(navigator.connection && navigator.connection.saveData);
+  var isNarrow = window.matchMedia("(max-width: 900px)").matches;
+  var coarse = window.matchMedia("(pointer: coarse)").matches;
+  // Mobil / tasarruf / düşük güç: canvas YOK — asıl yavaşlık buradaydı
+  var skipCanvas = !canvas || reducedMotion || saveData || isNarrow || coarse;
 
-  function resize() {
-    var rect = canvas.parentElement.getBoundingClientRect();
-    stageWidth = rect.width;
-    stageHeight = rect.height;
-    canvas.width = stageWidth * dpr;
-    canvas.height = stageHeight * dpr;
-    canvas.style.width = stageWidth + "px";
-    canvas.style.height = stageHeight + "px";
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    initParticles(stageWidth, stageHeight);
-  }
-
-  function initParticles(w, h) {
-    particles = [];
-    var density = window.innerWidth < 768 ? 18000 : 12000;
-    var count = Math.min(Math.floor((w * h) / density), window.innerWidth < 768 ? 32 : 52);
-    for (var i = 0; i < count; i++) {
-      particles.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        r: Math.random() * 2 + 0.6,
-        vy: -(Math.random() * 0.28 + 0.06),
-        vx: (Math.random() - 0.5) * 0.12,
-        color: ["155, 140, 245", "245, 221, 208", "212, 232, 220", "196, 184, 255"][Math.floor(Math.random() * 4)],
-        alpha: Math.random() * 0.3 + 0.1
-      });
-    }
-  }
-
-  function shouldAnimate() {
-    return !reducedMotion && heroVisible && pageVisible;
-  }
-
-  function tick() {
-    rafId = 0;
-    if (!shouldAnimate()) return;
-
-    var w = stageWidth;
-    var h = stageHeight;
-    ctx.clearRect(0, 0, w, h);
-    for (var i = 0; i < particles.length; i++) {
-      var p = particles[i];
-      p.x += p.vx;
-      p.y += p.vy;
-      if (p.y < -10) {
-        p.y = h + 10;
-        p.x = Math.random() * w;
-      }
-      if (p.x < -10) p.x = w + 10;
-      if (p.x > w + 10) p.x = -10;
-
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fillStyle = "rgba(" + p.color + ", " + p.alpha + ")";
-      ctx.fill();
-    }
-    rafId = requestAnimationFrame(tick);
-  }
-
-  function startAnimation() {
-    if (animating || !shouldAnimate()) return;
-    animating = true;
-    if (!rafId) rafId = requestAnimationFrame(tick);
-  }
-
-  function stopAnimation() {
-    animating = false;
-    if (rafId) {
-      cancelAnimationFrame(rafId);
-      rafId = 0;
-    }
-  }
-
-  function cycleCenterWord() {
-    if (!centerWord || !shouldAnimate()) return;
-    centerWord.classList.add("fade");
-    setTimeout(function () {
-      wordIndex = (wordIndex + 1) % centerWords.length;
-      centerWord.textContent = centerWords[wordIndex];
-      centerWord.classList.remove("fade");
-    }, 600);
-  }
-
-  function addListItem() {
-    if (!listEl || listIndex >= listItems.length) return;
-    var el = document.createElement("span");
-    el.className = "vision-list-item";
-    el.textContent = listItems[listIndex];
-    el.style.animationDelay = listIndex * 0.15 + "s";
-    listEl.appendChild(el);
-    listIndex++;
-  }
-
-  resize();
-  if (centerWord) centerWord.textContent = centerWords[0];
-
-  window.addEventListener("resize", function () {
-    resize();
-    if (shouldAnimate()) startAnimation();
-  });
-
-  document.addEventListener("visibilitychange", function () {
-    pageVisible = !document.hidden;
-    if (pageVisible && heroVisible) startAnimation();
-    else stopAnimation();
-  });
-
-  if ("IntersectionObserver" in window) {
-    var heroObserver = new IntersectionObserver(function (entries) {
-      heroVisible = entries[0].isIntersecting;
-      if (heroVisible && pageVisible) startAnimation();
-      else stopAnimation();
-    }, { root: null, threshold: 0.05 });
-    heroObserver.observe(canvas.parentElement);
-  }
-
-  if (!reducedMotion) {
-    startAnimation();
-    setInterval(cycleCenterWord, 4200);
-    listItems.forEach(function (_, i) {
-      setTimeout(addListItem, 800 + i * 600);
+  function fillList() {
+    if (!listEl) return;
+    listItems.forEach(function (text, i) {
+      var el = document.createElement("span");
+      el.className = "vision-list-item";
+      el.textContent = text;
+      if (!reducedMotion) el.style.animationDelay = i * 0.12 + "s";
+      listEl.appendChild(el);
     });
+  }
+
+  if (centerWord) centerWord.textContent = centerWords[0];
+  fillList();
+
+  if (!skipCanvas && centerWord && !reducedMotion) {
+    setInterval(function () {
+      centerWord.classList.add("fade");
+      setTimeout(function () {
+        wordIndex = (wordIndex + 1) % centerWords.length;
+        centerWord.textContent = centerWords[wordIndex];
+        centerWord.classList.remove("fade");
+      }, 500);
+    }, 4800);
+  }
+
+  if (skipCanvas) {
+    if (canvas) {
+      canvas.style.display = "none";
+      canvas.setAttribute("aria-hidden", "true");
+    }
   } else {
-    listItems.forEach(addListItem);
+    var ctx = canvas.getContext("2d", { alpha: true, desynchronized: true });
+    var particles = [];
+    var dpr = Math.min(window.devicePixelRatio || 1, 1.25);
+    var w = 0;
+    var h = 0;
+    var rafId = 0;
+    var running = false;
+    var heroVisible = true;
+    var pageVisible = !document.hidden;
+    var last = 0;
+    var frameMs = 1000 / 28;
+
+    function resize() {
+      var rect = canvas.parentElement.getBoundingClientRect();
+      w = rect.width;
+      h = rect.height;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      canvas.style.width = w + "px";
+      canvas.style.height = h + "px";
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      particles = [];
+      var count = Math.min(18, Math.floor((w * h) / 28000));
+      for (var i = 0; i < count; i++) {
+        particles.push({
+          x: Math.random() * w,
+          y: Math.random() * h,
+          r: Math.random() * 1.6 + 0.5,
+          vy: -(Math.random() * 0.2 + 0.05),
+          vx: (Math.random() - 0.5) * 0.08,
+          color: ["155,140,245", "245,221,208", "212,232,220"][i % 3],
+          alpha: Math.random() * 0.22 + 0.08
+        });
+      }
+    }
+
+    function tick(ts) {
+      rafId = 0;
+      if (!running || !heroVisible || !pageVisible) return;
+      if (ts - last < frameMs) {
+        rafId = requestAnimationFrame(tick);
+        return;
+      }
+      last = ts;
+      ctx.clearRect(0, 0, w, h);
+      for (var i = 0; i < particles.length; i++) {
+        var p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        if (p.y < -8) {
+          p.y = h + 8;
+          p.x = Math.random() * w;
+        }
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(" + p.color + "," + p.alpha + ")";
+        ctx.fill();
+      }
+      rafId = requestAnimationFrame(tick);
+    }
+
+    function start() {
+      if (running) return;
+      running = true;
+      if (!rafId) rafId = requestAnimationFrame(tick);
+    }
+
+    function stop() {
+      running = false;
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+    }
+
+    resize();
+    start();
+    window.addEventListener("resize", resize, { passive: true });
+    document.addEventListener("visibilitychange", function () {
+      pageVisible = !document.hidden;
+      if (pageVisible && heroVisible) start();
+      else stop();
+    });
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        heroVisible = entries[0].isIntersecting;
+        if (heroVisible && pageVisible) start();
+        else stop();
+      }, { threshold: 0.08 }).observe(canvas.parentElement);
+    }
   }
 
   var showcase = document.getElementById("app-showcase");
@@ -165,12 +154,12 @@
 
   function showSlide(index) {
     activeSlide = (index + slides.length) % slides.length;
-    slides.forEach(function (slide, slideIndex) {
-      slide.classList.toggle("is-active", slideIndex === activeSlide);
+    slides.forEach(function (slide, i) {
+      slide.classList.toggle("is-active", i === activeSlide);
     });
-    dots.forEach(function (dot, dotIndex) {
-      dot.classList.toggle("is-active", dotIndex === activeSlide);
-      dot.setAttribute("aria-current", dotIndex === activeSlide ? "true" : "false");
+    dots.forEach(function (dot, i) {
+      dot.classList.toggle("is-active", i === activeSlide);
+      dot.setAttribute("aria-current", i === activeSlide ? "true" : "false");
     });
     if (title) title.textContent = slides[activeSlide].getAttribute("data-title");
   }
@@ -181,22 +170,14 @@
     });
   });
 
-  showcase.addEventListener("mouseenter", function () {
-    isPaused = true;
-  });
-  showcase.addEventListener("mouseleave", function () {
-    isPaused = false;
-  });
-  showcase.addEventListener("focusin", function () {
-    isPaused = true;
-  });
-  showcase.addEventListener("focusout", function () {
-    isPaused = false;
-  });
+  showcase.addEventListener("mouseenter", function () { isPaused = true; });
+  showcase.addEventListener("mouseleave", function () { isPaused = false; });
+  showcase.addEventListener("focusin", function () { isPaused = true; });
+  showcase.addEventListener("focusout", function () { isPaused = false; });
 
-  if (!reducedMotion) {
+  if (!reducedMotion && !saveData) {
     setInterval(function () {
-      if (!isPaused && pageVisible) showSlide(activeSlide + 1);
-    }, 4200);
+      if (!isPaused && !document.hidden) showSlide(activeSlide + 1);
+    }, isNarrow ? 5600 : 4500);
   }
 })();

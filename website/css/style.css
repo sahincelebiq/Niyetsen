@@ -55,8 +55,7 @@ a:hover { color: var(--accent); }
 header {
   position: sticky;
   top: 0;
-  backdrop-filter: blur(18px);
-  background: rgba(250, 248, 245, 0.88);
+  background: #faf8f5;
   border-bottom: 1px solid var(--border);
   z-index: 100;
 }
@@ -200,8 +199,7 @@ h3 { font-size: 1.22rem; margin: 0 0 0.5rem; }
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid rgba(155, 140, 245, 0.25);
   box-shadow: var(--shadow-lg);
 }
@@ -232,11 +230,10 @@ h3 { font-size: 1.22rem; margin: 0 0 0.5rem; }
   font-weight: 600;
   color: var(--text-soft);
   padding: 0.35rem 0.85rem;
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.9);
   border-radius: 999px;
   border: 1px solid var(--border);
   white-space: nowrap;
-  backdrop-filter: blur(6px);
 }
 
 .orbit-word:nth-child(1) {
@@ -296,7 +293,6 @@ h3 { font-size: 1.22rem; margin: 0 0 0.5rem; }
   opacity: 0;
   transform: translateY(12px);
   animation: vision-rise 0.8s ease forwards;
-  backdrop-filter: blur(8px);
 }
 
 @keyframes vision-rise {
@@ -1457,9 +1453,10 @@ footer {
   .vision-orbit { width: min(330px, 94vw); height: min(330px, 94vw); }
   .orbit-ring { inset: 8px; }
   .orbit-word { font-size: 0.85rem; padding: 0.3rem 0.65rem; }
-  .vision-hero { min-height: 780px; }
+  .vision-hero { min-height: auto; padding: 4rem 0 2.5rem; }
   .showcase { min-height: 500px; border-radius: 24px; }
-  .orbit-ring { animation-duration: 72s; }
+  .orbit-ring { animation: none; }
+  #vision-canvas { display: none !important; }
   .showcase-stage { transform: scale(0.88); margin: -16px 0; }
   .legal { padding: 1.35rem; }
   .legal-info div { grid-template-columns: 1fr; }
