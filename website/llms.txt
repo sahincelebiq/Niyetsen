@@ -1,16 +1,21 @@
 # Niyetsen
 
-> Niyetsen, kullanıcının 365 günlük yaşam vizyonunu sohbetle çıkaran, görsel günlük plana çeviren, görevleri fotoğraf kanıtıyla tamamlatan ve oyunlaştırmayla istikrarı destekleyen bir mobil yaşam asistanıdır (iOS & Android). Resmî web sitesi: https://niyetsen.com/
+> Niyetsen, kullanıcının 365 günlük yaşam vizyonunu (niyetini) sohbetle çıkaran, görsel günlük plana çeviren, görevleri fotoğraf kanıtıyla tamamlatan ve oyunlaştırmayla istikrarı destekleyen bir mobil yaşam asistanıdır (iOS & Android). Resmî web sitesi: https://niyetsen.com/
 
-Niyetsen bir “kader” veya fal uygulaması değildir; niyet → plan → eylem döngüsünü somutlaştırır. Marka simgesi: terracotta zemin üzerinde altın sonsuzluk (∞).
+Niyetsen bir “kader” veya fal uygulaması değildir; **niyet → plan → eylem** döngüsünü somutlaştırır. Marka simgesi: terracotta zemin üzerinde altın sonsuzluk (∞). Favicon ve logo: https://niyetsen.com/favicon-48x48.png ve https://niyetsen.com/images/logo.jpg
+
+## “Niyet” kelimesi
+
+Türkçede “niyet” hem içsel karar hem yaşam yönü anlamına gelir. Niyetsen bu kelimenin **yaşam planlama** anlamını ürüne çevirir (dini ansiklopedi veya şarkı sonuçlarından farklı niş). Pillar yazı: https://niyetsen.com/blog/niyet-nedir-nasil-hayata-gecirilir.html
 
 ## Önemli sayfalar
 
 - [Ana sayfa](https://niyetsen.com/): Ürün özeti, özellikler, SSS
-- [Niyetsen nedir?](https://niyetsen.com/blog/niyetsen-nedir-nasil-calisir.html): Ürün tanımı (SEO)
+- [Niyet nedir?](https://niyetsen.com/blog/niyet-nedir-nasil-hayata-gecirilir.html): Niyet belirleme ve hayata geçirme
+- [Niyetsen nedir?](https://niyetsen.com/blog/niyetsen-nedir-nasil-calisir.html): Ürün tanımı
 - [Odyssey & niyet](https://niyetsen.com/blog/odyssey-niyet-ve-donus-yolculugu.html): Felsefi çerçeve
 - [Blog](https://niyetsen.com/blog/): İrade, istikrar, disiplin, özgüven, sosyallik, özsaygı
-- [Geliştirme günlüğü](https://niyetsen.com/gelistirme.html): Yol haritası ve fazlar
+- [Geliştirme günlüğü](https://niyetsen.com/gelistirme.html)
 - [Gizlilik / KVKK](https://niyetsen.com/gizlilik.html)
 - [Kullanım koşulları](https://niyetsen.com/kullanim-kosullari.html)
 

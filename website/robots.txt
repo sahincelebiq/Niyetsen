@@ -7,4 +7,8 @@ Allow: /
 User-agent: Googlebot-Image
 Allow: /
 
+# Marka varlıkları — Google favicon / Knowledge Graph
+# https://niyetsen.com/favicon-48x48.png
+# https://niyetsen.com/images/logo.jpg
+
 Sitemap: https://niyetsen.com/sitemap.xml
