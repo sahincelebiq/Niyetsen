@@ -1,0 +1,20 @@
+# Niyetsen
+
+> Niyetsen, kullanıcının 365 günlük yaşam vizyonunu sohbetle çıkaran, görsel günlük plana çeviren, görevleri fotoğraf kanıtıyla tamamlatan ve oyunlaştırmayla istikrarı destekleyen bir mobil yaşam asistanıdır (iOS & Android). Resmî web sitesi: https://niyetsen.com/
+
+Niyetsen bir “kader” veya fal uygulaması değildir; niyet → plan → eylem döngüsünü somutlaştırır. Marka simgesi: terracotta zemin üzerinde altın sonsuzluk (∞).
+
+## Önemli sayfalar
+
+- [Ana sayfa](https://niyetsen.com/): Ürün özeti, özellikler, SSS
+- [Niyetsen nedir?](https://niyetsen.com/blog/niyetsen-nedir-nasil-calisir.html): Ürün tanımı (SEO)
+- [Odyssey & niyet](https://niyetsen.com/blog/odyssey-niyet-ve-donus-yolculugu.html): Felsefi çerçeve
+- [Blog](https://niyetsen.com/blog/): İrade, istikrar, disiplin, özgüven, sosyallik, özsaygı
+- [Geliştirme günlüğü](https://niyetsen.com/gelistirme.html): Yol haritası ve fazlar
+- [Gizlilik / KVKK](https://niyetsen.com/gizlilik.html)
+- [Kullanım koşulları](https://niyetsen.com/kullanim-kosullari.html)
+
+## İletişim
+
+- E-posta: ai@niyetsen.com
+- Instagram: https://www.instagram.com/niyetsen.ai/

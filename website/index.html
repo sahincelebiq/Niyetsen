@@ -9,7 +9,7 @@
   <meta name="author" content="Niyetsen">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
   <meta name="p:domain_verify" content="1d27322d358bf294f1e1da3a23a8acdb">
-  <meta name="theme-color" content="#9b8cf5">
+  <meta name="theme-color" content="#d89b7c">
   <link rel="canonical" href="https://niyetsen.com/">
 
   <link rel="icon" href="/favicon.ico" sizes="48x48">
@@ -17,19 +17,24 @@
   <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
   <link rel="manifest" href="/site.webmanifest">
   <link rel="preload" href="/fonts/source-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
-  <link rel="stylesheet" href="/css/fonts.css?v=20260726-3">
-  <link rel="stylesheet" href="/css/style.css?v=20260726-3">
+  <link rel="stylesheet" href="/css/fonts.css?v=20260726-4">
+  <link rel="stylesheet" href="/css/style.css?v=20260726-4">
 <meta property="og:title" content="Niyetsen — Niyetini hayata geçir">
   <meta property="og:description" content="Hayalini anlat, 365 günlük planın hazır olsun. Fotoğraf kanıtıyla yap, zincirini koru, potansiyelini ortaya çıkar.">
   <meta property="og:url" content="https://niyetsen.com/">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="tr_TR">
+  <meta property="og:site_name" content="Niyetsen">
   <meta property="og:image" content="https://niyetsen.com/images/og/default.jpg">
-  <meta property="og:image:alt" content="Niyetsen — Niyetini hayata geçir">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Niyetsen — terracotta zemin üzerinde altın sonsuzluk logosu">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Niyetsen">
   <meta name="twitter:description" content="Vizyonunu söyle. Planın hazır olsun. Her gün bir adım, her adım sayılsın.">
   <meta name="twitter:image" content="https://niyetsen.com/images/og/default.jpg">
+  <link rel="me" href="https://www.instagram.com/niyetsen.ai/">
+  <link rel="alternate" type="text/plain" title="LLM bilgi dosyası" href="https://niyetsen.com/llms.txt">
 <script type="application/ld+json">
   {
     "@context": "https://schema.org",
@@ -38,24 +43,57 @@
         "@type": "Organization",
         "@id": "https://niyetsen.com/#organization",
         "name": "Niyetsen",
-        "alternateName": ["niyetsen.com", "Niyetsen App"],
+        "legalName": "Niyetsen",
+        "alternateName": ["niyetsen.com", "Niyetsen App", "Niyetsen AI"],
         "url": "https://niyetsen.com/",
         "logo": {
           "@type": "ImageObject",
           "@id": "https://niyetsen.com/#logo",
-          "url": "https://niyetsen.com/images/logo.png",
-          "contentUrl": "https://niyetsen.com/images/logo.png",
+          "url": "https://niyetsen.com/images/logo.jpg",
+          "contentUrl": "https://niyetsen.com/images/logo.jpg",
           "width": 512,
           "height": 512,
-          "caption": "Niyetsen logosu"
+          "caption": "Niyetsen logosu — terracotta üzerinde altın sonsuzluk"
         },
-        "image": "https://niyetsen.com/images/logo.png",
+        "image": [
+          "https://niyetsen.com/images/logo.jpg",
+          "https://niyetsen.com/images/og/default.jpg"
+        ],
         "email": "ai@niyetsen.com",
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "email": "ai@niyetsen.com",
+          "contactType": "customer support",
+          "availableLanguage": ["Turkish", "tr"]
+        },
         "sameAs": ["https://www.instagram.com/niyetsen.ai/"],
         "description": "Niyetsen, 365 günlük yaşam niyetini sohbetle günlük plana çeviren oyunlaştırılmış yaşam asistanıdır. Resmî web sitesi niyetsen.com.",
+        "slogan": "Niyetini hayata geçir",
         "foundingDate": "2026",
-        "areaServed": "TR",
-        "knowsAbout": ["yaşam planlama", "alışkanlık", "oyunlaştırma", "yapay zeka"]
+        "areaServed": {"@type": "Country", "name": "Türkiye"},
+        "brand": {"@id": "https://niyetsen.com/#brand"},
+        "knowsAbout": [
+          "yaşam planlama",
+          "alışkanlık oluşturma",
+          "oyunlaştırma",
+          "yapay zeka asistanı",
+          "fotoğraf kanıtı",
+          "istikrar ve zincir",
+          "Odyssey nostos",
+          "irade",
+          "disiplin",
+          "özgüven",
+          "sosyallik",
+          "özsaygı"
+        ]
+      },
+      {
+        "@type": "Brand",
+        "@id": "https://niyetsen.com/#brand",
+        "name": "Niyetsen",
+        "url": "https://niyetsen.com/",
+        "logo": "https://niyetsen.com/images/logo.jpg",
+        "slogan": "Niyetini hayata geçir"
       },
       {
         "@type": "WebSite",
@@ -65,15 +103,31 @@
         "alternateName": "niyetsen.com",
         "description": "Niyetsen resmî web sitesi — niyetini sohbetten 365 günlük plana dönüştüren yaşam asistanı.",
         "inLanguage": "tr",
-        "publisher": { "@id": "https://niyetsen.com/#organization" }
+        "publisher": { "@id": "https://niyetsen.com/#organization" },
+        "about": { "@id": "https://niyetsen.com/#organization" },
+        "mainEntity": { "@id": "https://niyetsen.com/#app" },
+        "hasPart": [
+          {"@type": "WebPage", "name": "Blog", "url": "https://niyetsen.com/blog/"},
+          {"@type": "WebPage", "name": "Geliştirme", "url": "https://niyetsen.com/gelistirme.html"},
+          {"@type": "WebPage", "name": "Gizlilik", "url": "https://niyetsen.com/gizlilik.html"}
+        ]
       },
       {
         "@type": "SoftwareApplication",
         "@id": "https://niyetsen.com/#app",
         "name": "Niyetsen",
         "applicationCategory": "LifestyleApplication",
+        "applicationSubCategory": "Personal productivity and habit tracking",
         "operatingSystem": "iOS, Android",
         "url": "https://niyetsen.com/",
+        "downloadUrl": "https://niyetsen.com/",
+        "screenshot": "https://niyetsen.com/images/og/default.jpg",
+        "featureList": [
+          "Sohbetle 365 günlük plan",
+          "Fotoğraf kanıtıyla görev doğrulama",
+          "Zincir ve puan oyunlaştırması",
+          "Altı gelişim kategorisi"
+        ],
         "description": "365 günlük vizyonunu sohbetle günlük plana çeviren, görevleri fotoğraf kanıtıyla tamamlatan ve oyunlaştırmayla istikrarını koruyan yaşam asistanı.",
         "offers": {
           "@type": "Offer",
@@ -81,7 +135,9 @@
           "priceCurrency": "TRY",
           "description": "Ücretsiz onboarding, ilk plan ve 7 gün görev denemesi"
         },
-        "author": { "@id": "https://niyetsen.com/#organization" }
+        "author": { "@id": "https://niyetsen.com/#organization" },
+        "brand": { "@id": "https://niyetsen.com/#brand" },
+        "publisher": { "@id": "https://niyetsen.com/#organization" }
       },
       {
         "@type": "FAQPage",
@@ -124,13 +180,13 @@
     ]
   }
   </script>
-  <script src="/js/site-config.js?v=20260726-3" defer></script>
-  <script src="/js/marketing.js?v=20260726-3" defer></script>
+  <script src="/js/site-config.js?v=20260726-4" defer></script>
+  <script src="/js/marketing.js?v=20260726-4" defer></script>
 </head>
 <body>
   <header>
     <nav class="nav" aria-label="Ana menü">
-      <a class="logo" href="/">Niyetsen</a>
+      <a class="logo" href="/" aria-label="Niyetsen ana sayfa"><img class="logo-mark" src="/images/logo-mark.webp" width="36" height="36" alt="" decoding="async">Niyetsen</a>
       <div class="nav-links">
         <a href="#felsefe">Felsefe</a>
         <a href="#plan">Plan</a>
@@ -503,12 +559,12 @@
     </div>
   </footer>
 
-  <script src="/js/scroll-target.js?v=20260726-3" defer></script>
-  <script src="/js/early-access.js?v=20260726-3" defer></script>
+  <script src="/js/scroll-target.js?v=20260726-4" defer></script>
+  <script src="/js/early-access.js?v=20260726-4" defer></script>
   <script>
   window.addEventListener("load", function () {
     var s = document.createElement("script");
-    s.src = "/js/vision.js?v=20260726-3";
+    s.src = "/js/vision.js?v=20260726-4";
     s.defer = true;
     document.body.appendChild(s);
   });
