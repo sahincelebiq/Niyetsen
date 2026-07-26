@@ -2,16 +2,16 @@
   "name": "Niyetsen",
   "short_name": "Niyetsen",
   "description": "Niyetini sohbetten günlük plana dönüştüren yaşam asistanı. Resmî site: niyetsen.com",
-  "start_url": "/",
+  "start_url": "https://niyetsen.com/",
   "display": "standalone",
   "background_color": "#faf1eb",
   "theme_color": "#d89b7c",
   "lang": "tr",
   "icons": [
-    {"src": "/favicon-48x48.png", "sizes": "48x48", "type": "image/png"},
-    {"src": "/favicon-96x96.png", "sizes": "96x96", "type": "image/png"},
-    {"src": "/favicon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
-    {"src": "/apple-touch-icon.png", "sizes": "180x180", "type": "image/png"},
-    {"src": "/favicon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    {"src": "https://niyetsen.com/favicon-48x48.png", "sizes": "48x48", "type": "image/png"},
+    {"src": "https://niyetsen.com/favicon-96x96.png", "sizes": "96x96", "type": "image/png"},
+    {"src": "https://niyetsen.com/favicon-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any"},
+    {"src": "https://niyetsen.com/apple-touch-icon.png", "sizes": "180x180", "type": "image/png"},
+    {"src": "https://niyetsen.com/favicon-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
   ]
 }

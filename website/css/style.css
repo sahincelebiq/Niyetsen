@@ -97,11 +97,13 @@ header {
 .logo-mark {
   width: 40px;
   height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   border-radius: 10px;
   display: block;
   flex-shrink: 0;
   object-fit: cover;
-  background: #d89b7c;
+  background: #d89b7c url("/images/logo-mark.png") center / cover no-repeat;
   box-shadow: 0 2px 10px rgba(180, 98, 60, 0.22);
 }
 
