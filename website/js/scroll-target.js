@@ -22,31 +22,22 @@
   }
 
   document.addEventListener('click', function (e) {
-    var link = e.target.closest('a[href], a[data-scroll-to]');
-    if (!link) return;
+    // Yalnız gerçek link düğümünde yakala; nav'ı bozma
+    var link = e.target.closest('a');
+    if (!link || !link.getAttribute) return;
 
     var scrollTo = link.getAttribute('data-scroll-to');
     var href = link.getAttribute('href') || '';
 
-    if (scrollTo === TARGET) {
-      e.preventDefault();
-      if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
-        try { sessionStorage.setItem(STORAGE_KEY, TARGET); } catch (err) {}
-        window.location.href = '/';
-        return;
-      }
-      scrollToTarget();
-      cleanUrl();
-      return;
-    }
-
-    if (!isErkenErisimLink(href)) return;
+    // Erken erişim dışındaki tüm linkler (Blog, Geliştirme, #felsefe…) doğal aksiyon
+    var isEarly = scrollTo === TARGET || isErkenErisimLink(href);
+    if (!isEarly) return;
 
     e.preventDefault();
 
-    if (href === '/#' + TARGET && window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
+    if (window.location.pathname !== '/' && window.location.pathname !== '/index.html') {
       try { sessionStorage.setItem(STORAGE_KEY, TARGET); } catch (err) {}
-      window.location.href = '/';
+      window.location.href = '/#' + TARGET;
       return;
     }
 
