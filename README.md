@@ -36,7 +36,7 @@ Android.
 │   Mobile (Expo)     │  ───────────────────────────────▶   │  Backend (FastAPI)   │
 │  React Native + TS  │                                      │   Python 3.11+       │
 │  expo-router        │  ◀───────────────────────────────   │   "çekirdek beyin"   │
-└─────────────────────┘         JSON API (42 uç)             └──────────┬───────────┘
+└─────────────────────┘         JSON API (38 uç)             └──────────┬───────────┘
          │                                                              │
          │ RevenueCat (IAP)                                             │
          ▼                                              ┌───────────────┼───────────────┐
@@ -169,7 +169,8 @@ kendi hayatının diline çevirmek.
 sunulur; kişi adı yalnız "…kamuya açık yaklaşımından ilham alır; kendisiyle
 bağlantılı değildir" kaynak notunda geçer (kişilik hakları + App Store 5.2.1).
 
-**Persona veri akışı:** `knowledge/personas/<slug>.json` (15 alanlı dossier:
+**Persona veri akışı:** `knowledge/personas/<slug>.json` (15 alanlı persona
+modeli — yol adı ve kategori üst düzeyde, 13 alan dossier içinde:
 core_beliefs, mindset, habits, daily_routine, reading_profile,
 books_read_or_recommended, decision_style, failure_and_recovery,
 public_quotes, lessons_for_users, sources …) → `python -m scripts.ingest_personas`
@@ -218,7 +219,7 @@ mazeret sabit −25 · puan tabanı 0 · 6 kategori (İrade, İstikrar, Disiplin
 
 Aktif geliştirme — mağaza yayını hazırlığı (bkz. [`STORE_READINESS.md`](STORE_READINESS.md)).
 Faz 7 (v2) kod tarafı tamamlandı: fal modülü, RAG, sohbet oturumları, İdol Modu
-ve store güvenlik altyapısı devrede; **168 otomatik backend testi yeşil**.
+ve store güvenlik altyapısı devrede; **175 otomatik backend testi yeşil**.
 Güncel faz ve kilitli kararlar için tek kaynak: [`NIYETSEN_MASTER_PLAN.md`](NIYETSEN_MASTER_PLAN.md).
 
 ---

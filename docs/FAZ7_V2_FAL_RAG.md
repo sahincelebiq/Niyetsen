@@ -221,7 +221,8 @@ görüntüleriyle bildirdiği sorunlara karşılık)
 - [x] **Supabase persona deposu:** `idol_personas` + `persona_chunks`
       (migration `20260719120000_idol_personas.sql`, SQL Editor dosyasına da
       eklendi). Yeni idol eklemek DEPLOY GEREKTİRMEZ.
-- [x] **15 alanlı dossier modeli** (Şahin'in şeması): why_important,
+- [x] **15 alanlı persona modeli** (Şahin'in şeması; yol adı + kategori üst
+      düzeyde, 13 alan `dossier` içinde): why_important,
       core_beliefs, mindset, habits, daily_routine, sports_or_physical_practice,
       reading_profile, books_read_or_recommended, decision_style,
       failure_and_recovery, public_quotes, lessons_for_users, sources.

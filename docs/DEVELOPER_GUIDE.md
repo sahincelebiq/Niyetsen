@@ -49,7 +49,7 @@ cp .env.example .env               # then edit .env — see §2.1
 
 Run tests (no API key required — they use in-memory storage):
 ```bash
-pytest -q                          # ~166 tests should pass
+pytest -q                          # 175 tests should pass
 ```
 
 Run the API:
