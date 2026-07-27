@@ -23,7 +23,8 @@ dizin dizin rehber.*
 | `mobile/` | Expo app (separate git repo). |
 | `website/` | Marketing site + blog (static HTML/CSS). / Tanıtım sitesi + blog. |
 | `docs/` | All documentation. / Tüm dokümanlar. |
-| `logo/`, `_design_ref/`, `_tmp_assets/` | Brand assets & design references. / Marka ve tasarım varlıkları. |
+| `logo/`, `_design_ref/` | Brand assets & design references. / Marka ve tasarım varlıkları. |
+| `_tmp_assets/` | **Gitignored** — local-only temp files (e.g. Expo Go QR PNG). / Yerel geçici dosyalar. |
 | `_arsiv/` | Old zip backups (gitignored). / Eski zip yedekleri. |
 
 ---
@@ -50,13 +51,13 @@ dizin dizin rehber.*
 |------|---------|
 | `app/main.py` | Entry point; prod safety-locks; security middleware. |
 | `app/config.py` | All settings from env + **locked game constants**. |
-| `app/api/routes.py` | ~42 HTTP endpoints; JWT auth; rate limits. |
+| `app/api/routes.py` | 38 HTTP endpoints; JWT auth; rate limits. |
 | `app/core/` | Prompts, prompt builder, Gemini client, tools allow-list, philosophy, rate limit, dev accounts, observability. |
 | `app/services/` | Business logic — one file per concern (intent, plan, proof, scoring, project, fortune, rag, subscription, consent, notification, push…). |
 | `app/models/schemas.py` | Pydantic API contracts. |
 | `app/storage/` | Repository interface + InMemory + Supabase implementations. |
 | `knowledge/` | RAG knowledge base (`.md`): atomik_aliskanliklar, burclar, felsefe, idoller, motivasyon, senaryolar, tarot. **Lives here so it deploys to Railway.** |
-| `tests/` | ~166 test functions (pytest). `test_scoring`-style files encode the game-rule contract. |
+| `tests/` | 175 test functions (pytest). `test_scoring`-style files encode the game-rule contract. |
 | `scripts/` | Ops scripts: Railway cron pause/resume/redeploy, env sync, RevenueCat/KAPI setup & verification, Supabase smoke test. |
 | `supabase/migrations/` | 17 timestamped SQL migrations + `RUN_IN_SUPABASE_SQL_EDITOR.sql`. |
 | `Dockerfile`, `railway*.toml` | Deploy config (API + cron services). |

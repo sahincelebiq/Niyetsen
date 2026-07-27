@@ -26,6 +26,8 @@ Android.
 | **Güvenlik** / Security overview & audit | [`docs/SECURITY.md`](docs/SECURITY.md) |
 | **Ürün yol haritası** / Product roadmap (single source of truth) | [`NIYETSEN_MASTER_PLAN.md`](NIYETSEN_MASTER_PLAN.md) |
 | **Tüm doküman dizini** / Full docs index | [`docs/README.md`](docs/README.md) |
+| **Demo günü (28 Temmuz)** / Investor demo runbook | [`docs/DEMO_GUNU_28TEMMUZ.md`](docs/DEMO_GUNU_28TEMMUZ.md) |
+| **Mobil depo (GitHub)** / Mobile repo | [github.com/sahincelebiq/Niyetsen-mobile](https://github.com/sahincelebiq/Niyetsen-mobile) |
 
 ---
 

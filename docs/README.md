@@ -7,6 +7,7 @@ Start with the root [`../README.md`](../README.md), then dive in below. /
 
 | Doc | What it is / Ne anlatır |
 |-----|-------------------------|
+| [`DEMO_GUNU_28TEMMUZ.md`](DEMO_GUNU_28TEMMUZ.md) | **Investor demo runbook** — flow, health checks, fallback plan (28 Jul 2026). |
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System, backend & mobile architecture, request lifecycle, prod safety-locks. |
 | [`REPO_MAP.md`](REPO_MAP.md) | "What is where" — every directory explained + endpoint groups. / "Neyin nerede olduğu." |
 | [`SECURITY.md`](SECURITY.md) | Security posture, point-in-time audit, hardening recommendations. |
@@ -35,7 +36,7 @@ Start with the root [`../README.md`](../README.md), then dive in below. /
 | Doc | Note |
 |-----|------|
 | [`../niyetsen-backend/RAILWAY_DEPLOY.md`](../niyetsen-backend/RAILWAY_DEPLOY.md) | Railway two-service deployment. |
-| [`../niyetsen-backend/README_BACKEND.md`](../niyetsen-backend/README_BACKEND.md) | (mirror of root backend readme) |
+| [`../niyetsen-backend/README_BACKEND.md`](../niyetsen-backend/README_BACKEND.md) | Backend readme copy inside `niyetsen-backend/` (may differ slightly from root). |
 
 ---
 
