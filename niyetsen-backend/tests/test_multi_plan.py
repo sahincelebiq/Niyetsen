@@ -96,6 +96,45 @@ def test_premium_user_can_start_second_project():
     assert len(projects) == 2
 
 
+def test_premium_user_unlimited_plan_slots():
+    """Abone: 2'lik tavan YOK — Plan 3+ de açılır (MASTER_PLAN §1.1.1)."""
+    user_id = "multi-plan-premium-unlimited"
+    from app.storage.repository import repo
+
+    repo.update_subscription(user_id, subscription_status="active")
+    grant_chat_consent(user_id, client)
+
+    first = client.post("/projects/new", headers=_headers(user_id))
+    assert first.status_code == 200
+    collected = {
+        "city": "İzmir",
+        "interests": ["yoga"],
+        "weekly_hours": 3,
+        "duration_days": 7,
+    }
+    assert (
+        client.post(
+            "/plan/generate",
+            headers=_headers(user_id),
+            json={"collected": collected, "duration_days": 7},
+        ).status_code
+        == 200
+    )
+
+    second = client.post("/projects/new", headers=_headers(user_id))
+    assert second.status_code == 200
+    assert second.json()["slot_no"] == 2
+
+    third = client.post("/projects/new", headers=_headers(user_id))
+    assert third.status_code == 200
+    assert third.json()["slot_no"] == 3
+    assert third.json()["is_active"] is True
+
+    projects = client.get("/projects", headers=_headers(user_id)).json()
+    assert len(projects) == 3
+    assert {p["slot_no"] for p in projects} == {1, 2, 3}
+
+
 def test_rename_and_activate_project():
     user_id = "multi-plan-rename-user"
     client.post("/projects/new", headers=_headers(user_id))

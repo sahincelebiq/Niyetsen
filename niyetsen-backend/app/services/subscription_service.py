@@ -114,8 +114,16 @@ def get_subscription(repo: Repository, user_id: str) -> SubscriptionInfo:
 
 
 def start_trial_if_needed(repo: Repository, user_id: str) -> None:
+    """İlk plan üretiminde 7 günlük denemeyi başlat.
+
+    Ödenmiş aboneliği (active) ASLA trial'a düşürmez — aksi halde abone
+    ikinci niyet başlatamazdı (MASTER_PLAN §1.1.1).
+    """
     row = repo.get_subscription_row(user_id)
     if row.get("trial_started_at") is not None:
+        return
+    status = row.get("subscription_status") or "free"
+    if status != "free":
         return
     now = datetime.now(timezone.utc)
     repo.update_subscription(

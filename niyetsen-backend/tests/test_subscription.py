@@ -27,6 +27,18 @@ def test_first_plan_starts_trial(repo: InMemoryRepository) -> None:
     assert info.has_premium_access is True
 
 
+def test_start_trial_does_not_downgrade_active_subscriber(repo: InMemoryRepository) -> None:
+    """Abone ilk planını üretirken trial'a düşmemeli (çoklu niyet kilidi)."""
+    repo.update_subscription("paid-user", subscription_status="active")
+    subscription_service.start_trial_if_needed(repo, "paid-user")
+    row = repo.get_subscription_row("paid-user")
+    assert row["subscription_status"] == "active"
+    assert row.get("trial_started_at") is None
+    info = subscription_service.get_subscription(repo, "paid-user")
+    assert info.status == "active"
+    assert info.has_premium_access is True
+
+
 def test_trial_expires_after_seven_days(repo: InMemoryRepository) -> None:
     started = datetime(2026, 7, 10, 8, 0, tzinfo=timezone.utc)
     repo.update_subscription(
