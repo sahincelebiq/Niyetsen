@@ -329,6 +329,7 @@ class PushTokenRecord(PushTokenRegistration):
     last_task_reminder_date: Optional[dt_date] = None
     last_bonus_offer_date: Optional[dt_date] = None
     last_tarot_push_date: Optional[dt_date] = None
+    last_recap_push_date: Optional[dt_date] = None
 
 
 class NotificationRecipient(BaseModel):
@@ -340,6 +341,7 @@ class NotificationRecipient(BaseModel):
     last_task_reminder_date: Optional[dt_date] = None
     last_bonus_offer_date: Optional[dt_date] = None
     last_tarot_push_date: Optional[dt_date] = None
+    last_recap_push_date: Optional[dt_date] = None
 
 
 BonusStatus = Literal["offered", "completed", "expired"]

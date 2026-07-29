@@ -118,12 +118,14 @@ def test_notification_cron_is_timezone_and_token_idempotent(monkeypatch):
         "task_reminders_sent": 1,
         "tarot_pushes_sent": 1,
         "bonus_offers_sent": 1,
+        "recap_pushes_sent": 0,
         "delivery_errors": 0,
     }
     assert second == {
         "task_reminders_sent": 0,
         "tarot_pushes_sent": 0,
         "bonus_offers_sent": 0,
+        "recap_pushes_sent": 0,
         "delivery_errors": 0,
     }
     assert {message.data["url"] for message in sent} == {"/daily", "/tarot", "/bonus"}
@@ -156,6 +158,7 @@ def test_tarot_push_is_one_minute_after_task_slot_and_idempotent(monkeypatch):
         "task_reminders_sent": 0,
         "tarot_pushes_sent": 0,
         "bonus_offers_sent": 0,
+        "recap_pushes_sent": 0,
         "delivery_errors": 0,
     }
     assert sent == []
@@ -168,14 +171,59 @@ def test_tarot_push_is_one_minute_after_task_slot_and_idempotent(monkeypatch):
         "task_reminders_sent": 0,
         "tarot_pushes_sent": 1,
         "bonus_offers_sent": 0,
+        "recap_pushes_sent": 0,
         "delivery_errors": 0,
     }
     assert second == {
         "task_reminders_sent": 0,
         "tarot_pushes_sent": 0,
         "bonus_offers_sent": 0,
+        "recap_pushes_sent": 0,
         "delivery_errors": 0,
     }
     assert len(sent) == 1
     assert sent[0].data["url"] == "/tarot"
     assert sent[0].title == "Bugünün kartı seni bekliyor"
+
+
+def test_recap_push_on_day_14_and_idempotent(monkeypatch):
+    repository = InMemoryRepository()
+    user_id = "recap-push-user"
+    start = date(2026, 7, 12)  # → 2026-07-25 = 14. gün
+    repository.save_profile(
+        user_id,
+        UserProfile(timezone="Europe/Istanbul", notif_hour=8, notif_minute=0),
+    )
+    repository.save_plan(
+        user_id,
+        Plan(
+            id="recap-plan",
+            duration_days=30,
+            batch_generated_until=14,
+            start_date=start,
+            days=[PlanDay(day=1, tasks=[])],
+        ),
+    )
+    repository.upsert_push_token(PushTokenRecord(
+        user_id=user_id,
+        token="ExpoPushToken[recap-test]",
+        platform="ios",
+    ))
+    sent: list[push_service.PushMessage] = []
+
+    def fake_send(messages, timeout=15):
+        sent.extend(messages)
+        return [{"status": "ok"} for _ in messages]
+
+    monkeypatch.setattr(push_service, "send", fake_send)
+
+    at_slot = datetime(2026, 7, 25, 5, 0, tzinfo=timezone.utc)  # 08:00 Istanbul
+    first = notification_service.run_due_notifications(repository, at_slot)
+    second = notification_service.run_due_notifications(repository, at_slot)
+
+    assert first["recap_pushes_sent"] == 1
+    assert second["recap_pushes_sent"] == 0
+    recap_msgs = [m for m in sent if m.data.get("screen") == "rapor"]
+    assert len(recap_msgs) == 1
+    assert recap_msgs[0].data["url"] == "/rapor"
+    assert "hikâyesi hazır" in recap_msgs[0].body

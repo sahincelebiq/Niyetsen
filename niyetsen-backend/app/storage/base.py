@@ -200,6 +200,11 @@ class Repository(ABC):
     ) -> None: ...
 
     @abstractmethod
+    def mark_recap_push_sent(
+        self, user_id: str, token: str, day: dt_date
+    ) -> None: ...
+
+    @abstractmethod
     def get_bonus_for_day(self, user_id: str, day: dt_date) -> BonusOffer | None: ...
 
     @abstractmethod

@@ -110,6 +110,18 @@ def build_recap(
     )
 
 
+def is_recap_push_due(days_in: int) -> bool:
+    """14. gün + sonrasında her 30 günde bir (14, 44, 74…)."""
+    if days_in < 14:
+        return False
+    return (days_in - 14) % 30 == 0
+
+
+def recap_push_period_days(days_in: int) -> int:
+    """İlk rapor 14 günlük; sonrakiler aylık (30)."""
+    return 14 if days_in == 14 else 30
+
+
 def recap_push_body(days: int = 14) -> str:
     """Rapor hazır bildirimi — dürüst-sıcak ton (FAZ 8 ton kuralı)."""
     return (

@@ -62,6 +62,12 @@ alter table public.push_tokens
   add column if not exists last_tarot_push_date date;
 
 -- ============================================================
+-- FAZ 8.8: Niyetsen Raporu push idempotency (2026-07-29)
+-- ============================================================
+alter table public.push_tokens
+  add column if not exists last_recap_push_date date;
+
+-- ============================================================
 -- FAZ 7.6: Sohbet oturumları — chat_threads (2026-07-17)
 -- ============================================================
 create table if not exists public.chat_threads (

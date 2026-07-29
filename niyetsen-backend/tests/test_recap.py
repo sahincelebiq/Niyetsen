@@ -68,3 +68,13 @@ def test_recap_endpoint_invalid_period_falls_back():
     response = client.get("/me/recap?period=99y", headers=HEADERS)
     assert response.status_code == 200
     assert response.json()["period"] == "14d"
+
+
+def test_is_recap_push_due_schedule():
+    assert not recap_service.is_recap_push_due(13)
+    assert recap_service.is_recap_push_due(14)
+    assert not recap_service.is_recap_push_due(15)
+    assert not recap_service.is_recap_push_due(43)
+    assert recap_service.is_recap_push_due(44)
+    assert recap_service.recap_push_period_days(14) == 14
+    assert recap_service.recap_push_period_days(44) == 30

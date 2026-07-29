@@ -533,6 +533,7 @@ class InMemoryRepository(Repository):
                 last_task_reminder_date=token.last_task_reminder_date,
                 last_bonus_offer_date=token.last_bonus_offer_date,
                 last_tarot_push_date=token.last_tarot_push_date,
+                last_recap_push_date=token.last_recap_push_date,
             ))
         return recipients
 
@@ -556,6 +557,13 @@ class InMemoryRepository(Repository):
         existing = self._push_tokens.get(token)
         if existing and existing.user_id == user_id:
             existing.last_tarot_push_date = day
+
+    def mark_recap_push_sent(
+        self, user_id: str, token: str, day: dt_date
+    ) -> None:
+        existing = self._push_tokens.get(token)
+        if existing and existing.user_id == user_id:
+            existing.last_recap_push_date = day
 
     def get_bonus_for_day(self, user_id: str, day: dt_date) -> BonusOffer | None:
         return next((

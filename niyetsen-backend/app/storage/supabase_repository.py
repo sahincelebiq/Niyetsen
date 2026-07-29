@@ -883,7 +883,7 @@ class SupabaseRepository(Repository):
             page = (
                 self._db.table("push_tokens").select(
                     "user_id,token,last_task_reminder_date,last_bonus_offer_date,"
-                    "last_tarot_push_date,"
+                    "last_tarot_push_date,last_recap_push_date,"
                     "users!inner(timezone,notif_hour,notif_minute)"
                 ).eq("enabled", True)
                 .range(len(rows), len(rows) + page_size - 1)
@@ -904,6 +904,9 @@ class SupabaseRepository(Repository):
                 ),
                 last_tarot_push_date=_parse_optional_date(
                     row.get("last_tarot_push_date")
+                ),
+                last_recap_push_date=_parse_optional_date(
+                    row.get("last_recap_push_date")
                 ),
                 timezone=(row.get("users") or {}).get("timezone") or "Europe/Istanbul",
                 notif_hour=(row.get("users") or {}).get("notif_hour") or 8,
@@ -931,6 +934,13 @@ class SupabaseRepository(Repository):
     ) -> None:
         self._db.table("push_tokens").update({
             "last_tarot_push_date": day.isoformat(),
+        }).eq("user_id", user_id).eq("token", token).execute()
+
+    def mark_recap_push_sent(
+        self, user_id: str, token: str, day: dt_date
+    ) -> None:
+        self._db.table("push_tokens").update({
+            "last_recap_push_date": day.isoformat(),
         }).eq("user_id", user_id).eq("token", token).execute()
 
     def get_bonus_for_day(self, user_id: str, day: dt_date) -> BonusOffer | None:

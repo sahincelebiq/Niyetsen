@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from app.services import bonus_service, project_service, push_service
+from app.services import bonus_service, project_service, push_service, recap_service
 from app.storage.base import Repository
 
 log = logging.getLogger("niyetsen.notifications")
@@ -43,18 +43,19 @@ def _delivered(result: list[dict]) -> bool:
     return bool(result and result[0].get("status") == "ok")
 
 
-def _flush_pending(pending: list[_PendingPush]) -> tuple[int, int, int, list[str]]:
+def _flush_pending(pending: list[_PendingPush]) -> tuple[int, int, int, int, list[str]]:
     if not pending:
-        return 0, 0, 0, []
+        return 0, 0, 0, 0, []
     sent_task = 0
     sent_bonus = 0
     sent_tarot = 0
+    sent_recap = 0
     errors: list[str] = []
     try:
         results = push_service.send_batched([item.message for item in pending])
     except Exception as exc:
         log.warning("Push batch hatası (%d mesaj): %s", len(pending), exc)
-        return 0, 0, 0, [item.user_id for item in pending]
+        return 0, 0, 0, 0, [item.user_id for item in pending]
     for item, result in zip(pending, results, strict=False):
         if _delivered([result]):
             item.on_success()
@@ -64,9 +65,11 @@ def _flush_pending(pending: list[_PendingPush]) -> tuple[int, int, int, list[str
                 sent_bonus += 1
             elif item.kind == "tarot":
                 sent_tarot += 1
+            elif item.kind == "recap":
+                sent_recap += 1
         else:
             errors.append(item.user_id)
-    return sent_task, sent_bonus, sent_tarot, errors
+    return sent_task, sent_bonus, sent_tarot, sent_recap, errors
 
 
 def run_due_notifications(
@@ -150,16 +153,40 @@ def run_due_notifications(
                         repository.mark_bonus_offer_sent(r.user_id, r.token, d)
                     ),
                 ))
+
+            # FAZ 8.8 — Niyetsen Raporu: 14. gün + her 30 günde bir.
+            plan = repository.get_plan(recipient.user_id)
+            days_in = (day - plan.start_date).days + 1 if plan else 0
+            if (
+                local_min >= notif_min
+                and recipient.last_recap_push_date != day
+                and recap_service.is_recap_push_due(days_in)
+            ):
+                period_days = recap_service.recap_push_period_days(days_in)
+                pending.append(_PendingPush(
+                    message=push_service.PushMessage(
+                        token=recipient.token,
+                        title="Raporun hazır ✨",
+                        body=recap_service.recap_push_body(period_days),
+                        data={"screen": "rapor", "url": "/rapor"},
+                    ),
+                    user_id=recipient.user_id,
+                    kind="recap",
+                    on_success=lambda r=recipient, d=day: (
+                        repository.mark_recap_push_sent(r.user_id, r.token, d)
+                    ),
+                ))
         except Exception:
             log.exception(
                 "Bildirim işlenemedi (user_id=%s)", recipient.user_id
             )
 
-    sent_task, sent_bonus, sent_tarot, errors = _flush_pending(pending)
+    sent_task, sent_bonus, sent_tarot, sent_recap, errors = _flush_pending(pending)
     return {
         "task_reminders_sent": sent_task,
         "tarot_pushes_sent": sent_tarot,
         "bonus_offers_sent": sent_bonus,
+        "recap_pushes_sent": sent_recap,
         "delivery_errors": len(set(errors)),
     }
 
@@ -192,5 +219,5 @@ def send_penalty_notifications(
             kind="penalty",
             on_success=lambda: None,
         ))
-    sent_task, _, _, _ = _flush_pending(pending)
+    sent_task, _, _, _, _ = _flush_pending(pending)
     return sent_task
