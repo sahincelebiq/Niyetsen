@@ -96,6 +96,14 @@ düzenleyebilmeli, ekleyip silebilmeli.
 - KAPI: iPhone SE + büyük Android'de taşma yok; tsc 0 hata; cinsiyet seçimi
   kaydedilip sohbette hitabın değiştiği gözlemleniyor.
 
+### 8.4-B — UI v3 "İLKBAHAR" ekran turu (paralel şerit, 8.4 ile birlikte)
+
+Yatırımcı geri bildirimi: "Arayüz pastel; uygulama ilkbaharı hissettirmeli,
+sonbaharı değil." Palet iskeleti (Adım 0) koda entegre edildi — tüm token
+değerleri yenilendi (`theme.ts`), uygulama otomatik canlandı. Kalan ekran
+turu ve mikro-etkileşim sözlüğü: **`docs/UI_V3_ILKBAHAR.md`** (Adım 1-7,
+her adımın KAPI'sı orada). 8.4 profil işi bu dille yapılır.
+
 ### 8.5 — Çoklu plan geçişi uçtan uca sertifikasyon (1 gün)
 
 - [ ] 8.1 sonrası: iki farklı karakterde plan (entelektüel + sporcu) oluştur;
