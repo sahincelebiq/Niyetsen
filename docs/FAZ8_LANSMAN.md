@@ -52,16 +52,24 @@ tablo yine de gerekli).
 - KAPI: Gerçek cihazda (dev hesabı) iki plan oluştur → aralarında 5 kez
   geçiş yap → sohbet geçmişi ve vision-board görselleri her planda doğru.
 
-### 8.2 — Gemini 3 geçişi (yarım gün)
+### 8.2 — Gemini 3.1 Pro geçişi (yarım gün) — MODEL SEÇİLDİ (2026-07-29)
 
-- [ ] https://ai.google.dev/gemini-api/docs/models adresinden GÜNCEL kararlı
-      model adlarını doğrula (Gemini 3 ailesi: flash sınıfı sohbet/vision,
-      pro sınıfı plan üretimi). Model adı UYDURMA — sayfadaki adı birebir al.
-- [ ] Railway → Variables: `GEMINI_MODEL` ve `GEMINI_MODEL_PLAN`'ı yeni
-      adlarla değiştir. `GEMINI_FALLBACK_MODEL=gemini-2.5-flash`,
-      `GEMINI_FALLBACK_MODEL_PLAN=gemini-2.5-pro`, `RAG_CHAT_EMBEDDINGS=false`
-      değişkenlerini ekle. Kod değişikliği GEREKMEZ.
-- [ ] `/health` yanıtında model adlarını gör; 1 sohbet + 1 plan üretimi smoke test.
+Şahin'in kararı: sohbet + plan artık **`gemini-3.1-pro-preview`** (kimlik
+ai.google.dev/gemini-api/docs/models/gemini-3.1-pro-preview'dan doğrulandı;
+1M giriş / 65K çıkış, function calling + yapısal JSON + görüntü girişi destekli).
+Kod tarafı HAZIR: config varsayılanları güncellendi; Gemini 3'te
+`thinking_budget=0` geçersiz olduğundan client `thinking_level="low"` kullanıyor
+ve fallback'te config yeniden kuruluyor (`gemini_client._build_config`).
+
+- [ ] Railway → Variables: `GEMINI_MODEL=gemini-3.1-pro-preview` ve
+      `GEMINI_MODEL_PLAN=gemini-3.1-pro-preview` (env set ise koddaki
+      varsayılanı EZER — mutlaka güncelle). `GEMINI_FALLBACK_MODEL=gemini-2.5-flash`,
+      `GEMINI_FALLBACK_MODEL_PLAN=gemini-2.5-pro`, `RAG_CHAT_EMBEDDINGS=false`.
+- [ ] `/health` yanıtında model adlarını gör; 1 sohbet + 1 plan + 1 kanıt
+      (vision) smoke test.
+- [ ] ⚠️ KOTA: 3.1 Pro preview ücretsiz katman ~250 istek/gün — dev/demo için
+      yeter, LANSMANDA YETMEZ. Lansman öncesi faturalandırmayı aç (paid tier)
+      ve PostHog'da günlük Gemini istek sayısını izle.
 - KAPI: Sohbet yanıtı gerçek cihazda < 8 sn; yanlış model adı senaryosunda
   log'da "fallback" görülüp yanıtın yine gelmesi.
 

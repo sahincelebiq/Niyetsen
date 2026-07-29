@@ -114,9 +114,20 @@ async def generate_text(
         config_kwargs["max_output_tokens"] = max_output_tokens
     if force_json and response_schema is not None:
         config_kwargs["response_schema"] = response_schema
-    if disable_thinking:
-        config_kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
-    config = types.GenerateContentConfig(**config_kwargs)
+    def _build_config(for_model: str) -> "types.GenerateContentConfig":
+        kwargs = dict(config_kwargs)
+        if disable_thinking:
+            # Gemini 3 ailesi thinking_budget=0 kabul ETMEZ (Pro'da düşünme
+            # tamamen kapatılamaz); en hızlı geçerli ayar thinking_level="low".
+            # 2.5 ve öncesi eski yolu kullanır. Fallback'te aile değişirse
+            # config yeniden kurulur (aksi halde 400 INVALID_ARGUMENT).
+            if for_model.startswith("gemini-3"):
+                kwargs["thinking_config"] = types.ThinkingConfig(thinking_level="low")
+            else:
+                kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+        return types.GenerateContentConfig(**kwargs)
+
+    config = _build_config(resolved_model)
 
     client = get_client()
 
@@ -159,6 +170,7 @@ async def generate_text(
                         resolved_model, fallback,
                     )
                     resolved_model = fallback
+                    config = _build_config(resolved_model)
                     continue
             if not _is_retryable(e):
                 break

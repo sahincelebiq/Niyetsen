@@ -24,11 +24,14 @@ puan düşüren oyunlaştırılmış yaşam asistanı.
 ## Stack (kilitli)
 - Backend: Python 3.11+, FastAPI
 - Mobil: Expo (React Native + TypeScript, expo-router)
-- AI: Gemini API — `gemini-2.5-flash` (multimodal, function calling).
-  FAZ 8: Railway env'den Gemini 3 ailesine geçiş; geçersiz model adında
-  otomatik fallback var (`GEMINI_FALLBACK_MODEL*`). Model adı UYDURMA —
+- AI: Gemini API — sohbet + plan: `gemini-3.1-pro-preview` (FAZ 8 kararı,
+  2026-07-29; kimlik docs'tan doğrulandı). Geçersiz/kapatılan model adında
+  otomatik fallback var (`GEMINI_FALLBACK_MODEL*` → 2.5 ailesi). Gemini 3'te
+  thinking_budget=0 GEÇERSİZ — client thinking_level="low" kullanır
+  (`gemini_client._build_config`). Model adı UYDURMA —
   ai.google.dev/gemini-api/docs/models'ten doğrula.
-  **v1'de fine-tuning YOK.** Prod'da ücretli katman.
+  **v1'de fine-tuning YOK.** Prod'da ücretli katman (preview kotası 250 istek/gün
+  — lansmanda yetmez).
 - DB: Supabase (Postgres + Auth + Storage). Dev'de SQLite olabilir, şema aynı.
 - RAG: `rag_service.py` — Gemini embedding + in-memory kosinüs (varsayılan);
   Chroma opsiyonel yuva (requirements'a eklenmedi, Railway imaj boyutu).

@@ -23,11 +23,16 @@ def _csv(name: str) -> list[str]:
 class Settings:
     # --- AI ---
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
-    GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
-    GEMINI_MODEL_PLAN: str = os.environ.get("GEMINI_MODEL_PLAN", "gemini-2.5-pro")
-    # FAZ 8 model yükseltme yuvası: GEMINI_MODEL'i yeni nesle (Gemini 3 ailesi)
-    # çekmek için Railway env'ini değiştirmek YETERLİ. Yeni model adı geçersiz
-    # çıkarsa istekler patlamaz — aşağıdaki fallback modele otomatik düşülür.
+    # FAZ 8 (2026-07-29, Şahin kararı): sohbet + plan artık Gemini 3.1 Pro.
+    # Model kimliği ai.google.dev/gemini-api/docs/models/gemini-3.1-pro-preview
+    # sayfasından DOĞRULANDI. DİKKAT: Railway'de GEMINI_MODEL* env'leri set
+    # ise onlar kazanır — prod'u yükseltmek için Railway değerlerini de değiştir.
+    GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-3.1-pro-preview")
+    GEMINI_MODEL_PLAN: str = os.environ.get(
+        "GEMINI_MODEL_PLAN", "gemini-3.1-pro-preview"
+    )
+    # Yeni model adı geçersiz/erişilemez çıkarsa istekler patlamaz —
+    # aşağıdaki fallback modele otomatik düşülür (gemini_client).
     GEMINI_FALLBACK_MODEL: str = os.environ.get(
         "GEMINI_FALLBACK_MODEL", "gemini-2.5-flash"
     )
