@@ -1,0 +1,23 @@
+---
+description: FAZ 8 Ağustos lansmanı — aktif faz protokolü (backend + dokümanlar)
+alwaysApply: true
+---
+
+# FAZ 8 — Aktif Faz Protokolü
+
+1. Her oturum başında oku: `CLAUDE.md` → `NIYETSEN_MASTER_PLAN.md` (FAZ 8
+   bölümü) → `docs/FAZ8_LANSMAN.md` (görev sırası + KAPI kriterleri).
+2. Sıra: 8.1 Supabase migration doğrulaması → 8.2 Railway Gemini 3 env →
+   8.3 plan düzenleme → 8.4 profil/cinsiyet/burç → 8.5 çoklu plan geçişi →
+   8.6 kanıt bağlamı → 8.7 lansman listesi. FAZ/sıra atlamak YASAK.
+3. İskelet hazır (2026-07-29): model fallback, force-plan, thread degrade modu,
+   katı kanıt promptu, gender uçtan uca, zodiac.ts, dürüst bildirim tonu.
+   Bunları YENİDEN yazma; üzerine inşa et.
+4. Kilitli kurallar: puan/ceza/zincir MASTER_PLAN §1–2 birebir (taban 0,
+   tavan 200); araç listesi `core/tools.py` dışına çıkma; sırlar yalnız `.env`;
+   JWT'siz endpoint yok; model adı UYDURMA (ai.google.dev/gemini-api/docs/models).
+5. Backend testleri: değişiklik sonrası `pytest -q` tamamı yeşil kalır
+   (şu an 175). Mobil ayrı repo (`mobile/`), kendi kuralları
+   `mobile/.cursor/rules/` içinde.
+6. Commit formatı: `faz8: <kısa açıklama>` — küçük, tek konulu commit'ler.
+7. Kararsızlıkta: MASTER_PLAN §1 → yoksa Şahin'e sor. UYDURMA.

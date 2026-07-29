@@ -83,7 +83,7 @@ düzenleyebilmeli, ekleyip silebilmeli.
 
 ### 8.4 — Profil ekranı gerçek app hissi + cinsiyet UI + burç ikonu (1-2 gün)
 
-- [ ] `profil.tsx` yeniden düzenle: dev web başlıkları yerine kompakt mobil
+- [ ] `mobile/src/app/settings.tsx` (Profil) yeniden düzenle: dev web başlıkları yerine kompakt mobil
       hiyerarşi (avatar + isim satırı, küçük bölüm başlıkları, kart listeleri).
       Mevcut tema token'ları kullanılır; YENİ tasarım dili İCAT ETME.
 - [ ] İsim yanına burç ikonu: `zodiacLabel(profile.zodiac_sign)`
