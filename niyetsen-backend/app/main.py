@@ -45,6 +45,19 @@ if settings.ENV == "prod" and not settings.REVENUECAT_WEBHOOK_SECRET:
         "doğrulaması zorunludur."
     )
 
+# Boot tanısı: Railway'de "Deploy Crashed" görülürse logdaki İLK satırlardan
+# hangi konfigürasyonla açıldığı okunur (sır YAZILMAZ). Bu satır görünmüyorsa
+# çökme import sırasında demektir → üstteki kilitler veya SupabaseRepository
+# init (SUPABASE_URL/KEY) birincil şüpheli.
+logging.getLogger("niyetsen.app").info(
+    "boot: env=%s db=%s auth_disabled=%s model=%s plan_model=%s",
+    settings.ENV,
+    "supabase" if settings.USE_SUPABASE_DB else "memory",
+    settings.AUTH_DISABLED,
+    settings.GEMINI_MODEL,
+    settings.GEMINI_MODEL_PLAN,
+)
+
 app = FastAPI(
     title="Niyetsen API",
     version="0.1.0",

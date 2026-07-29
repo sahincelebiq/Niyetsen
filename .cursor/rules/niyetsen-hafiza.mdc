@@ -1,0 +1,85 @@
+---
+description: Niyetsen proje hafızası — sözlük, kilitli kararlar, tuzaklar, dosya haritası (her oturumda geçerli)
+alwaysApply: true
+---
+
+# NİYETSEN HAFIZASI (proje beyni — v1, 2026-07-29)
+
+Bu dosya projenin damıtılmış kurumsal hafızasıdır. Bir karar buradakiyle
+çelişiyorsa ÖNCE burada/MASTER_PLAN'da neden öyle olduğuna bak — çoğu madde
+canlıda yaşanmış bir hatanın veya Şahin'in verdiği bir kararın izidir.
+
+## Sözlük (Şahin'in dili → sistem karşılığı)
+
+- **Zincir** = streak. Gün sınırı kullanıcı timezone 23:59. "Zincir Koruma
+  Jetonu" = ayda 1 otomatik freeze token.
+- **Mazeret** = missed_excused (−25 sabit, katlanmaz). **Sessiz kaçırma** =
+  missed_silent (−25×2ⁿ, tavan 200). Puan tabanı 0 — negatif yok.
+- **Mistik / gizli bölüm** = fal modülü (tarot/kahve/el/burç), MysticColors
+  teması, ☾ butonu. Fal = AYNA, kader değil; her yanıtta disclaimer.
+- **İdol Modu / Felsefe Yolları** = kamuya açık kişilerden İLHAM alan
+  felsefe-adlı paketler. YASAL KURAL: paket adı felsefe adıdır, kişi adı yalnız
+  "…ilham alır; kendisiyle bağlantılı değildir" notunda geçer. Premium (dev muaf).
+- **Dev hesabı** = kutluadalarr7@gmail.com (DEV_ACCOUNT_EMAILS) — abonelik
+  kısa devresi, mağaza satın alması olmadan tam erişim.
+- **KAPI** = faz çıkış kriteri. Geçmeden sonraki göreve BAŞLANMAZ.
+- **Wrapped / Rapor** = /me/recap story özeti. Yalnız kazanımlar gösterilir.
+- **İlkbahar** = UI v3 paleti (genç yaprak #35814A + mercan #E06842).
+  Sonbahar/pastel geri gelmez.
+
+## Kilitli kararlar (tartışılmaz, tarihiyle)
+
+- Görev +50; 6 kategori sabit: İrade, İstikrar, Disiplin, Özgüven, Sosyallik, Özsaygı.
+- Ücretsiz sohbet SINIRSIZ (FAZ 7.6); plan/kanıt/bonus/İdol premium; 7 gün deneme.
+- Ödeme YALNIZ IAP/RevenueCat — harici ödeme linki Apple reddi sebebi.
+- Model: sohbet+plan `gemini-3.1-pro-preview` (2026-07-29); fallback 2.5 ailesi
+  otomatik. Model adı UYDURULMAZ — ai.google.dev/gemini-api/docs/models.
+- Kanıt: Vision güven ≥60 onay; <60 nazik tekrar (maks 3, 3.'de beyanla kabul).
+  Anlamsal eşleşme ZORUNLU — aynı tema yetmez (su ≠ meyve tarifi, ≤40).
+- Ton: dürüst yüzleşme ✅ ("Disiplinin düşüyor, neden vazgeçiyorsun?"),
+  utandırma/aşağılama ❌. Wrapped'ta kaçırılanlar HİÇ gösterilmez.
+- Cinsiyet: isteğe bağlı, yalnız hitap/örnek uyarlaması; klişe YASAK.
+  String'ler birebir: "kadın" / "erkek" / "belirtmek istemiyorum".
+- v1'de YOK: fine-tuning, leaderboard (v3), Pinterest (v3), tanımlı araç
+  dışı function calling (core/tools.py = tam liste).
+
+## Tuzaklar (her biri canlıda yaşandı — tekrarı yasak)
+
+1. **Reanimated Easing**: `Easing`/`Animated` ASLA 'react-native'ten import
+   edilmez → worklet crash. eslint no-restricted-imports kuralı kaldırılamaz.
+   count-up-text.tsx bilerek saf JS.
+2. **plans.id TEXT'tir, uuid değil** — FK yazarken `plan_id text references
+   public.plans(id)`. (chat_threads migration'ında yaşandı, 42804.)
+3. **Gemini 3'te thinking_budget=0 GEÇERSİZ** → client thinking_level="low"
+   kullanır, fallback'te config yeniden kurulur (gemini_client._build_config).
+4. **chat_threads degrade modu**: thread işlemleri try/except'lidir; thread
+   hatası sohbeti/plan geçişini DÜŞÜREMEZ. Bu zırhı kaldırma (demo faciası).
+5. **Migration'lar otomatik uygulanmaz**: her yeni tablo/kolon
+   RUN_IN_SUPABASE_SQL_EDITOR.sql'e eklenir ve Şahin SQL Editor'da çalıştırır.
+6. **Railway cron**: cron servisi Config-as-code `/railway.cron.toml` kullanır;
+   yanlışsa uvicorn açılır ve 5 dk'da SIGKILL = "Deploy Crashed" spam. Tanı:
+   docs/RAILWAY_SORUN_GIDERME.md.
+7. **localStorage yok** (Expo) → AsyncStorage/SecureStore.
+8. **Sırlar yalnız .env**; .env commit edilmez; .env.example placeholder taşır.
+9. **Kullanıcı mesajı system rolüne karışmaz**; RAG içeriği etiketli CONTEXT
+   bloğunda (injection önlemi). /chat sırası: SYSTEM → CONTEXT → USER, tek yer:
+   core/prompt_builder.py.
+
+## Dosya haritası (nereye bakılır)
+
+- Kurallar: `CLAUDE.md` → yol haritası: `NIYETSEN_MASTER_PLAN.md` (§1 kilitli
+  kararlar, §2 veri modeli) → aktif faz: `docs/FAZ8_LANSMAN.md`.
+- Backend beyin: `app/services/intent_service.py` (sohbet), `plan_service.py`
+  (plan), `proof_service.py` (kanıt), `fortune_service.py` (fal),
+  `recap_service.py` (rapor), `scoring_service.py` (puan/rank).
+- Promptlar TEK yerde: `app/core/prompts.py` (SYSTEM + FORTUNE + PROOF).
+- UI: `mobile/src/constants/theme.ts` (İlkbahar token'ları — hex hardcode yasak),
+  `zodiac.ts` (burç), plan: `docs/UI_V3_ILKBAHAR.md`.
+- RAG bilgi tabanı: `niyetsen-backend/knowledge/` (Railway imajına COPY'lenir).
+
+## Çalışma protokolü
+
+- Test: backend `pytest -q` (şu an 181 yeşil — düşürme); mobil
+  `npx tsc --noEmit` 0 hata + Expo Go gerçek cihaz.
+- Commit: `faz8: <konu>` küçük/tek konulu. mobile/ AYRI git deposudur.
+- Kararsızlıkta: MASTER_PLAN §1 → bu dosya → yoksa Şahin'e sor. UYDURMA.
