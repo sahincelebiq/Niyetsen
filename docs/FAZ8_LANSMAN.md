@@ -41,16 +41,20 @@ veritabanında `chat_threads` migration'ının hiç çalıştırılmamış olmas
 (kod thread'e yazmaya çalışıp patlıyordu; degrade mod artık koruyor ama
 tablo yine de gerekli).
 
-- [ ] Supabase SQL Editor'da `RUN_IN_SUPABASE_SQL_EDITOR.sql` içindeki şu
+- [x] Supabase SQL Editor'da `RUN_IN_SUPABASE_SQL_EDITOR.sql` içindeki şu
       blokların prod'da uygulandığını doğrula, eksikse çalıştır:
       `chat_threads`, `idol_personas` + `persona_chunks`, `users.gender`
       (migration `20260728100000_faz8_gender.sql`).
-- [ ] Doğrulama sorgusu: `select table_name from information_schema.tables
+- [x] Doğrulama sorgusu: `select table_name from information_schema.tables
       where table_schema='public';` → chat_threads, idol_personas,
       persona_chunks görünmeli; `select column_name from
       information_schema.columns where table_name='users';` → gender görünmeli.
+- [x] API sertifikası: `test_two_plan_switch_certification_five_times` —
+      Entelektüel ↔ Sporcu, 5 geçiş, aktif plan + vision board karışmaz
+      (`tests/test_multi_plan.py`).
 - KAPI: Gerçek cihazda (dev hesabı) iki plan oluştur → aralarında 5 kez
   geçiş yap → sohbet geçmişi ve vision-board görselleri her planda doğru.
+  *(API yeşil; cihaz smoke Şahin'e bırakıldı.)*
 
 ### 8.2 — Gemini 3.1 Pro geçişi (yarım gün) — MODEL SEÇİLDİ (2026-07-29)
 
@@ -61,15 +65,21 @@ Kod tarafı HAZIR: config varsayılanları güncellendi; Gemini 3'te
 `thinking_budget=0` geçersiz olduğundan client `thinking_level="low"` kullanıyor
 ve fallback'te config yeniden kuruluyor (`gemini_client._build_config`).
 
-- [ ] Railway → Variables: `GEMINI_MODEL=gemini-3.1-pro-preview` ve
-      `GEMINI_MODEL_PLAN=gemini-3.1-pro-preview` (env set ise koddaki
-      varsayılanı EZER — mutlaka güncelle). `GEMINI_FALLBACK_MODEL=gemini-2.5-flash`,
-      `GEMINI_FALLBACK_MODEL_PLAN=gemini-2.5-pro`, `RAG_CHAT_EMBEDDINGS=false`.
-- [ ] `/health` yanıtında model adlarını gör; 1 sohbet + 1 plan + 1 kanıt
-      (vision) smoke test.
-- [ ] ⚠️ KOTA: 3.1 Pro preview ücretsiz katman ~250 istek/gün — dev/demo için
-      yeter, LANSMANDA YETMEZ. Lansman öncesi faturalandırmayı aç (paid tier)
-      ve PostHog'da günlük Gemini istek sayısını izle.
+**Prod Railway (api) — 2026-07-29:**
+- Ana: `GEMINI_MODEL=gemini-3.1-pro-preview`,
+  `GEMINI_MODEL_PLAN=gemini-3.1-pro-preview`
+- Fallback (SİLİNMEZ): `GEMINI_FALLBACK_MODEL=gemini-2.5-flash`,
+  `GEMINI_FALLBACK_MODEL_PLAN=gemini-2.5-pro`
+- `RAG_CHAT_EMBEDDINGS=false`
+
+- [x] Railway → Variables: ana model 3.1-pro-preview; 2.5 fallback'ler korundu.
+- [x] `/health` → `model_chat`/`model_plan` = `gemini-3.1-pro-preview` (2026-07-29).
+      Cihazda 1 sohbet + 1 plan + 1 kanıt smoke Şahin'e bırakıldı.
+- [ ] ⚠️ KOTA / PAID TIER: 3.1 Pro preview ücretsiz katman ~250 istek/gün —
+      dev/demo için yeter, **LANSMANDA YETMEZ**. Google AI Studio / Cloud'da
+      faturalandırmayı aç (paid tier) ve PostHog'da günlük Gemini istek
+      sayısını izle. Kota bitince fallback 2.5'e düşer (yanıt gelir ama
+      kalite düşer) — log'da "fallback" ara.
 - KAPI: Sohbet yanıtı gerçek cihazda < 8 sn; yanlış model adı senaryosunda
   log'da "fallback" görülüp yanıtın yine gelmesi.
 

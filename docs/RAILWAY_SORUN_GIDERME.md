@@ -60,3 +60,5 @@ Logda `boot: env=...` satırını ara (main.py'nin ilk işi — 2026-07-29'da ek
 - [ ] Sentry alarmı: "Deploy Crashed" yerine gerçek hata izi için SENTRY_DSN set.
 - [ ] `GEMINI_MODEL=gemini-3.1-pro-preview` geçişi sonrası logda "fallback"
       taraması yap — sık görünüyorsa preview kota/erişim sorunu var demektir.
+      **Paid tier açılmadan lansman yapılmaz** (~250 req/gün ücretsiz tavan).
+      Fallback 2.5 flash/pro env'de kalır; silinmez.

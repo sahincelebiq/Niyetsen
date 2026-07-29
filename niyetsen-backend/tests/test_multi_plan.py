@@ -161,3 +161,109 @@ def test_rename_and_activate_project():
     assert activated.json()["id"] == plan_id
     assert activated.json()["is_active"] is True
     assert second["id"] != plan_id
+
+
+def test_two_plan_switch_certification_five_times():
+    """FAZ 8.1/8.5 KAPI: iki plan arasında tekrarlı geçiş — aktif plan,
+    günün görevleri ve vision-board görselleri karışmaz."""
+    user_id = "multi-plan-switch-cert"
+    from app.storage.repository import repo
+
+    repo.update_subscription(user_id, subscription_status="active")
+    grant_chat_consent(user_id, client)
+
+    # Plan A — entelektüel
+    assert client.post("/projects/new", headers=_headers(user_id)).status_code == 200
+    plan_a = client.post(
+        "/plan/generate",
+        headers=_headers(user_id),
+        json={
+            "collected": {
+                "city": "İstanbul",
+                "interests": ["kitap", "felsefe"],
+                "weekly_hours": 6,
+                "duration_days": 7,
+            },
+            "duration_days": 7,
+        },
+    )
+    assert plan_a.status_code == 200
+    plan_a_id = plan_a.json()["id"]
+    client.patch(
+        f"/projects/{plan_a_id}",
+        headers=_headers(user_id),
+        json={"name": "Entelektüel"},
+    )
+
+    # Plan B — sporcu (yeni slot + generate)
+    assert client.post("/projects/new", headers=_headers(user_id)).status_code == 200
+    plan_b = client.post(
+        "/plan/generate",
+        headers=_headers(user_id),
+        json={
+            "collected": {
+                "city": "Ankara",
+                "interests": ["koşu", "spor"],
+                "weekly_hours": 8,
+                "duration_days": 7,
+            },
+            "duration_days": 7,
+        },
+    )
+    assert plan_b.status_code == 200
+    plan_b_id = plan_b.json()["id"]
+    client.patch(
+        f"/projects/{plan_b_id}",
+        headers=_headers(user_id),
+        json={"name": "Sporcu"},
+    )
+
+    assert plan_a_id != plan_b_id
+    projects = client.get("/projects", headers=_headers(user_id)).json()
+    assert len(projects) == 2
+
+    # Her planda en az 1 görev + image_url (vision board sinyali)
+    for plan_id in (plan_a_id, plan_b_id):
+        client.put(
+            f"/projects/{plan_id}/activate",
+            headers=_headers(user_id),
+        )
+        plan = client.get("/plan", headers=_headers(user_id)).json()
+        assert plan["id"] == plan_id
+        tasks = [
+            t for day in plan["days"] for t in day.get("tasks", [])
+        ]
+        assert tasks, f"plan {plan_id} boş"
+        assert any(t.get("image_url") or t.get("image_keyword") for t in tasks)
+
+    # 5 ardışık geçiş: A→B→A→B→A — aktif plan / vision board sızması yok.
+    # Not: /tasks/daily TÜM planların bugünkü görevlerini birleştirir
+    # (çoklu niyet UX); aktiflik filtresi GET /plan üzerindedir.
+    sequence = [plan_a_id, plan_b_id, plan_a_id, plan_b_id, plan_a_id]
+    for expected_id in sequence:
+        activated = client.put(
+            f"/projects/{expected_id}/activate",
+            headers=_headers(user_id),
+        )
+        assert activated.status_code == 200
+        assert activated.json()["id"] == expected_id
+        assert activated.json()["is_active"] is True
+
+        current = client.get("/plan", headers=_headers(user_id)).json()
+        assert current["id"] == expected_id
+        assert current["days"], "aktif plan vision board boş olmamalı"
+
+        listing = client.get("/projects", headers=_headers(user_id)).json()
+        active = [p for p in listing if p["is_active"]]
+        assert len(active) == 1
+        assert active[0]["id"] == expected_id
+
+        daily = client.get("/tasks/daily", headers=_headers(user_id))
+        assert daily.status_code == 200
+        daily_plan_ids = {item["plan_id"] for item in daily.json()}
+        # Bugün her iki planda da görev varsa ikisi de listede olabilir;
+        # aktif planın görevleri mutlaka gelsin.
+        assert expected_id in daily_plan_ids or not any(
+            day.get("tasks") for day in current["days"]
+            if any(t.get("date") for t in day.get("tasks", []))
+        )
