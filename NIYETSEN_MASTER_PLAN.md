@@ -609,6 +609,9 @@ Demo'da yaşanan hataların kök nedenleri ve çözümler:
       prompt'una taşı; sınır vakalarla cihaz testi.
 - [ ] 8.7 Lansman kontrol listesi: store metinleri, IAP smoke test, PostHog
       hunisi, Sentry alarmları.
+- [ ] 8.8 Niyetsen Raporu "Wrapped" (yazılımcı talebi): 14 günlük/aylık story
+      raporu — iskelet hazır (recap_service + GET /me/recap + rapor.tsx),
+      Cursor: rank banner'ı + push deep link + paylaş (detay FAZ8 dokümanında).
 
 KAPI 8: Prod'da (gerçek cihaz) → yeni kullanıcı sohbeti <8 sn yanıt, "planı
 oluştur" %100 plan üretir, 2 plan arası geçiş + görseller sorunsuz, su içme

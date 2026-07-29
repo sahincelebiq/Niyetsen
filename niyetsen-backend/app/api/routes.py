@@ -29,6 +29,7 @@ from app.models.schemas import (
     ChatThread, ConsentStatus, ConsentUpdate, DailyTaskItem, FortuneRecord,
     FortuneRightsResponse,
     HoroscopeResponse, PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
+    RecapResponse,
     PlanSummary, ProfileUpdate, ProofRecord, ProofResult, PushTokenRecord,
     PushTokenRegistration, RevenueCatWebhookPayload, StateResponse, SubscriptionInfo,
     TarotDrawRequest, TarotDrawResponse, UserProfile,
@@ -36,7 +37,8 @@ from app.models.schemas import (
 from app.services import (
     attachment_service, bonus_service, consent_service, fortune_service,
     greeting_service, intent_service, notification_service, plan_service,
-    profile_service, project_service, proof_service, push_service, scoring_service,
+    profile_service, project_service, proof_service, push_service, recap_service,
+    scoring_service,
     subscription_service, task_lifecycle_service, tool_service,
 )
 from app.services.bonus_pool import is_completion_message
@@ -790,6 +792,24 @@ def my_state(user_id: str = Depends(get_current_user)) -> StateResponse:
         freeze_tokens=s.freeze_tokens,
         excuse_count=s.excuse_count,
         silent_miss_streak=s.silent_miss_streak,
+    )
+
+
+@router.get("/me/recap", response_model=RecapResponse)
+def my_recap(
+    period: str = "14d",
+    user_id: str = Depends(get_current_user),
+) -> RecapResponse:
+    """Niyetsen Raporu (FAZ 8.8 'Wrapped'): story kartları — 14 günlük/aylık özet.
+    Kural bazlı, Gemini çağrılmaz (hız/kota); kutlama tonu, kaçırılanlar sayılmaz."""
+    if period not in recap_service.PERIOD_DAYS:
+        period = "14d"
+    profile = repo.get_profile(user_id)
+    return recap_service.build_recap(
+        state=repo.get_state(user_id),
+        plan=repo.get_plan(user_id),
+        user_name=profile.name or "",
+        period=period,
     )
 
 

@@ -134,6 +134,36 @@ Sıkı prompt entegre; eksik parça: görevin KİŞİSELLEŞTİRİLMİŞ içeri�
 - KAPI: Su fotoğrafı meyve görevini GEÇEMEZ; meşru fotoğraf ≥60 güvenle geçer;
   3 deneme + beyan kuralı (MASTER_PLAN §1.5) bozulmaz.
 
+### 8.8 — Niyetsen Raporu "Wrapped" (1-1,5 gün; yazılımcı talebi, 28 Tem)
+
+Spotify'ın yıllık özeti gibi: 14 günlük (ve aylık) dönem sonunda kullanıcı
+story formatında görür — kaç görev yaptı, hangi karakter özellikleri gelişti,
+başladığından beri yolculuğu.
+
+İSKELET HAZIR (2026-07-29, Claude Cowork):
+- Backend: `services/recap_service.py` (kural bazlı, Gemini yok — hız/kota) +
+  `GET /me/recap?period=14d|30d` + `RecapCard/RecapResponse` şemaları +
+  `recap_push_body()` bildirim kopyası. 4 test yeşil (`test_recap.py`).
+- Mobil: `src/app/rapor.tsx` story ekranı (ilerleme çubukları, dokun-ilerle,
+  5 kart: intro/tasks/trait/streak/closing) + `api.ts getRecap`.
+- Tasarım kuralı: Wrapped mantığı = YALNIZ kazanımlar. Kaçırılan görev sayısı
+  raporda GÖSTERİLMEZ (Spotify az dinlediğini yüzüne vurmaz; ton kuralı).
+
+Cursor görevleri:
+- [ ] Giriş noktası: `rank.tsx` üstüne "Raporun hazır ✨" banner'ı — kullanıcı
+      14. günü geçtiyse görünür (days_in >= 14), `router.push('/rapor')`.
+- [ ] Push: notification_service'e 14. gün (ve sonrasında her 30 günde bir)
+      `recap_service.recap_push_body()` ile bildirim; data payload'ına
+      `{"screen": "rapor"}` → bildirime dokununca /rapor açılır (deep link).
+- [ ] Story cilası: kart geçiş animasyonu (Reanimated, Easing yalnız
+      reanimated'dan), kind'a göre şablon (trait kartında kategori rozeti,
+      streak kartında filiz 🌱→🌿→🌳), uzun basınca duraklat.
+- [ ] Paylaş: closing kartına "Paylaş" butonu (react-native-view-shot ile
+      kart görüntüsü → native share sheet) — organik büyüme kanalı.
+- [ ] Aylık dönem: period=30d seçeneği UI'da (segment).
+- KAPI: 14+ günlük dev hesabında rapor gerçek verilerle akıyor; boş/yeni
+  kullanıcıda çökmüyor (kartlar dolu geliyor); reduce-motion'da sorunsuz.
+
 ### 8.7 — Lansman kontrol listesi (2-3 gün, store bekleme hariç)
 
 - [ ] Store metinleri güncelle (fal İKİNCİL özellik — Apple 4.3 riski).

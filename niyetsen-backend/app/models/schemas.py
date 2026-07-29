@@ -204,6 +204,26 @@ class StateResponse(BaseModel):
     silent_miss_streak: int
 
 
+# ---------- Niyetsen Raporu / "Wrapped" (FAZ 8.8) ----------
+class RecapCard(BaseModel):
+    """Tek story kartı. kind mobil tarafta görsel şablonu seçer."""
+    kind: Literal["intro", "tasks", "trait", "streak", "closing"]
+    title: str
+    headline: str  # kartın büyük değeri ("47 görev", "Disiplin", "12 gün")
+    subtitle: str = ""
+
+
+class RecapResponse(BaseModel):
+    period: str  # "14d" | "30d"
+    start_date: dt_date
+    end_date: dt_date
+    days_in: int  # Niyetsen'de kaçıncı gün
+    completed_tasks: int
+    total_points: int
+    top_category: str
+    cards: list[RecapCard]
+
+
 # ---------- Profil / Onboarding ----------
 class UserProfile(BaseModel):
     name: Optional[str] = None
