@@ -25,6 +25,15 @@ class Settings:
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
     GEMINI_MODEL: str = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
     GEMINI_MODEL_PLAN: str = os.environ.get("GEMINI_MODEL_PLAN", "gemini-2.5-pro")
+    # FAZ 8 model yükseltme yuvası: GEMINI_MODEL'i yeni nesle (Gemini 3 ailesi)
+    # çekmek için Railway env'ini değiştirmek YETERLİ. Yeni model adı geçersiz
+    # çıkarsa istekler patlamaz — aşağıdaki fallback modele otomatik düşülür.
+    GEMINI_FALLBACK_MODEL: str = os.environ.get(
+        "GEMINI_FALLBACK_MODEL", "gemini-2.5-flash"
+    )
+    GEMINI_FALLBACK_MODEL_PLAN: str = os.environ.get(
+        "GEMINI_FALLBACK_MODEL_PLAN", "gemini-2.5-pro"
+    )
     GEMINI_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_TIMEOUT_SEC", "30"))
     GEMINI_PLAN_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_PLAN_TIMEOUT_SEC", "90"))
     # Vision kanıt: retry + ağ gecikmesi; mobil istemci ProofTimeoutMs ile uyumlu tut.
@@ -117,6 +126,10 @@ class Settings:
     RAG_ENABLED: bool = _bool("RAG_ENABLED", "true")
     # Embedding kapatılırsa keyword fallback çalışır (maliyet/kota kontrolü).
     RAG_EMBEDDINGS_ENABLED: bool = _bool("RAG_EMBEDDINGS_ENABLED", "true")
+    # FAZ 8 HIZ KARARI: ana sohbet RAG'i varsayılan olarak KEYWORD modda çalışır
+    # (her mesajda sorgu embedding'i = fazladan ağ çağrısı = demo'daki yavaşlığın
+    # bir kaynağı). Fal/burç embeddingli kalır (kalite orada daha kritik).
+    RAG_CHAT_EMBEDDINGS: bool = _bool("RAG_CHAT_EMBEDDINGS", "false")
     RAG_TOP_K: int = int(os.environ.get("RAG_TOP_K", "4"))
     GEMINI_EMBED_MODEL: str = os.environ.get(
         "GEMINI_EMBED_MODEL", "gemini-embedding-001"

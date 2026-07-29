@@ -18,12 +18,16 @@ puan düşüren oyunlaştırılmış yaşam asistanı.
    eski `chat_system_prompt.md` artık `docs/arsiv-planlama/`'da, güncel değil)
 4. `niyetsen-backend/knowledge/` — RAG bilgi tabanı (**FAZ 7 ile AKTİF,
    2026-07-16**; Railway'e deploy için backend kökünde yaşar)
-5. `docs/FAZ7_V2_FAL_RAG.md` — aktif v2 fazı: fal + RAG durumu ve sonraki dalgalar
+5. `docs/FAZ8_LANSMAN.md` — **AKTİF FAZ (Ağustos lansmanı, 2026-07-29)**:
+   yatırımcı geri bildirimi görev listesi. (FAZ 7 arşiv: `docs/FAZ7_V2_FAL_RAG.md`)
 
 ## Stack (kilitli)
 - Backend: Python 3.11+, FastAPI
 - Mobil: Expo (React Native + TypeScript, expo-router)
 - AI: Gemini API — `gemini-2.5-flash` (multimodal, function calling).
+  FAZ 8: Railway env'den Gemini 3 ailesine geçiş; geçersiz model adında
+  otomatik fallback var (`GEMINI_FALLBACK_MODEL*`). Model adı UYDURMA —
+  ai.google.dev/gemini-api/docs/models'ten doğrula.
   **v1'de fine-tuning YOK.** Prod'da ücretli katman.
 - DB: Supabase (Postgres + Auth + Storage). Dev'de SQLite olabilir, şema aynı.
 - RAG: `rag_service.py` — Gemini embedding + in-memory kosinüs (varsayılan);

@@ -207,10 +207,13 @@ def retrieve(
     *,
     k: int | None = None,
     sources: list[str] | None = None,
+    use_embeddings: bool = True,
 ) -> list[str]:
     """
     Sorguya en yakın bilgi tabanı parçalarını döndürür (etiketli metin).
     sources: yalnız belirli dosyalarla sınırla (ör. ["tarot"], ["burclar"]).
+    use_embeddings=False: sorgu embedding'i için AĞ ÇAĞRISI YAPILMAZ (hız) —
+    keyword eşleşmesi kullanılır. FAZ 8: ana sohbet bu modda çalışır.
     Hata durumunda BOŞ liste döner — çağıran akış asla kırılmaz.
     """
     if not settings.RAG_ENABLED:
@@ -223,7 +226,7 @@ def retrieve(
         return []
 
     scored: list[tuple[float, _Chunk]]
-    if _ensure_embeddings(chunks):
+    if use_embeddings and _ensure_embeddings(chunks):
         query_vec = _embed([query])
         if query_vec:
             scored = [
@@ -262,13 +265,23 @@ _MYSTIC_TRIGGERS = {
 
 
 def retrieve_for_chat(message: str, *, k: int | None = None) -> list[str]:
-    """Ana /chat akışı için bağlama göre bilgi tabanı parçaları."""
+    """Ana /chat akışı için bağlama göre bilgi tabanı parçaları.
+
+    FAZ 8 hız kararı: varsayılan KEYWORD modu (RAG_CHAT_EMBEDDINGS=false) —
+    her sohbet mesajında sorgu embedding'i üretmek fazladan bir Gemini ağ
+    çağrısıydı ve gecikmeyi büyütüyordu. Keyword eşleşmesi süreç içidir (~0ms).
+    """
     sources = list(_CHAT_DEFAULT_SOURCES)
     normalized = _normalize(message)
     for source, triggers in _MYSTIC_TRIGGERS.items():
         if any(_normalize(t) in normalized for t in triggers):
             sources.append(source)
-    return retrieve(message, k=k or settings.RAG_TOP_K, sources=sources)
+    return retrieve(
+        message,
+        k=k or settings.RAG_TOP_K,
+        sources=sources,
+        use_embeddings=settings.RAG_CHAT_EMBEDDINGS,
+    )
 
 
 def reset_cache() -> None:

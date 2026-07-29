@@ -61,6 +61,29 @@ def _resolve_model(model: Optional[str]) -> str:
     return model or settings.GEMINI_MODEL
 
 
+def _is_model_unavailable(exc: Exception) -> bool:
+    """Model adı geçersiz/erişilemez mi? (FAZ 8: Gemini 3 geçiş güvencesi).
+
+    Yeni nesil model adı yanlış yazılır ya da hesapta henüz açık olmazsa
+    istekler kalıcı hata verir; bu durumda fallback modele düşülür.
+    """
+    text = str(exc).lower()
+    return any(marker in text for marker in (
+        "not found", "not_found", "does not exist", "is not supported",
+        "invalid model", "unknown model", "was not found", "permission denied",
+        "404",
+    ))
+
+
+def _fallback_for(resolved_model: str) -> Optional[str]:
+    """Kullanılan modele uygun fallback (plan→plan fallback'i, diğer→genel)."""
+    if resolved_model == settings.GEMINI_MODEL_PLAN:
+        fallback = settings.GEMINI_FALLBACK_MODEL_PLAN
+    else:
+        fallback = settings.GEMINI_FALLBACK_MODEL
+    return fallback if fallback and fallback != resolved_model else None
+
+
 async def generate_text(
     contents: Any,
     system_instruction: Optional[str] = None,
@@ -126,6 +149,17 @@ async def generate_text(
             continue
         except Exception as e:  # noqa: BLE001 — SDK sürümüne göre hata tipleri değişir
             last_err = e
+            # FAZ 8: model adı geçersizse (Gemini 3 geçişinde yanlış string vb.)
+            # beklemeden fallback modele geç — kullanıcı hata görmez.
+            if _is_model_unavailable(e):
+                fallback = _fallback_for(resolved_model)
+                if fallback:
+                    log.warning(
+                        "Model erişilemez (%s) — fallback'e geçiliyor: %s",
+                        resolved_model, fallback,
+                    )
+                    resolved_model = fallback
+                    continue
             if not _is_retryable(e):
                 break
             if attempt >= retry_limit:

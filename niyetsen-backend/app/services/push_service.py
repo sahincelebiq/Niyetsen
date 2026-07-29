@@ -24,12 +24,18 @@ def is_valid_expo_token(token: str) -> bool:
 
 
 def emotional_penalty_body(streak_len: int) -> str:
+    """FAZ 8 ton güncellemesi (toplantı geri bildirimi): utandırmadan ama
+    GERÇEKÇİ uyar — kayıp somut söylenir, soru kullanıcıyı yüzleştirir.
+    Yasak bölge değişmedi: aşağılama/suçlama yok ("tembelsin" ❌)."""
     if streak_len > 0:
         return (
-            f"{streak_len} günlük zincirin seni bekliyor. "
-            "Yarın en küçük halkayla yeniden tutunabilirsin."
+            f"Disiplinin düşüyor: {streak_len} günlük zincirin bugün kırılmak üzere. "
+            "Bu kadar yol geldin — neden şimdi vazgeçesin? Tek küçük halka yeter."
         )
-    return "Bugün eksik kaldı; yarın yeni bir halka için yeniden başlayabilirsin."
+    return (
+        "Bugün de görev yok ve puanın eridi. Kendine verdiğin sözü hatırlıyor musun? "
+        "Yarın 2 dakikalık tek bir adımla geri dönebilirsin."
+    )
 
 
 def send(messages: list[PushMessage], timeout: float = 8) -> list[dict]:

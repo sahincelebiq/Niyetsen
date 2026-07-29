@@ -27,6 +27,22 @@ REPLAN_MARKERS = (
     "plan tasarla", "plan oluştur", "yeni plan", "kapsamlı plan",
     "yeniden plan", "plan yap", "planlama yap",
 )
+# FAZ 8 (toplantı geri bildirimi): kullanıcı açıkça plan istiyorsa model soru
+# sormaya devam edemez — eksik alanlar varsayılanla doldurulur, plan AÇILIR.
+# "Sohbet ederken planı oluşturamadı" hatasının kökten çözümü.
+FORCE_PLAN_MARKERS = (
+    "planı oluştur", "planımı oluştur", "planı hazırla", "direkt plan",
+    "hemen plan", "artık plan", "planı çıkar", "plana geç", "planı yap",
+)
+
+
+def _fill_intent_defaults(collected: CollectedIntent) -> CollectedIntent:
+    """Zorunlu alan boşsa mantıklı varsayılan — plan üretimi asla kilitlenmez."""
+    return collected.model_copy(update={
+        "city": collected.city or "belirtilmedi",
+        "interests": collected.interests or ["kişisel gelişim"],
+        "weekly_hours": collected.weekly_hours or 5,
+    })
 CHAT_HISTORY_LIMIT = 24
 
 
@@ -73,6 +89,7 @@ def _merge_collected(old: CollectedIntent, new_raw: dict) -> CollectedIntent:
 
 async def handle_chat(req: ChatRequest, state: GameState | None = None,
                 user_name: str = "", birth_date: str = "", zodiac: str = "",
+                gender: str = "",
                 active_intent: str = "", today_status: str = "",
                 recent_tasks: str = "", mood_notes: str = "",
                 has_active_plan: bool = False,
@@ -127,6 +144,7 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
         name=user_name,
         birth_date=birth_date,
         zodiac=zodiac,
+        gender=gender,
         active_intent=active_intent,
         today_status=today_status,
         recent_tasks=recent_tasks,
@@ -171,11 +189,20 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
 
     merged = _merge_collected(req.collected, data.get("collected", {}))
 
+    # FAZ 8: kullanıcı planı AÇIKÇA istediyse eksikler varsayılanla dolar ve
+    # ready sinyali kesin verilir (model soru döngüsüne giremez).
+    force_plan = any(marker in normalized_message for marker in FORCE_PLAN_MARKERS)
+    if force_plan:
+        merged = _fill_intent_defaults(merged)
+
     # 4) ÇİFTE KİLİT: plan zaten varsa veya asgari alanlar dolmadan plan yok.
+    # FAZ 8 istisnası: kullanıcı planı açıkça istediyse (force_plan) kilit
+    # aşılır — varsayılanlar dolduruldu, kullanıcı beklemeye devam etmez.
     model_ready = bool(data.get("ready_for_plan"))
     can_generate_plan = not plan_has_content
     ready = can_generate_plan and (
-        (model_ready and merged.is_ready())
+        force_plan
+        or (model_ready and merged.is_ready())
         or (
             not has_active_plan
             and merged.is_ready()

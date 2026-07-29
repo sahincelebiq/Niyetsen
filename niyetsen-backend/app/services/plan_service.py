@@ -90,7 +90,18 @@ async def generate_batch(
     """
     start_date = start_date or date.today()
     if not collected.is_ready():
-        raise ValueError("Niyet eksik: şehir + ilgi + haftalık zaman dolmadan plan üretilmez.")
+        # FAZ 8 karar değişikliği (toplantı geri bildirimi, 2026-07-28):
+        # Eksik alan plan üretimini KİLİTLEMEZ — kullanıcıyı bekletmek,
+        # varsayılanla üretmekten daha maliyetli (demo'da plan hiç çıkmadı).
+        log.warning(
+            "Niyet eksik, varsayılanlarla üretiliyor (city=%s, interests=%s, hours=%s)",
+            collected.city, collected.interests, collected.weekly_hours,
+        )
+        collected = collected.model_copy(update={
+            "city": collected.city or "belirtilmedi",
+            "interests": collected.interests or ["kişisel gelişim"],
+            "weekly_hours": collected.weekly_hours or 5,
+        })
 
     batch = min(settings.PLAN_BATCH_DAYS, duration_days - start_day + 1)
     instructions = prompts.PLAN_JSON_INSTRUCTIONS.format(

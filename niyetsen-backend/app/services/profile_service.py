@@ -32,6 +32,8 @@ def build_profile(update: ProfileUpdate, current: UserProfile) -> UserProfile:
         name=update.name.strip(),
         birth_date=update.birth_date,
         zodiac_sign=zodiac_for(update.birth_date),
+        # FAZ 8: isteğe bağlı — gönderilmezse mevcut değer korunur.
+        gender=update.gender if update.gender is not None else current.gender,
         timezone=update.timezone,
         notif_hour=update.notif_hour,
         notif_minute=update.notif_minute,

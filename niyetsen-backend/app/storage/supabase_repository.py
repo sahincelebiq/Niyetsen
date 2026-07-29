@@ -282,17 +282,23 @@ class SupabaseRepository(Repository):
         self._set_active_plan_id(user_id, plan_id)
         # Plana bağlı en güncel sohbet oturumuna geç (yoksa yeni açılır) —
         # FAZ 7.6: proje değişince o projenin sohbeti gelir.
-        row = _maybe_single(
-            self._db.table("chat_threads").select("id")
-            .eq("user_id", user_id).eq("plan_id", plan_id)
-            .order("updated_at", desc=True).limit(1)
-        )
-        if row:
-            self._db.table("users").update(
-                {"active_thread_id": row["id"]}
-            ).eq("id", user_id).execute()
-        else:
-            self._create_thread_row(user_id)
+        # FAZ 8 dayanıklılık: thread tarafı hata verirse PLAN GEÇİŞİ YİNE
+        # BAŞARILIDIR (toplantıdaki "planlar arası geçiş yapamıyorum"
+        # hatasının olası kök nedeni buydu).
+        try:
+            row = _maybe_single(
+                self._db.table("chat_threads").select("id")
+                .eq("user_id", user_id).eq("plan_id", plan_id)
+                .order("updated_at", desc=True).limit(1)
+            )
+            if row:
+                self._db.table("users").update(
+                    {"active_thread_id": row["id"]}
+                ).eq("id", user_id).execute()
+            else:
+                self._create_thread_row(user_id)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Plan geçişinde thread ayarlanamadı (yoksayıldı): %s", exc)
 
     def create_draft_plan(self, user_id: str, *, name: str, slot_no: int) -> str:
         self._ensure_user(user_id)
@@ -584,11 +590,18 @@ class SupabaseRepository(Repository):
         ).eq("id", user_id).execute()
         return thread_id
 
-    def _ensure_active_thread(self, user_id: str) -> str:
-        thread_id = self._active_thread_id(user_id)
-        if thread_id:
-            return thread_id
-        return self._create_thread_row(user_id)
+    def _ensure_active_thread(self, user_id: str) -> Optional[str]:
+        """FAZ 8 dayanıklılık: thread altyapısı hata verirse (ör. migration
+        eksik) None döner — sohbet/plan akışı ASLA thread yüzünden ölmez;
+        mesajlar plan bazlı eski davranışla yazılır."""
+        try:
+            thread_id = self._active_thread_id(user_id)
+            if thread_id:
+                return thread_id
+            return self._create_thread_row(user_id)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Thread altyapısı devre dışı (degrade mod): %s", exc)
+            return None
 
     def _touch_thread(self, user_id: str, thread_id: str, first_user_msg: str) -> None:
         row = _maybe_single(
@@ -619,8 +632,9 @@ class SupabaseRepository(Repository):
                 "role": message.role,
                 "content": message.content,
                 "plan_id": plan_id,
-                "thread_id": thread_id,
             }
+            if thread_id is not None:
+                row["thread_id"] = thread_id
             (upsert_rows if message.id else insert_rows).append(row)
         if upsert_rows:
             self._db.table("chat_msgs").upsert(
@@ -630,8 +644,12 @@ class SupabaseRepository(Repository):
             ).execute()
         if insert_rows:
             self._db.table("chat_msgs").insert(insert_rows).execute()
-        first_user = next((m.content for m in messages if m.role == "user"), "")
-        self._touch_thread(user_id, thread_id, first_user)
+        if thread_id is not None:
+            try:
+                first_user = next((m.content for m in messages if m.role == "user"), "")
+                self._touch_thread(user_id, thread_id, first_user)
+            except Exception as exc:  # noqa: BLE001 — başlık güncellenemedi diye sohbet düşmez
+                log.warning("Thread başlığı güncellenemedi: %s", exc)
 
     def list_chat_threads(self, user_id: str) -> list[ChatThread]:
         active_id = self._active_thread_id(user_id)
@@ -676,15 +694,29 @@ class SupabaseRepository(Repository):
         return True
 
     def get_chat_history(self, user_id: str) -> list[ChatMessage]:
-        thread_id = self._active_thread_id(user_id)
-        if not thread_id:
-            return []
+        # FAZ 8 dayanıklılık: thread altyapısı yoksa plan bazlı eski davranışa dön.
+        try:
+            thread_id = self._active_thread_id(user_id)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Thread okunamadı, plan bazlı geçmişe düşülüyor: %s", exc)
+            thread_id = None
+        if thread_id:
+            query = (
+                self._db.table("chat_msgs").select("id,client_message_id,role,content")
+                .eq("user_id", user_id).eq("thread_id", thread_id)
+            )
+        else:
+            plan_id = self._active_plan_id(user_id)
+            if not plan_id:
+                return []
+            query = (
+                self._db.table("chat_msgs").select("id,client_message_id,role,content")
+                .eq("user_id", user_id).eq("plan_id", plan_id)
+            )
         rows = (
-            self._db.table("chat_msgs").select("id,client_message_id,role,content")
-            .eq("user_id", user_id).eq("thread_id", thread_id)
             # Toplu insert'te created_at aynı olabilir; id ikincil anahtar
             # sıralamayı deterministik yapar.
-            .order("created_at").order("id").execute().data
+            query.order("created_at").order("id").execute().data
         )
         return [
             ChatMessage(
@@ -773,7 +805,7 @@ class SupabaseRepository(Repository):
     def get_profile(self, user_id: str) -> UserProfile:
         self._ensure_user(user_id)
         row = self._db.table("users").select(
-            "name,birth_date,zodiac_sign,timezone,notif_hour,notif_minute,"
+            "name,birth_date,zodiac_sign,gender,timezone,notif_hour,notif_minute,"
             "irade_modu_active,kvkk_consent_at"
         ).eq("id", user_id).single().execute().data
         complete = bool(
@@ -789,6 +821,7 @@ class SupabaseRepository(Repository):
             "name": profile.name,
             "birth_date": profile.birth_date.isoformat() if profile.birth_date else None,
             "zodiac_sign": profile.zodiac_sign,
+            "gender": profile.gender,
             "timezone": profile.timezone,
             "notif_hour": profile.notif_hour,
             "notif_minute": profile.notif_minute,

@@ -555,6 +555,65 @@ Detaylı tasarım + LLM/Supabase analizi: docs/FAZ7_V2_FAL_RAG.md "Dalga 4".
 Google Search grounding), yeni tablo GEREKMEZ, "ilham alır/bağlantısızdır"
 disclaimer'ı zorunlu, Supabase yeterli (Pro'ya lansmanla geç).
 
+### FAZ 8 — AĞUSTOS LANSMANI: Yatırımcı Geri Bildirimi (AKTİF FAZ, 2026-07-29)
+
+> 🎯 **28 Temmuz yatırımcı toplantısı geri bildirimlerinden doğdu. Uygulama
+> AĞUSTOS'ta yayına çıkıyor.** Ana iskelet Claude Cowork tarafından koda
+> entegre edildi (aşağıda [x] işaretli); kalan görevler Cursor Composer'da.
+> **Detaylı görev listesi + teknik işaretçiler: [`docs/FAZ8_LANSMAN.md`](docs/FAZ8_LANSMAN.md)
+> — Cursor önce onu okur.**
+
+Demo'da yaşanan hataların kök nedenleri ve çözümler:
+
+**İskelet — koda entegre EDİLDİ (2026-07-29, Claude Cowork):**
+- [x] **Hız**: sohbette sorgu embedding'i kapatıldı (`RAG_CHAT_EMBEDDINGS=false`,
+      keyword eşleşme) — mesaj başına 1 Gemini çağrısı eksildi.
+- [x] **Model yükseltme altyapısı**: `GEMINI_FALLBACK_MODEL(_PLAN)` +
+      `gemini_client._is_model_unavailable` — Railway'de GEMINI_MODEL'i yeni
+      nesle (Gemini 3 ailesi) çevirince model yoksa otomatik 2.5'e döner,
+      uygulama çökmez. Güncel adlar: ai.google.dev/gemini-api/docs/models.
+- [x] **Plan üretim güvencesi**: "planı oluştur/hazırla/çıkar…" işaretleri
+      (`FORCE_PLAN_MARKERS`) → eksik alanlar varsayılanla dolar, ready kesin
+      döner; `plan_service.generate_batch` artık not-ready'de HATA ATMAZ.
+      Demo'daki "sohbette plan çıkaramadı" kökten kapandı.
+- [x] **Thread dayanıklılığı**: chat_threads işlemleri degrade moda alındı
+      (try/except) — thread tablosu yoksa/bozuksa sohbet ve **plan geçişi**
+      ASLA düşmez. Demo'daki "planlar arası geçemiyorum"un baş şüphelisi:
+      prod Supabase'de `chat_threads` migration'ının çalışmamış olması.
+- [x] **Kanıt sıkılaştırma**: `PROOF_VALIDATION_PROMPT` 6 katı kuralla yeniden
+      yazıldı — anlamsal eşleşme zorunlu, "su içme ≠ meyve/protein tarifi"
+      (aynı tema yetmez, ≤40 güven), ekran görüntüsü/stok görsel red.
+- [x] **Cinsiyet**: `users.gender` kolonu (migration `20260728100000_faz8_gender.sql`),
+      UserProfile/ProfileUpdate şemaları, bellek bloğunda "Cinsiyet:" satırı,
+      SYSTEM_PROMPT'ta klişesiz uyarlama kuralı. Sohbet + fal uçtan uca alıyor.
+- [x] **Burç ikonu altyapısı**: `mobile/src/constants/zodiac.ts` (12 sembol +
+      helper) — Cursor profil başlığına yerleştirecek. Rehber burcu zaten
+      bellek bloğundan tanıyor.
+- [x] **Bildirim tonu**: `push_service.emotional_penalty_body` dürüst-direkt
+      tona güncellendi ("Disiplinin düşüyor… neden şimdi vazgeçesin?") —
+      utandırma çizgisi korunarak (§4 madde 9 geçerli).
+
+**Cursor görevleri (sıra docs/FAZ8_LANSMAN.md'de, KAPI'larıyla):**
+- [ ] 8.1 Prod Supabase doğrulaması: `chat_threads` + `idol_personas` +
+      `gender` migration'larını SQL Editor'da çalıştır/doğrula (**demo hatasının
+      1 numaralı şüphelisi — İLK İŞ**).
+- [ ] 8.2 Railway env: GEMINI_MODEL/GEMINI_MODEL_PLAN'ı güncel Gemini 3 ailesi
+      adlarına çevir (fallback güvencesi kodda hazır).
+- [ ] 8.3 Plan düzenleme: görev taşı/düzenle/ekle/sil endpoint'leri +
+      takvimde sürükle-düzenle UI (Niyetsen görsel kimliği korunur).
+- [ ] 8.4 Profil ekranı mobil yeniden tasarım (web görünümünden gerçek app
+      hissine) + cinsiyet seçimi UI + burç ikonu isim yanında.
+- [ ] 8.5 Çoklu plan geçişi uçtan uca test (plan başına vision-board
+      görselleri dahil) + hata telemetrisi.
+- [ ] 8.6 Kanıt: kişiselleştirilmiş görev bağlamını (tarif içeriği) proof
+      prompt'una taşı; sınır vakalarla cihaz testi.
+- [ ] 8.7 Lansman kontrol listesi: store metinleri, IAP smoke test, PostHog
+      hunisi, Sentry alarmları.
+
+KAPI 8: Prod'da (gerçek cihaz) → yeni kullanıcı sohbeti <8 sn yanıt, "planı
+oluştur" %100 plan üretir, 2 plan arası geçiş + görseller sorunsuz, su içme
+fotoğrafı meyve görevini GEÇEMEZ. Bunlar yeşil olmadan store'a gidilmez.
+
 ---
 
 ## §4. CURSOR ÇALIŞMA PROTOKOLÜ (kesintisiz ilerleme için)

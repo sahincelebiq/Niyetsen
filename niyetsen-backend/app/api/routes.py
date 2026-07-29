@@ -262,6 +262,7 @@ async def chat(
                 user_name=profile.name or "",
                 birth_date=profile.birth_date.isoformat() if profile.birth_date else "",
                 zodiac=profile.zodiac_sign or "",
+                gender=profile.gender or "",
                 active_intent=active_intent,
                 today_status=today_status,
                 recent_tasks=recent_tasks,
@@ -882,6 +883,7 @@ def _fortune_context(user_id: str) -> tuple[UserProfile, bool, str]:
         name=profile.name or "",
         birth_date=profile.birth_date.isoformat() if profile.birth_date else "",
         zodiac=profile.zodiac_sign or "",
+        gender=profile.gender or "",
     )
     return profile, info.has_premium_access, memory
 

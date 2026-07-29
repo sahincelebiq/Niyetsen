@@ -209,6 +209,9 @@ class UserProfile(BaseModel):
     name: Optional[str] = None
     birth_date: Optional[dt_date] = None
     zodiac_sign: Optional[str] = None
+    # FAZ 8: sohbet kişiselleştirmesi için İSTEĞE BAĞLI cinsiyet (KVKK: zorunlu
+    # değil, sadece hitap/örnek uyarlaması için; klişe üretimi prompt'ta yasak).
+    gender: Optional[Literal["kadın", "erkek", "belirtmek istemiyorum"]] = None
     timezone: str = "Europe/Istanbul"
     notif_hour: int = 8
     notif_minute: int = 0
@@ -220,6 +223,7 @@ class UserProfile(BaseModel):
 class ProfileUpdate(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     birth_date: dt_date
+    gender: Optional[Literal["kadın", "erkek", "belirtmek istemiyorum"]] = None
     timezone: str = Field(default="Europe/Istanbul", min_length=1, max_length=80)
     notif_hour: int = Field(default=8, ge=0, le=23)
     notif_minute: int = Field(default=0, ge=0, le=59)

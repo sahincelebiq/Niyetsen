@@ -19,6 +19,7 @@ def build_memory_block(
     name: str = "",
     birth_date: str = "",
     zodiac: str = "",
+    gender: str = "",
     active_intent: str = "",
     today_status: str = "",
     recent_tasks: str = "",
@@ -36,6 +37,8 @@ def build_memory_block(
         lines.append(f"Doğum tarihi: {birth_date}")
     if zodiac:
         lines.append(f"Burç: {zodiac}")
+    if gender and gender != "belirtmek istemiyorum":
+        lines.append(f"Cinsiyet: {gender}")
     if active_intent:
         lines.append(f"Aktif niyet: \"{active_intent}\"")
     if state is not None:
