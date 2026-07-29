@@ -194,3 +194,6 @@ Cursor görevleri:
 - Cinsiyet = ince uyarlama sinyali; klişe/genelleme YASAK (prompts.py kuralı).
 - Sırlar yalnız .env; migration'lar önce SQL Editor'da; her ekran gerçek cihazda.
 - Araç listesi dışına çıkma (core/tools.py).
+- Public zincir/rank, şehirler arası rekabet, store sonrası herkese açık
+  istatistik → MASTER_PLAN **leaderboard v3**; FAZ 8 lansmanında kodlanmaz
+  (puan/rank kullanıcı bazlı kalır; plan değişince score sıfırlanmaz).
