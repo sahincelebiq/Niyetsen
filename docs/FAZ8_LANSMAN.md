@@ -150,17 +150,17 @@ başladığından beri yolculuğu.
   raporda GÖSTERİLMEZ (Spotify az dinlediğini yüzüne vurmaz; ton kuralı).
 
 Cursor görevleri:
-- [ ] Giriş noktası: `rank.tsx` üstüne "Raporun hazır ✨" banner'ı — kullanıcı
+- [x] Giriş noktası: `rank.tsx` üstüne "Raporun hazır ✨" banner'ı — kullanıcı
       14. günü geçtiyse görünür (days_in >= 14), `router.push('/rapor')`.
-- [ ] Push: notification_service'e 14. gün (ve sonrasında her 30 günde bir)
+- [x] Push: notification_service'e 14. gün (ve sonrasında her 30 günde bir)
       `recap_service.recap_push_body()` ile bildirim; data payload'ına
       `{"screen": "rapor"}` → bildirime dokununca /rapor açılır (deep link).
-- [ ] Story cilası: kart geçiş animasyonu (Reanimated, Easing yalnız
+- [x] Story cilası: kart geçiş animasyonu (Reanimated, Easing yalnız
       reanimated'dan), kind'a göre şablon (trait kartında kategori rozeti,
       streak kartında filiz 🌱→🌿→🌳), uzun basınca duraklat.
-- [ ] Paylaş: closing kartına "Paylaş" butonu (react-native-view-shot ile
+- [x] Paylaş: closing kartına "Paylaş" butonu (react-native-view-shot ile
       kart görüntüsü → native share sheet) — organik büyüme kanalı.
-- [ ] Aylık dönem: period=30d seçeneği UI'da (segment).
+- [x] Aylık dönem: period=30d seçeneği UI'da (segment).
 - KAPI: 14+ günlük dev hesabında rapor gerçek verilerle akıyor; boş/yeni
   kullanıcıda çökmüyor (kartlar dolu geliyor); reduce-motion'da sorunsuz.
 
