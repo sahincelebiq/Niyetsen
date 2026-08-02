@@ -19,7 +19,7 @@ from app.config import CATEGORIES
 from app.models.schemas import GameState, Plan, RecapCard, RecapResponse
 from app.services.scoring_service import overall_rank, rank_for
 
-PERIOD_DAYS = {"14d": 14, "30d": 30}
+PERIOD_DAYS = {"7d": 7, "14d": 14, "30d": 30}
 
 
 def _completed_in_period(plan: Plan | None, start: date, end: date) -> int:
@@ -57,12 +57,31 @@ def build_recap(
     top_cat, top_pts = _top_category(state.points)
     name = (user_name or "").strip()
 
+    first_theme = ""
+    if plan and plan.days:
+        day0 = plan.days[0]
+        first_theme = (day0.theme or "").strip()
+        if not first_theme and day0.tasks:
+            first_theme = (day0.tasks[0].title or "").strip()
+    journey_sub = (
+        f"İlk gün: {first_theme[:80]}. Şimdi {max(days_in, 1)}. gündesin — "
+        f"{completed} görev bu dönemde tamamlandı."
+        if first_theme
+        else f"Başladığın yerden {max(days_in, 1)}. güne. Bu dönemde {completed} görev."
+    )
+
     cards: list[RecapCard] = [
         RecapCard(
             kind="intro",
             title=f"{name}, yolculuğun" if name else "Yolculuğun",
             headline=f"{max(days_in, 1)}. gün",
             subtitle="Niyetsen'e başladığından beri her gün bir halka.",
+        ),
+        RecapCard(
+            kind="journey",
+            title="İlk gün → şimdi",
+            headline=f"Gün 1 → Gün {max(days_in, 1)}",
+            subtitle=journey_sub,
         ),
         RecapCard(
             kind="tasks",
@@ -94,7 +113,7 @@ def build_recap(
             kind="closing",
             title="Genel rütben",
             headline=overall_rank(state.points),
-            subtitle=f"Toplam {total_points} puan. Sonraki rapor: {days} gün sonra 🌱",
+            subtitle=f"Toplam {total_points} puan. Haftalık ve aylık raporun Zincir’de.",
         ),
     ]
 

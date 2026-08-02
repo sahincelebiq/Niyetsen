@@ -7,6 +7,13 @@ _tmp_assets/
 website_*.zip
 website_*_maintenance/
 
+# Logo paket zip/klasör (ağır binary; store-listing/sources kullan)
+Niyetsen_Logo_Paketi/
+Niyetsen_Logo_Paketi.zip
+
+# Sosyal medya credential notları — asla commit etme
+Sosyal Medya*/
+
 # Editör / araç yerel durumu
 .DS_Store
 .claude/

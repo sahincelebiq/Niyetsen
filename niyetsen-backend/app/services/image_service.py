@@ -184,9 +184,10 @@ async def enrich_image_keywords_batch(
         f'JSON: {{"queries": ["terim1", ...]}} — tam {len(items)} öğe, aynı sıra.'
     )
     try:
+        # Görsel terim zenginleştirme ucuz modelde — 3.1 Pro burada yakılmaz.
         data = await generate_json(
             prompt,
-            model=settings.GEMINI_MODEL,
+            model=settings.GEMINI_FALLBACK_MODEL,
             max_output_tokens=512,
             json_retries=2,
             response_schema={

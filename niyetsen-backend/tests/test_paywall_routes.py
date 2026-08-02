@@ -71,6 +71,16 @@ def test_expired_trial_blocks_idol_paths() -> None:
     assert res.json()["detail"]["code"] == "paywall_required"
 
 
+def test_free_status_blocks_idol_paths() -> None:
+    """Free (deneme başlamamış) idol/mistik PRO kapısında — has_premium_access
+    true olsa bile status=free 402 alır."""
+    _grant_consents()
+    repo.update_subscription(USER, subscription_status="free")
+    res = client.get("/paths", headers=_auth_headers())
+    assert res.status_code == 402
+    assert res.json()["detail"]["code"] == "paywall_required"
+
+
 def test_subscription_endpoint_reports_trial() -> None:
     user_id = "paywall-trial-user"
     client.post(

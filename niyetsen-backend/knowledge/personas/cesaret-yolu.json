@@ -1,0 +1,53 @@
+{
+  "slug": "cesaret-yolu",
+  "path_name": "Cesaret Yolu",
+  "tagline": "korkunun yanında durmak",
+  "category": "ozguven",
+  "inspired_by": "Brené Brown",
+  "source_note": "Bu yol Brené Brown'ın kamuya açık utanç/cesaret araştırmalarından ilham alır; kendisiyle bağlantılı değildir.",
+  "tags": [
+    "cesaret",
+    "kırılganlık",
+    "özgüven",
+    "ifade"
+  ],
+  "dossier": {
+    "why_important": "Cesaret, korkusuzluk değil; korku varken değerli olanı yapmaktır. Sosyallik ve özgüven görevleri çoğu zaman 'görünmek' ister — bu yol onu güvenli mikro adımlara böler.",
+    "core_beliefs": [
+      "Kırılganlık zayıflık değil, bağlantının bedelidir.",
+      "Utanç sessizlikte büyür; paylaşılınca küçülür.",
+      "Sınırlar cesareti korur.",
+      "Küçük cesur eylemler kimliği değiştirir."
+    ],
+    "mindset": "Bugün korkuttuğu halde doğru olan en küçük adımı seç. Mükemmel konuşma bekleme; dürüst bir cümle yeter.",
+    "habits": [
+      "Günlük bir cesur mikro eylem",
+      "Sınır cümlesi pratikleri",
+      "Haftada 1 teşekkür / takdir ifadesi",
+      "Utanç tetikleyicisini yazma",
+      "Güvenli biriyle kısa paylaşım"
+    ],
+    "daily_routine": "Sabah bugünün cesur mikro eylemini seç; akşam nasıl hissettirdiğini 3 satır yaz.",
+    "sports_or_physical_practice": "Güç veya denge hareketleri — bedende 'yapabilirim' hissi için.",
+    "reading_profile": "Özşefkat, iletişim ve araştırma temelli popüler bilim.",
+    "books_read_or_recommended": [
+      "Daring Greatly — Brené Brown"
+    ],
+    "decision_style": "Kararı 'korku mu değer mi yönetiyor?' diye sor; değer kazanırsa küçük adım at.",
+    "failure_and_recovery": "Red veya utanç geldiyse hikâyeyi büyütme; bir güvenli kişiye tek cümle anlat, sonra mini eyleme dön.",
+    "public_quotes": [
+      "Cesaret, korku varken doğru olanı yapmaktır. (Brown araştırmaları — mealen)"
+    ],
+    "lessons_for_users": [
+      "Bugün seni biraz gererken doğru olan 1 mikro eylem yap.",
+      "Birine kısa ve dürüst bir cümle söyle.",
+      "Bir sınır cümlesi yaz ve kullan.",
+      "Utanç tetikleyicini tek satır not et.",
+      "Bu hafta birine samimi teşekkür et."
+    ],
+    "sources": [
+      "https://brenebrown.com/",
+      "https://en.wikipedia.org/wiki/Bren%C3%A9_Brown"
+    ]
+  }
+}

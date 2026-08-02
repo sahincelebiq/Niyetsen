@@ -73,6 +73,11 @@ class Repository(ABC):
     def update_task(self, user_id: str, task: Task) -> None: ...
 
     @abstractmethod
+    def delete_task(self, user_id: str, task_id: str) -> bool:
+        """Sahiplik doğrulayarak görevi siler. Yoksa False."""
+        ...
+
+    @abstractmethod
     def get_proof_attempts(self, user_id: str, task_id: str) -> int: ...
 
     @abstractmethod
@@ -159,6 +164,11 @@ class Repository(ABC):
 
     @abstractmethod
     def get_active_intent(self, user_id: str) -> tuple[CollectedIntent, bool] | None: ...
+
+    @abstractmethod
+    def get_latest_intent(self, user_id: str) -> CollectedIntent | None:
+        """Aktif veya tamamlanmış son niyet — /plan/next için."""
+        ...
 
     @abstractmethod
     def complete_active_intent(self, user_id: str) -> None: ...

@@ -1,0 +1,53 @@
+{
+  "slug": "safak-yolu",
+  "path_name": "Şafak Yolu",
+  "tagline": "sabahı fethetmek",
+  "category": "rutin",
+  "inspired_by": "Kobe Bryant",
+  "source_note": "Bu yol sabah antrenman etiği ve 'sabah mucizesi' geleneğinin kamuya açık pratiklerinden ilham alır (ör. Kobe Bryant'ın bilinen erken antrenman disiplini); kendisiyle bağlantılı değildir.",
+  "tags": [
+    "sabah",
+    "rutin",
+    "uyku",
+    "disiplin"
+  ],
+  "dossier": {
+    "why_important": "Günün ilk saati kimseye ait değildir; onu alan, günün geri kalanına borçlu başlamaz. Sabah rutini disiplin gösterisi değil, kendine verilmiş sessiz bir sözdür.",
+    "core_beliefs": [
+      "Yatış saati, uyanış saatinden önce gelir.",
+      "Telefonsuz ilk dakika kimliği kurar.",
+      "Küçük sabah zaferi günü taşır.",
+      "Hafta sonu telafisi rutini bozmamalıdır."
+    ],
+    "mindset": "Akşamı sabahın provası yap. Telefonsuz ilk 30 dakika. Yatak toplamak bile zincire sayılır.",
+    "habits": [
+      "Sabit yatış alarmı",
+      "Uyanınca su + 5 dk hareket",
+      "Telefonsuz ilk yarım saat",
+      "Günün önemli işini sabah yapmak",
+      "Hafta sonu uykuyu 1 saatle sınırlamak"
+    ],
+    "daily_routine": "Akşam yatış alarmı; sabah su ve kısa hareket; telefonsuz pencere; günün tek önemli işi ilk saatte.",
+    "sports_or_physical_practice": "Sabah kısa hareket veya hafif kardiyo — uyanıklık için.",
+    "reading_profile": "Kısa sabah okuması (5-10 sayfa) veya sesli kitap yerine sessiz sayfa.",
+    "books_read_or_recommended": [
+      "The Miracle Morning — Hal Elrod (kamuya açık çerçeve)"
+    ],
+    "decision_style": "Gece kararlarını sabaha ertele; yorgun beyinle büyük seçim yapma.",
+    "failure_and_recovery": "Geç kaldıysan rutinin tamamını atlama; en küçük halkayı (su + yatak) yap.",
+    "public_quotes": [
+      "Büyük işler, kimsenin bakmadığı saatlerde hazırlanır. (kamuya açık antrenman etiği — mealen)"
+    ],
+    "lessons_for_users": [
+      "Yatış alarmı kur (uyanma değil).",
+      "Uyanınca 1 bardak su iç.",
+      "İlk 30 dk telefonu başka odada tut.",
+      "Günün tek önemli işini sabaha koy.",
+      "Hafta sonu uykuyu en fazla 1 saat uzat."
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/The_Miracle_Morning",
+      "https://en.wikipedia.org/wiki/Kobe_Bryant"
+    ]
+  }
+}

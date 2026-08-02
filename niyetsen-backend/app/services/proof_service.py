@@ -47,6 +47,9 @@ async def evaluate_proof(
     tiny_version: str = "",
     categories: list[str] | None = None,
     task_type: str = "alışkanlık",
+    plan_name: str = "",
+    day_theme: str = "",
+    task_context: str = "",
 ) -> ProofResult:
     validate_upload(image_bytes, mime_type)
 
@@ -65,6 +68,9 @@ async def evaluate_proof(
                 tiny_version=tiny_version or "belirtilmedi",
                 categories=", ".join(categories or []) or "belirtilmedi",
                 task_type=task_type,
+                plan_name=plan_name or "belirtilmedi",
+                day_theme=day_theme or "belirtilmedi",
+                task_context=task_context or "yok",
             ),
             image_bytes=image_bytes,
             mime_type=mime_type,

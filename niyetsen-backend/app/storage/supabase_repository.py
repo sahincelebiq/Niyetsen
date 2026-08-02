@@ -400,6 +400,7 @@ class SupabaseRepository(Repository):
             return
         self._db.table("tasks").update({
             "title": task.title,
+            "day_no": task.day,
             "task_type": task.task_type,
             "categories": task.categories,
             "image_keyword": task.image_keyword,
@@ -413,6 +414,13 @@ class SupabaseRepository(Repository):
             "date": task.date.isoformat() if task.date else None,
             "proof_id": task.proof_id,
         }).eq("id", task.id).execute()
+
+    def delete_task(self, user_id: str, task_id: str) -> bool:
+        # plans!inner ile sahiplik; başka kullanıcının task_id'si silinmez.
+        if self.get_task(user_id, task_id) is None:
+            return False
+        self._db.table("tasks").delete().eq("id", task_id).execute()
+        return True
 
     # ------------------------------------------------------------------
     # Kanıt denemeleri
@@ -790,6 +798,23 @@ class SupabaseRepository(Repository):
             )
         except (TypeError, ValueError, json.JSONDecodeError):
             return CollectedIntent(), False
+
+    def get_latest_intent(self, user_id: str) -> CollectedIntent | None:
+        plan_id = self._active_plan_id(user_id)
+        if not plan_id:
+            return None
+        row = _maybe_single(
+            self._db.table("intents").select("text").eq("user_id", user_id)
+            .eq("plan_id", plan_id)
+            .order("created_at", desc=True).limit(1)
+        )
+        if not row:
+            return None
+        try:
+            payload = json.loads(row["text"])
+            return CollectedIntent(**payload.get("collected", {}))
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return CollectedIntent()
 
     def complete_active_intent(self, user_id: str) -> None:
         plan_id = self._active_plan_id(user_id)

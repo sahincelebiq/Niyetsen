@@ -1,0 +1,104 @@
+---
+description: Play Store çıkış + tam donanım sprint hafızası (2026-08-02 Şahin)
+alwaysApply: true
+---
+
+# PLAY STORE ÇIKIŞ HAFIZASI (v1, 2026-08-02)
+
+Şahin'in talimatı: uygulamayı **Play Store** için çıkartacağız. Önce hafıza
++ plan; sonraki prompt'ta uygulama. Hiçbir kilitli karar unutulmaz.
+
+## Bu oturumda kilitlenen niyet
+
+1. **UYGULAMA AÇIK** (2026-08-02): `/goal` = `docs/PLAYSTORE_GOAL.md` —
+   agent’lar paralel çalışır; duraksama yok.
+1b. **Play Console** (Sahinology / kutluadalarr7): geliştirici hesabı açıldı,
+   kimlik **onay aşamasında** — ekran görüntüsü güvenlik sızıntısı değil;
+   sır/credential sayılmaz. Yayın için onay + Internal testing beklenir.
+1c. Supabase Pro ($25) yükseltme hedefi: **2026-08-05**. SQL Editor disiplini:
+   yalnız `RUN_IN_SUPABASE_SQL_EDITOR.sql` VERIFY; DDL = migration.
+2. Hedef: **tam donanımlı** çıkış — API'ler hazır kalsın; UI optimize;
+   eksik planlama / raporlama / mistik arayüz + kart animasyonları Figma
+   (`/figma-generate-design`) ile tasarlanıp koda işlenecek.
+3. **Güvenlik + hatasızlık** şart: JWT, sırlar, kanıt sıkılığı, store
+   uyumu (fal İKİNCİL), IAP yalnız RevenueCat. Sosyal medya dosyaları
+   ürün engeli değil (yatırımcı ekip).
+4. Araçlar: Figma generate-design + motion; `/superfrontend` ve
+   `/add-plugin` ile keskin plugin'ler (aşağıda öneri listesi).
+5. **Bağlam penceresi kusursuz**: sol ChatHistorySheet + sunucu
+   KULLANICI BELLEĞİ + kanıt GÖREV BAĞLAMI.
+
+## Zaten HAZIR (dokunmadan koru — üzerine inşa et)
+
+### Backend / API
+- FastAPI prod Railway; `/health` Gemini **3.1-pro-preview** (+ 2.5 fallback).
+- Sohbet / plan / kanıt / fal / recap / scoring / multi-plan / threads degrade.
+- Dev muaf: `kutluadalarr7@gmail.com` → subscription `active`.
+- Test: ~184 pytest yeşil (düşürme).
+- ⚠️ Gemini paid tier kota açılmalı (preview ~250/gün lansmanda yetmez).
+
+### Mobil (ayrı repo: `Niyetsen-mobile`)
+- Expo Router tabs: Sohbet / Bugün / Planım / Zincir / Profil (+ mistik gizli).
+- UI v3 İlkbahar token'ları; soft dark + Profil Görünüm Switch.
+- Sohbet: inverted list, logo avatar, doodle wallpaper, VectorIcon tabs.
+- Yeni plan akışı: abone/dev → sohbet; ücretsiz = 1 plan + web Alert fallback.
+- Wrapped `/rapor` + rank banner + share (8.8 iskelet+Cursor görevleri ✅).
+- Mistik ekranlar var ama bir kısmı `MysticComingSoon` / cilasız.
+
+### Altyapı
+- Supabase: chat_threads, gender, idol_* doğrulandı (8.1 ✅).
+- Railway cron: `/railway.cron.toml` (uvicorn açma!).
+- CORS: localhost 8081/8082.
+
+## AÇIK KALANLAR (Play öncesi sıra — FAZ8 + Şahin talebi)
+
+| Öncelik | Madde | Not |
+|--------|--------|-----|
+| P0 | 8.2 paid Gemini kota | Lansman blocker |
+| P0 | 8.6 kanıt kişisel bağlam | Su ≠ meyve KAPI |
+| P0 | Play IAP + Data Safety + Internal testing | MASTER_PLAN KAPI 5–6 |
+| P1 | 8.3 plan düzenleme API+UI | Taşı/düzenle/sil |
+| P1 | 8.4 profil + burç mistik başlık | Kısmen yapıldı; checklist kapat |
+| P1 | Mistik UI tam donanım | Kartlar + animasyon (Figma→kod) |
+| P1 | Rapor/planlama UI polish | Örnek ekranlar + Figma |
+| P2 | 8.5 cihaz multi-plan smoke | API yeşil; cihaz Şahin |
+| P2 | 8.7 store metin / PostHog / Sentry | Fal ikincil |
+| — | Leaderboard / public rank | **v3 — bu sprintte YOK** |
+
+## Figma + Superfrontend protokolü (sonraki prompt)
+
+1. Ürün fontu: **Fraunces** (başlık) + **Manrope** (gövde) — Inter YASAK.
+2. Renk: yalnız `theme.ts` / `MysticColors` token'ları.
+3. `/figma-generate-design`: önce wrapper → bölüm bölüm; mistik kartlar
+   componentize; motion için `figma-use-motion` / `figma-implement-motion`.
+4. Animasyon kodda: **Reanimated only** (Easing/Animated RN'den gelmez).
+5. Web capture varsa `generate_figma_design` paralel (görsel hash transfer).
+
+## Önerilen Cursor plugin'ler (`/add-plugin` — keskin set)
+
+Zaten bağlıysa tekrar ekleme. Yoksa ekle:
+
+| Plugin | Neden |
+|--------|--------|
+| **Figma** | Ekran/kart/motion → kod |
+| **Supabase** | Migration, RLS, advisor |
+| **Railway** | Deploy, env, cron, log |
+| **RevenueCat** | Play IAP / entitlement |
+| **Sentry** (varsa) | 5xx + crash alarm |
+| **Expo / EAS** (varsa) | AAB build, submit |
+| Frontend quality (Superfrontend benzeri) | Erişilebilirlik, layout audit, performans |
+
+`/superfrontend`: UI kalite katmanı — mistik/plan/rapor ekranlarında spacing,
+hit-area, dark mode, a11y, animasyon jank kontrolü için kullan.
+
+## Commit / repo hatırlatması
+
+- Kök: `Niyetsen` (backend+docs) — `faz8: …`
+- Mobil: `mobile/` ayrı git — `faz8-ui: …` / `faz8: …`
+- Commit yalnız Şahin isteyince; push aynı.
+
+## Aktif yürütme sırası (goal)
+
+1. 8.6 kanıt GÖREV BAĞLAMI → 2) ChatHistorySheet + bellek → 3) Profil/mistik
+   UI → 4) Plan düzenleme 8.3 → 5) Play IAP/Data Safety. Detay:
+   `docs/PLAYSTORE_GOAL.md`.

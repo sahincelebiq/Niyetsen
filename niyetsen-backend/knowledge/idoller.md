@@ -67,3 +67,39 @@ telefonsuz ilk 30 dakika; küçük zafer zinciri — yatak toplamak sayılır.
 PRATİK: Sabit yatış alarmı (uyanma değil, YATMA alarmı); uyanınca 1 bardak su
 + 5 dakika hareket; telefonsuz ilk yarım saat; günün tek önemli işini sabah
 ilk saatte yapmak; hafta sonu telafi uykusunu 1 saatle sınırlamak.
+
+## Ikigai Yolu — anlamın kesişimi
+FELSEFE: Sevdiğin / iyi olduğun / dünyanın ihtiyaç duyduğu / karşılığını
+alabileceğin alanların kesişimi. Rastgele görev yığınını anlamlı yöne bağlar.
+Japon ikigai geleneğinin kamuya açık çerçevelerinden ilham alır; belirli bir
+kişiyle bağlantılı değildir.
+PRATİK: 4 kutulu haftalık harita; günde 1 anlamlı mikro katkı; ayda 1 beceri
+derinleştirme; eleme listesi; akşam etki cümlesi.
+
+## Akış Yolu — odak ve keyif dengesi
+FELSEFE: Beceri ile zorluğun dengelendiği derin odak. Görev sıkıcı veya panik
+seviyesindeyse zincir kırılır. Mihaly Csikszentmihalyi'nin kamuya açık flow
+araştırmalarından ilham alır; kendisiyle bağlantılı değildir.
+PRATİK: 45 dk bildirimsiz blok; zorluk ayarı; iş sonrası 2 satır geri bildirim;
+haftada 1 keyifli derin iş.
+
+## Dayanıklılık Yolu — esneyip kırılmamak
+FELSEFE: Uzun vadeli tutku + ısrar. Motivasyon dalgası geçince kalan şey
+sistemdir. Angela Duckworth'un kamuya açık grit araştırmalarından ilham alır;
+kendisiyle bağlantılı değildir.
+PRATİK: Neden kartı; zayıf halkaya 10 dk kasıtlı pratik; 24 saat kuralı;
+küçük zafer arşivi.
+
+## Minimalizm Yolu — az ile öz
+FELSEFE: Fazla seçenek dikkat yer. Minimalizm yoksunluk değil, niyete yer
+açmaktır. Kamuya açık minimalizm hareketinden ilham alır; belirli bir ünlüyle
+bağlantılı değildir.
+PRATİK: 10 dk alan sadeleştirme; dijital temizlik; 48 saat alışveriş kuralı;
+en fazla 3 maddelik odak listesi.
+
+## Cesaret Yolu — korkunun yanında durmak
+FELSEFE: Cesaret korkusuzluk değil; korku varken değerli olanı yapmaktır.
+Brené Brown'ın kamuya açık utanç/cesaret araştırmalarından ilham alır;
+kendisiyle bağlantılı değildir.
+PRATİK: Günlük cesur mikro eylem; sınır cümlesi; teşekkür ifadesi; güvenli
+paylaşım.

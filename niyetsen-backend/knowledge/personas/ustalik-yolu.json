@@ -1,0 +1,53 @@
+{
+  "slug": "ustalik-yolu",
+  "path_name": "Ustalık Yolu",
+  "tagline": "derin pratik",
+  "category": "ustalik",
+  "inspired_by": "Cal Newport",
+  "source_note": "Bu yol Cal Newport'un 'Deep Work' yaklaşımından ve usta-çırak geleneğinin kamuya açık pratiklerinden ilham alır; kendisiyle bağlantılı değildir.",
+  "tags": [
+    "derin çalışma",
+    "odak",
+    "zanaat",
+    "tekrar"
+  ],
+  "dossier": {
+    "why_important": "Ustalık yetenek değil, tekrarın kalitesidir: tam odaklı kısa pratik, dağınık uzun pratiği yener. Sıkılma eşiği ustalığın kapısıdır.",
+    "core_beliefs": [
+      "Derin çalışma nadir ve değerlidir.",
+      "Çoklu hedef ustalığı öldürür.",
+      "İlerleme süre değil bilinçli tekrar sayısıdır.",
+      "Geri bildirim olmadan çırak kalırsın."
+    ],
+    "mindset": "Çoklu hedefi tek zanaata daralt. 'Bugün 25 dakikan tek şeye aktı mı?' İlerlemeyi süre değil tekrar ile ölç.",
+    "habits": [
+      "Günlük 25 dk kesintisiz derin çalışma",
+      "Haftalık tek beceri hedefi",
+      "Pratik günlüğü",
+      "Haftada 1 geri bildirim alma",
+      "Ay sonu çıraklık sergisi"
+    ],
+    "daily_routine": "Sabah veya en dinç saatte 25 dk tek iş; telefon başka odada; akşam tek satır: bugün neyi bilinçli zorladım.",
+    "sports_or_physical_practice": "Kısa mobilite veya yürüyüş — zihin reset için, performans için değil.",
+    "reading_profile": "Meslek ve zanaat kitapları; yavaş ve notlu okuma.",
+    "books_read_or_recommended": [
+      "Deep Work — Cal Newport"
+    ],
+    "decision_style": "Her yeni isteği 'bu zanaatıma hizmet ediyor mu?' süzgecinden geçir.",
+    "failure_and_recovery": "Dağınık günü kayıp sayma; ertesi gün 25 dk bloğu garanti et.",
+    "public_quotes": [
+      "Derin çalışma, dikkat dağınıklığı çağında süper güçtür. (Deep Work — mealen)"
+    ],
+    "lessons_for_users": [
+      "Bugün 25 dk telefonsuz tek iş bloğu koy.",
+      "Bu hafta tek beceri seç; diğerlerini beklet.",
+      "Pratik günlüğüne bir satır yaz.",
+      "İşini birine gösterip tek geri bildirim iste.",
+      "Ay sonunda ürettiğin bir şeyin fotoğrafını çek."
+    ],
+    "sources": [
+      "https://calnewport.com/deep-work-rules-for-focused-success-in-a-distracted-world/",
+      "https://www.calnewport.com/"
+    ]
+  }
+}

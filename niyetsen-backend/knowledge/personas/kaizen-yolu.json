@@ -1,0 +1,53 @@
+{
+  "slug": "kaizen-yolu",
+  "path_name": "Kaizen Yolu",
+  "tagline": "yüzde birin gücü",
+  "category": "verimlilik",
+  "inspired_by": "James Clear",
+  "source_note": "Bu yol James Clear'ın 'Atomik Alışkanlıklar' kitabında topladığı kamuya açık alışkanlık biliminden ilham alır; kendisiyle bağlantılı değildir.",
+  "tags": [
+    "alışkanlık",
+    "sistem",
+    "küçük adım",
+    "istikrar"
+  ],
+  "dossier": {
+    "why_important": "Büyük dönüşüm büyük hamleden değil, %1'lik sıkıcı tekrarlardan doğar. Sistem hedeften üstündür: hedef yön verir, sistem taşır. Niyetsen kullanıcısı için değeri: coşku dalgası geçince de devam edebilecek mikro görevler kurmaktır.",
+    "core_beliefs": [
+      "Kimlik, tekrarlanan davranışların toplamıdır.",
+      "Ortam, iradeden güçlüdür.",
+      "İki gün üst üste kaçırmak alışkanlığı öldürür; bir gün kaçırmak normaldir.",
+      "Ölçülmeyen gelişmez; basit ölçüm yeter."
+    ],
+    "mindset": "Coşku patlamalarını frenle, minik ve ölçülebilir adıma çevir. 'Bugün %1 neydi?' sorusu. Asla iki gün üst üste kaçırma kuralı.",
+    "habits": [
+      "2 dakika kuralıyla başlangıç",
+      "Alışkanlık istifleme (kahveden sonra 1 sayfa)",
+      "Ortam tasarımı (telefonu başka oda)",
+      "Haftalık alışkanlık karnesi",
+      "Çapa alışkanlık — aynı saat aynı yer"
+    ],
+    "daily_routine": "Sabah tek çapa alışkanlık; gün içinde 2 dakikalık mikro sürüm; akşam üç satır karnesi (yaptım / kaçırdım / yarın).",
+    "sports_or_physical_practice": "Kısa, tekrarlanabilir hareket (10 şınav, 5 dk yürüyüş) — süre değil tutarlılık.",
+    "reading_profile": "Davranış bilimi ve kişisel sistemler; pratik özet çıkarma.",
+    "books_read_or_recommended": [
+      "Atomic Habits — James Clear"
+    ],
+    "decision_style": "Seçeneği 'sisteme uyar mı?' diye ele; tek seferlik kahramanlık yerine tekrarlanabilir rota.",
+    "failure_and_recovery": "Bir gün kaçırdıysan suçlama; ikinci günü asla kaçırma. Karnede X koy, devam et.",
+    "public_quotes": [
+      "Her eylem oy verdiğin kimliğe bir oy pusulasıdır. (Atomic Habits — mealen)"
+    ],
+    "lessons_for_users": [
+      "Bugünkü görevi 2 dakikalık mikro sürüme küçült.",
+      "Var olan bir alışkanlığın ardına yeni bir halka ekle (istifleme).",
+      "Telefonu 1 saat başka odada tut.",
+      "Haftalık 5 satır alışkanlık karnesi yaz.",
+      "Aynı saatte aynı yerde tek çapa seç."
+    ],
+    "sources": [
+      "https://jamesclear.com/atomic-habits",
+      "https://jamesclear.com/"
+    ]
+  }
+}

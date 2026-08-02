@@ -1,0 +1,53 @@
+{
+  "slug": "minimalizm-yolu",
+  "path_name": "Minimalizm Yolu",
+  "tagline": "az ile öz",
+  "category": "yasam",
+  "inspired_by": "minimalizm hareketi",
+  "source_note": "Bu yol kamuya açık minimalizm hareketinin (az eşya / az dikkat dağıtıcı) pratiklerinden ilham alır; belirli bir ünlüyle bağlantılı değildir.",
+  "tags": [
+    "sadelik",
+    "eleme",
+    "odak",
+    "alan"
+  ],
+  "dossier": {
+    "why_important": "Fazla seçenek ve fazla eşya dikkati yer. Minimalizm, yoksunluk değil; niyetine yer açmaktır. Plan ve sohbet gürültüsü azalınca görevler görünür olur.",
+    "core_beliefs": [
+      "Her eşya / abonelik / alışkanlık bir dikkat vergisi öder.",
+      "Bir şeyi eklemeden önce bir şeyi çıkar.",
+      "Boş alan yaratıcılığı büyütür.",
+      "Yeterlilik, daha fazlasından güçlüdür."
+    ],
+    "mindset": "Bugün neyi çıkarabilirim? sorusu. Yeni görev eklemeden önce bir görevi sadeleştir.",
+    "habits": [
+      "Günlük 10 dk alan sadeleştirme",
+      "Haftalık dijital temizlik",
+      "Alışverişte 48 saat kuralı",
+      "Tek odak listesi (en fazla 3)",
+      "Ayda 1 'bırakma' kutusu"
+    ],
+    "daily_routine": "Sabah üç maddelik odak listesi; gün içinde bir yüzeyi temizle; akşam yarım kalanı yarına taşıma (biriktirme).",
+    "sports_or_physical_practice": "Basit ev hareketleri veya yürüyüş — ekipmansız.",
+    "reading_profile": "Kısa, seçilmiş okuma; aynı anda çok kitap açmama.",
+    "books_read_or_recommended": [
+      "Goodbye, Things — Fumio Sasaki (kamuya açık minimalizm)"
+    ],
+    "decision_style": "Yeni bir şey almadan / başlamadan önce bir şeyi bırak.",
+    "failure_and_recovery": "Dağıldıysa tüm evi değil tek bir yüzeyi düzelt; momentum oradan gelsin.",
+    "public_quotes": [
+      "Az şey, daha çok hayat demektir. (minimalizm hareketi — mealen)"
+    ],
+    "lessons_for_users": [
+      "Bugün tek bir yüzeyi 10 dk sadeleştir.",
+      "Bildirimlerden 3 tanesini kapat.",
+      "Günün odak listesini en fazla 3 madde yap.",
+      "48 saat kuralı: istemediğin alışverişi ertele.",
+      "Bu hafta bir abonelik veya uygulamayı sil."
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/Minimalism_(lifestyle)",
+      "https://www.theminimalists.com/"
+    ]
+  }
+}

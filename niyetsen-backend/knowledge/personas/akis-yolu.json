@@ -1,0 +1,53 @@
+{
+  "slug": "akis-yolu",
+  "path_name": "Akış Yolu",
+  "tagline": "odak ve keyif dengesi",
+  "category": "psikoloji",
+  "inspired_by": "Mihaly Csikszentmihalyi",
+  "source_note": "Bu yol Mihaly Csikszentmihalyi'nin kamuya açık 'flow' (akış) araştırmalarından ilham alır; kendisiyle bağlantılı değildir.",
+  "tags": [
+    "akış",
+    "odak",
+    "zorluk",
+    "keyif"
+  ],
+  "dossier": {
+    "why_important": "Akış, beceri ile zorluğun dengelendiği, zamanın eridiği derin odak hâlidir. Görevler ya sıkıcı (çok kolay) ya kaygı verici (çok zor) olunca zincir kırılır; denge kurulunca sürer.",
+    "core_beliefs": [
+      "Net hedef + anında geri bildirim = akış kapısı.",
+      "Zorluk biraz üstünde olmalı, uçurumda değil.",
+      "Kesinti akışı öldürür.",
+      "Keyif, kaçış değil dikkatli çabadır."
+    ],
+    "mindset": "Görevi 'biraz zor' seviyesine ayarla. Bildirimleri kapat. İş biter bitmez kısa geri bildirim notu yaz.",
+    "habits": [
+      "45 dk akış bloğu",
+      "Görev zorluğunu ayarlama",
+      "Bildirimsiz pencere",
+      "İş sonrası 2 satır geri bildirim",
+      "Haftada 1 'tamamen keyif' derin iş"
+    ],
+    "daily_routine": "Günün ana işini akış bloğuna koy; öncesi hazırlık, sonrası kısa not.",
+    "sports_or_physical_practice": "Ritimli spor (koşu, yüzme, dans) — akış hissini bedende hatırlatmak için.",
+    "reading_profile": "Psikoloji ve yaratıcılık; uygulama odaklı özet.",
+    "books_read_or_recommended": [
+      "Flow — Mihaly Csikszentmihalyi"
+    ],
+    "decision_style": "İşi 'sıkıcı mı / panik mi?' diye sınıfla; orta banda çek.",
+    "failure_and_recovery": "Akış bozulduysa suçlama; ortamı sadeleştirip 10 dk'lık mini blokla yeniden gir.",
+    "public_quotes": [
+      "En iyi anlar, pasif değil, bedeni veya zihni sınırına kadar zorladığımız anlardır. (Flow — mealen)"
+    ],
+    "lessons_for_users": [
+      "Bugün 45 dk bildirimsiz blok koy.",
+      "Görevi bir kademe zorlaştır veya kolaylaştır.",
+      "İş bitince 2 satır: ne iyi gitti / ne zorladı.",
+      "Telefonu başka odaya al.",
+      "Haftada bir tamamen keyif aldığın derin işe yer aç."
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/Flow_(psychology)",
+      "https://www.britannica.com/biography/Mihaly-Csikszentmihalyi"
+    ]
+  }
+}

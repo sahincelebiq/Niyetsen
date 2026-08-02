@@ -1,0 +1,53 @@
+{
+  "slug": "ikigai-yolu",
+  "path_name": "Ikigai Yolu",
+  "tagline": "anlamın kesişimi",
+  "category": "anlam",
+  "inspired_by": "Japon ikigai geleneği",
+  "source_note": "Bu yol Japon ikigai (yaşama sebebi) geleneğinin kamuya açık çerçevelerinden ilham alır; belirli bir kişiyle bağlantılı değildir.",
+  "tags": [
+    "anlam",
+    "amaç",
+    "denge",
+    "meslek"
+  ],
+  "dossier": {
+    "why_important": "Ikigai, sevdiğin / iyi olduğun / dünyanın ihtiyaç duyduğu / karşılığını alabileceğin alanların kesişimidir. Niyetsen'de amacı: rastgele görev yığınını anlamlı bir yöne bağlamak.",
+    "core_beliefs": [
+      "Anlam, küçük günlük katkılarda birikir.",
+      "Tek kutuplu hayat (yalnız para veya yalnız tutku) tükenir.",
+      "Topluma küçük fayda, kişisel motiveyi büyütür.",
+      "Netlik, daha fazla iş değil daha doğru iş demektir."
+    ],
+    "mindset": "Her hafta dört soruyu sor: Seviyor muyum? İyi miyim? Birine yararı var mı? Sürdürülebilir mi? Cevapsız kalan köşeyi güçlendir.",
+    "habits": [
+      "Haftalık ikigai haritası (4 kutu)",
+      "Günde 1 anlamlı mikro katkı",
+      "Ayda 1 beceriyi derinleştirme",
+      "Gereksiz işleri eleme listesi",
+      "Teşekkür / etki günlüğü"
+    ],
+    "daily_routine": "Sabah günün 'anlamlı tek işi'ni seç; akşam o işin kime/neye yaradığını bir cümle yaz.",
+    "sports_or_physical_practice": "Doğa yürüyüşü veya nefes odaklı hareket — zihin berraklığı.",
+    "reading_profile": "Anlam, meslek ve kültür üzerine kısa denemeler.",
+    "books_read_or_recommended": [
+      "Ikigai — Héctor García & Francesc Miralles (popüler çerçeve)"
+    ],
+    "decision_style": "Yeni fırsatı dört kutuya yerleştir; üçü boşsa hayır de.",
+    "failure_and_recovery": "Yanlış yolda olduğunu fark edince suçlama; bir kutuyu güçlendiren mikro göreve dön.",
+    "public_quotes": [
+      "Ikigai, her sabah yataktan kalkmana neden olan şeydir. (geleneksel tanım — mealen)"
+    ],
+    "lessons_for_users": [
+      "4 kutulu ikigai haritanı 10 dk doldur.",
+      "Bugün birine küçük bir fayda üret.",
+      "Bu hafta sevdiğin ama ihmal ettiğin bir beceriyi 15 dk yap.",
+      "Seni tüketen bir işi eleme listesine yaz.",
+      "Akşam etki cümlesi yaz: bugün neye yaradım?"
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/Ikigai",
+      "https://www.bbc.com/worklife/article/20170807-ikigai-a-japanese-concept-to-improve-work-and-life"
+    ]
+  }
+}

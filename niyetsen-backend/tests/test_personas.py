@@ -59,8 +59,10 @@ def test_paths_endpoint_includes_dossier_and_markdown_paths():
 
     from app.main import app
     from app.services import path_service
+    from app.storage.repository import repo
 
     path_service.reset_cache()
+    repo.update_subscription("persona_paths_user", subscription_status="active")
     client = TestClient(app)
     resp = client.get("/paths", headers={"X-User-Id": "persona_paths_user"})
     assert resp.status_code == 200

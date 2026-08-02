@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
-from app.models.schemas import CollectedIntent, DailyTaskItem, PlanSummary
+from app.models.schemas import CollectedIntent, DailyTaskItem, DailyTasksResponse, PlanSummary
 from app.services import subscription_service
 from app.storage.base import Repository
 
@@ -53,6 +53,12 @@ def start_new_project(repo: Repository, user_id: str) -> PlanSummary:
     plan_id = repo.create_draft_plan(user_id, name=f"Plan {slot_no}", slot_no=slot_no)
     repo.set_active_plan(user_id, plan_id)
     repo.save_intent(user_id, CollectedIntent(), 365, ready_for_plan=False)
+    # Yeni niyet = yeni sohbet oturumu. Eski test yazıları aktif thread'de kalmasın.
+    try:
+        repo.create_chat_thread(user_id)
+    except Exception:
+        # Thread degrade: sohbet hatası yeni planı düşürmez (hafıza kuralı).
+        pass
     summaries = repo.list_plan_summaries(user_id)
     match = next((item for item in summaries if item.id == plan_id), None)
     if match is None:
@@ -67,3 +73,32 @@ def get_today_tasks(repo: Repository, user_id: str, *, today: date | None = None
     else:
         current = today
     return repo.list_daily_tasks_for_date(user_id, current)
+
+
+def get_daily_tasks_response(
+    repo: Repository, user_id: str, *, today: date | None = None
+) -> DailyTasksResponse:
+    """Bugünün görevleri + parti geride kaldıysa needs_extension=True."""
+    if today is None:
+        profile = repo.get_profile(user_id)
+        current = _user_local_today(profile.timezone)
+    else:
+        current = today
+    items = repo.list_daily_tasks_for_date(user_id, current)
+    plan = repo.get_plan(user_id)
+    if plan is None or not plan.days:
+        return DailyTasksResponse(items=items, has_active_plan=False)
+    plan_day = (current - plan.start_date).days + 1
+    needs = (
+        plan_day > plan.batch_generated_until
+        and plan.batch_generated_until < plan.duration_days
+        and plan_day >= 1
+    )
+    return DailyTasksResponse(
+        items=items,
+        needs_extension=needs,
+        plan_day=max(plan_day, 0),
+        batch_generated_until=plan.batch_generated_until,
+        active_plan_name=plan.name or "Planım",
+        has_active_plan=True,
+    )

@@ -1,0 +1,54 @@
+{
+  "slug": "staci-yolu",
+  "path_name": "Stoacı Yol",
+  "tagline": "kontrol dairesi",
+  "category": "felsefe",
+  "inspired_by": "Marcus Aurelius",
+  "source_note": "Bu yol Marcus Aurelius'un 'Düşünceler'i ve Epiktetos'un kamuya açık öğretisinden ilham alır; kendileriyle bağlantılı değildir.",
+  "tags": [
+    "stoacılık",
+    "kontrol",
+    "sükunet",
+    "muhasebe"
+  ],
+  "dossier": {
+    "why_important": "Elinde olan tek şey yargıların ve eylemlerindir; gerisi hava durumu. Enerji kontrol edilemeyene harcandığında tükeniş, edilebilene odaklandığında güç doğar.",
+    "core_beliefs": [
+      "Olaylar zarar vermez; yargılarımız zarar verir.",
+      "Hazırlık korkuyu küçültür (premeditatio).",
+      "Erdem eylemde görünür, konuşmada değil.",
+      "Akşam muhasebesi olmadan gün kapanmaz."
+    ],
+    "mindset": "Kaygı geldiğinde 'bunun neresi senin elinde?' ayrımı. Olumsuz senaryoyu önceden küçült. Sabah 'bugün zorlanacağım' demek zayıflık değil hazırlıktır.",
+    "habits": [
+      "Sabah 3 satır niyet",
+      "Akşam 3 satır muhasebe",
+      "Günde 1 küçük konfor daralması",
+      "Haftada 1 dijital sessizlik saati",
+      "Kontrol dışı defteri"
+    ],
+    "daily_routine": "Sabah kontrol dairesi notu; gün içinde bir küçük zorluk bilinçli alınır; akşam iyi yaptım / geliştiririm / yarın tek odak.",
+    "sports_or_physical_practice": "Soğuk duş veya tempolu yürüyüş gibi küçük dayanıklılık pratikleri.",
+    "reading_profile": "Klasik ahlak metinleri ve kısa günlük felsefe.",
+    "books_read_or_recommended": [
+      "Meditations — Marcus Aurelius",
+      "Enchiridion — Epictetus"
+    ],
+    "decision_style": "Kararı 'elinde olan / olmayan' diye ayır; olmayanı bırak.",
+    "failure_and_recovery": "Hatayı karakter değil veri say; bir cümle ders çıkar, devam et.",
+    "public_quotes": [
+      "Seni rahatsız eden olaylar değil, onlar hakkındaki yargıların. (Epiktetos — mealen)"
+    ],
+    "lessons_for_users": [
+      "Bugün elinde olan tek şeyi 3 satır yaz.",
+      "Akşam 3 satır muhasebe tut.",
+      "Küçük bir konfor daralması seç (tatlısız gün gibi).",
+      "1 saat telefonsuz pencere koy.",
+      "Kontrol dışı bir kaygıyı deftere yazıp bırak."
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/Meditations",
+      "https://en.wikipedia.org/wiki/Epictetus"
+    ]
+  }
+}

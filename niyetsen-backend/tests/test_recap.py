@@ -8,9 +8,14 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.models.schemas import GameState, Plan, PlanDay, Task
 from app.services import recap_service
+from app.storage.repository import repo
 
 client = TestClient(app)
 HEADERS = {"X-User-Id": "recap-user"}
+
+
+def _grant_pro() -> None:
+    repo.update_subscription("recap-user", subscription_status="active")
 
 
 def _plan_with_done_tasks(n_done: int) -> Plan:
@@ -42,10 +47,10 @@ def test_build_recap_counts_done_tasks_and_orders_cards():
     assert recap.completed_tasks == 4
     assert recap.top_category == "Disiplin"
     assert [c.kind for c in recap.cards] == [
-        "intro", "tasks", "trait", "streak", "closing",
+        "intro", "journey", "tasks", "trait", "streak", "closing",
     ]
     assert "Şahin" in recap.cards[0].title
-    assert "4 görev" in recap.cards[1].headline
+    assert "4 görev" in recap.cards[2].headline
 
 
 def test_build_recap_without_plan_is_safe():
@@ -53,21 +58,30 @@ def test_build_recap_without_plan_is_safe():
         state=GameState(user_id="u"), plan=None,
     )
     assert recap.completed_tasks == 0
-    assert len(recap.cards) == 5  # kartlar her durumda dolu — boş story yok
+    assert len(recap.cards) == 6  # kartlar her durumda dolu — boş story yok
 
 
 def test_recap_endpoint_returns_cards():
+    _grant_pro()
     response = client.get("/me/recap", headers=HEADERS)
     assert response.status_code == 200
     body = response.json()
     assert body["period"] == "14d"
-    assert len(body["cards"]) == 5
+    assert len(body["cards"]) == 6
 
 
 def test_recap_endpoint_invalid_period_falls_back():
+    _grant_pro()
     response = client.get("/me/recap?period=99y", headers=HEADERS)
     assert response.status_code == 200
     assert response.json()["period"] == "14d"
+
+
+def test_recap_endpoint_free_user_gets_paywall():
+    repo.update_subscription("recap-free", subscription_status="free")
+    response = client.get("/me/recap", headers={"X-User-Id": "recap-free"})
+    assert response.status_code == 402
+    assert response.json()["detail"]["code"] == "paywall_required"
 
 
 def test_is_recap_push_due_schedule():

@@ -88,31 +88,21 @@ ve fallback'te config yeniden kuruluyor (`gemini_client._build_config`).
 Kullanıcı Niyetsen'in görsel kimliği içinde kalarak görevleri taşıyabilmeli,
 düzenleyebilmeli, ekleyip silebilmeli.
 
-- [ ] Backend endpoint'leri (JWT + rate limit, şema MASTER_PLAN §2):
-      `PATCH /plan/tasks/{task_id}` (title/date/time düzenleme),
-      `POST /plan/days/{date}/tasks` (kullanıcı görevi ekleme, +50 puan
-      kuralına dahil), `DELETE /plan/tasks/{task_id}` (yalnız pending,
-      ceza tetiklemez). Görev taşıma = PATCH ile date değişimi.
-- [ ] Mobil: takvim/plan ekranında görev kartına uzun basınca "Taşı / Düzenle /
-      Sil" action sheet; tarih seçici Niyetsen temasında. Vision-board
-      görselleri ve kart tasarımı DEĞİŞMEZ.
-- [ ] Kural: geçmiş güne görev taşınamaz; tamamlanmış görev düzenlenemez.
-- KAPI: Cihazda görev yarına taşınır → cron/puan akışı bozulmaz; testler yeşil.
+- [x] Backend: `PATCH /plan/tasks/{task_id}`, `POST /plan/days/{date}/tasks`,
+      `DELETE /plan/tasks/{task_id}` — `plan_edit_service` + 13 test.
+      (Şemada `time` yok → title+date; geçmiş/done engelli.)
+- [x] Mobil: Planım/Bugün uzun bas → Taşı / Düzenle / Sil + temalı tarih;
+      `plan-task-editor.tsx` + api helpers; + Görev ekle. Vision-board aynı.
+- [x] Kural (backend): geçmiş güne taşınamaz; tamamlanmış düzenlenemez.
+- KAPI kalan: cihaz smoke (yarına taşı → cron/puan); tsc 0 ✅; plan_edit 13 ✅.
 
 ### 8.4 — Profil ekranı gerçek app hissi + cinsiyet UI + burç ikonu (1-2 gün)
 
-- [ ] `mobile/src/app/settings.tsx` (Profil) yeniden düzenle: dev web başlıkları yerine kompakt mobil
-      hiyerarşi (avatar + isim satırı, küçük bölüm başlıkları, kart listeleri).
-      Mevcut tema token'ları kullanılır; YENİ tasarım dili İCAT ETME.
-- [ ] İsim yanına burç ikonu: `zodiacLabel(profile.zodiac_sign)`
-      (`mobile/src/constants/zodiac.ts` hazır).
-- [ ] Cinsiyet seçimi: profil düzenlemede 3 seçenek — "kadın", "erkek",
-      "belirtmek istemiyorum" (backend Literal ile birebir aynı string'ler).
-      Onboarding'e de nazik, atlanabilir bir soru olarak ekle.
-- [ ] Mistik ekranlarda (tarot/astroloji/fal) kullanıcının burç sembolü
-      başlıkta görünsün (rehber zaten bellek bloğundan tanıyor).
-- KAPI: iPhone SE + büyük Android'de taşma yok; tsc 0 hata; cinsiyet seçimi
-  kaydedilip sohbette hitabın değiştiği gözlemleniyor.
+- [x] `settings.tsx` kompakt mobil hiyerarşi (avatar + isim + burç glyph).
+- [x] Burç: `zodiacLabel` / `zodiacFromBirthDate` + isim yanı glyph.
+- [x] Cinsiyet chip’leri + onboarding atlanabilir adım (aynı 3 string).
+- [x] Mistik hub/tarot/fal/astro başlıklarında burç; `mystic-screen-shell`.
+- KAPI kalan: cihazda cinsiyet → sohbet hitap smoke (Şahin); tsc 0 ✅.
 
 ### 8.4-B — UI v3 "İLKBAHAR" ekran turu (paralel şerit, 8.4 ile birlikte)
 
@@ -136,9 +126,9 @@ her adımın KAPI'sı orada). 8.4 profil işi bu dille yapılır.
 Sıkı prompt entegre; eksik parça: görevin KİŞİSELLEŞTİRİLMİŞ içeriği
 (ör. plandaki tarifin malzemeleri) modele gitmiyor.
 
-- [ ] `proof_service` çağrısında Gemini Vision'a görev başlığı + görev
-      açıklaması + (varsa) plan günü bağlamını geçir; prompt'taki
-      "GÖREV BAĞLAMI" alanını doldur.
+- [x] `proof_service` + `PROOF_VALIDATION_PROMPT` GÖREV BAĞLAMI: plan adı,
+      gün teması, aynı gün kardeş görevler, image_keyword; `routes.upload_proof`
+      doldurur (`tests/test_proof_context.py`). Cihaz smoke Şahin.
 - [ ] Sınır vakalarla cihaz testi: su bardağı ≠ meyve tarifi (RED),
       gerçek tabak (ONAY), ekran görüntüsü (RED), loş/yakın çekim (nazik tekrar).
 - KAPI: Su fotoğrafı meyve görevini GEÇEMEZ; meşru fotoğraf ≥60 güvenle geçer;

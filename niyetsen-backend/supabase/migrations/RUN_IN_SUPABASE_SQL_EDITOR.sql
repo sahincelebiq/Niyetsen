@@ -1,149 +1,130 @@
 /**
- * Supabase SQL Editor'da çalıştırılacak migration.
- * NOT: Python test dosyası DEĞİL — yalnızca bu SQL'i yapıştır.
+ * Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (nizami, 2026-08-02)
+ *
+ * AMAÇ: Dashboard SQL Editor'da biriken Claude/Cursor yapıştırmalarını
+ * TEKRAR ÇALIŞTIRMA. Bu dosya salt DOĞRULAMA sorgularıdır.
+ *
+ * Şema değişiklikleri → `supabase/migrations/*.sql` veya MCP apply_migration.
+ * Eski "her şeyi create if not exists" yığını kaldırıldı; prod zaten uygulanmış.
+ *
+ * Kullanım: SQL Editor'a yapıştır → Run → sonuç tablolarını kontrol et.
  */
--- FAZ 5+: çoklu plan projeleri (abonelikle 2+ plan; free/trial = 1 plan)
-
-alter table public.plans drop constraint if exists plans_user_id_key;
-
-alter table public.plans
-  add column if not exists name text not null default 'Planım',
-  add column if not exists slot_no int not null default 1;
-
-create unique index if not exists plans_user_slot_idx
-  on public.plans(user_id, slot_no);
-
-alter table public.users
-  add column if not exists active_plan_id text references public.plans(id) on delete set null;
-
-alter table public.intents
-  add column if not exists plan_id text references public.plans(id) on delete set null;
-
-alter table public.chat_msgs
-  add column if not exists plan_id text references public.plans(id) on delete set null;
-
-create index if not exists chat_msgs_user_plan_idx
-  on public.chat_msgs(user_id, plan_id, created_at);
-
--- FAZ 5: deneme süresi (sohbet /chat bu kolona bakar — eksikse 500 verir)
-alter table public.users
-  add column if not exists trial_started_at timestamptz;
-
--- Cron performansı: gün bazlı görev sorguları (ReadTimeout önleme)
-create index if not exists tasks_plan_date_idx
-  on public.tasks(plan_id, date);
-
-create index if not exists tasks_date_status_idx
-  on public.tasks(date, status);
-
-create index if not exists tasks_date_pending_idx
-  on public.tasks(date)
-  where status = 'pending';
 
 -- ============================================================
--- FAZ 7 (V2): Fal modülü — fortune_log (2026-07-16)
+-- A) Tablolar + RLS (hepsi true olmalı; rls_off = 0)
 -- ============================================================
-create table if not exists public.fortune_log (
-  id uuid primary key default gen_random_uuid(),
-  user_id text not null references public.users(id) on delete cascade,
-  type text not null check (type in ('tarot', 'kahve', 'el', 'burc')),
-  day date not null,
-  result_json jsonb not null default '{}'::jsonb,
-  created_at timestamptz not null default now()
+select c.relname as table_name, c.relrowsecurity as rls_on
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relkind = 'r'
+order by 1;
+
+select count(*) as rls_disabled_tables
+from pg_class c
+join pg_namespace n on n.oid = c.relnamespace
+where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity;
+-- BEKLENEN: 0
+
+-- ============================================================
+-- B) Kritik kolonlar (eksik satır = sorun)
+-- ============================================================
+select t.col
+from (
+  values
+    ('users','gender'),
+    ('users','active_plan_id'),
+    ('users','active_thread_id'),
+    ('users','trial_started_at'),
+    ('users','subscription_status'),
+    ('users','notif_minute'),
+    ('plans','name'),
+    ('plans','slot_no'),
+    ('chat_msgs','thread_id'),
+    ('chat_msgs','plan_id'),
+    ('push_tokens','last_tarot_push_date'),
+    ('push_tokens','last_recap_push_date'),
+    ('tasks','date'),
+    ('tasks','tiny_version')
+) as t(table_name, col)
+where not exists (
+  select 1 from information_schema.columns c
+  where c.table_schema = 'public'
+    and c.table_name = t.table_name
+    and c.column_name = t.col
 );
-create index if not exists fortune_log_user_type_day_idx
-  on public.fortune_log(user_id, type, day);
-alter table public.fortune_log enable row level security;
+-- BEKLENEN: 0 satır
 
 -- ============================================================
--- FAZ 7 Dalga 2: Günlük Tarot push idempotency (2026-07-17)
+-- C) Kritik tablolar var mı
 -- ============================================================
-alter table public.push_tokens
-  add column if not exists last_tarot_push_date date;
-
--- ============================================================
--- FAZ 8.8: Niyetsen Raporu push idempotency (2026-07-29)
--- ============================================================
-alter table public.push_tokens
-  add column if not exists last_recap_push_date date;
-
--- ============================================================
--- FAZ 7.6: Sohbet oturumları — chat_threads (2026-07-17)
--- ============================================================
-create table if not exists public.chat_threads (
-  id uuid primary key default gen_random_uuid(),
-  user_id text not null references public.users(id) on delete cascade,
-  plan_id text references public.plans(id) on delete set null,
-  title text,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+select t.tbl
+from (
+  values
+    ('chat_threads'),
+    ('fortune_log'),
+    ('idol_personas'),
+    ('persona_chunks'),
+    ('proof_requests'),
+    ('user_consents'),
+    ('bonus_offers'),
+    ('push_tokens')
+) as t(tbl)
+where not exists (
+  select 1 from information_schema.tables x
+  where x.table_schema = 'public' and x.table_name = t.tbl
 );
-create index if not exists chat_threads_user_updated_idx
-  on public.chat_threads(user_id, updated_at desc);
-alter table public.chat_threads enable row level security;
-alter table public.chat_msgs
-  add column if not exists thread_id uuid references public.chat_threads(id) on delete cascade;
-create index if not exists chat_msgs_thread_idx on public.chat_msgs(thread_id, created_at);
-alter table public.users add column if not exists active_thread_id uuid;
-insert into public.chat_threads (user_id, plan_id, title, created_at, updated_at)
-select m.user_id, m.plan_id, 'Önceki sohbet', min(m.created_at), max(m.created_at)
-from public.chat_msgs m where m.thread_id is null group by m.user_id, m.plan_id;
-update public.chat_msgs m set thread_id = t.id from public.chat_threads t
-where m.thread_id is null and t.user_id = m.user_id
-  and (t.plan_id = m.plan_id or (t.plan_id is null and m.plan_id is null))
-  and t.title = 'Önceki sohbet';
-update public.users u set active_thread_id = t.id
-from (select distinct on (user_id) user_id, id from public.chat_threads
-      order by user_id, updated_at desc) t
-where u.id = t.user_id and u.active_thread_id is null;
--- FAZ 7.7 (Dalga 4.3): İdol Modu persona dosyaları — Supabase depolama.
--- Markdown (knowledge/idoller.md) tohum kalır; ASIL KAYNAK artık DB'dir.
--- Böylece yeni idol eklemek deploy gerektirmez (Şahin panelden/scriptten besler).
+-- BEKLENEN: 0 satır
 
-create table if not exists public.idol_personas (
-  id uuid primary key default gen_random_uuid(),
-  slug text not null unique,                 -- "greenlights-yolu", "first-principles-yolu"
-  path_name text not null,                   -- SUNUM ADI (felsefe): "Greenlights Yolu"
-  tagline text not null default '',
-  category text not null default 'genel',    -- girisimci|sporcu|bilim|sanat|tarih|genel
-  -- Kişi adı YALNIZ kaynak/ilham göstergesi olarak tutulur; arayüzde paket adı
-  -- kullanılır, kişi adı "ilham alır" cümlesinde geçer (kişilik hakları + Apple 5.2.1).
-  inspired_by text not null default '',
-  source_note text not null default '',
-  -- Persona dossier (15 alanlı model): why_important, core_beliefs, mindset,
-  -- habits, daily_routine, sports_or_physical_practice, reading_profile,
-  -- books_read_or_recommended, decision_style, failure_and_recovery,
-  -- public_quotes, lessons_for_users, sources ...
-  dossier jsonb not null default '{}'::jsonb,
-  tags text[] not null default '{}',
-  is_active boolean not null default true,
-  created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+-- ============================================================
+-- D) RPC (service_role) — kanıt / bonus
+-- ============================================================
+select p.proname
+from (
+  values
+    ('claim_proof_attempt'),
+    ('finish_proof_attempt'),
+    ('abort_proof_attempt'),
+    ('complete_bonus_offer')
+) as need(proname)
+where not exists (
+  select 1 from pg_proc pr
+  join pg_namespace n on n.oid = pr.pronamespace
+  where n.nspname = 'public' and pr.proname = need.proname
 );
+-- BEKLENEN: 0 satır
 
-create index if not exists idol_personas_active_idx
-  on public.idol_personas(is_active, category);
+-- ============================================================
+-- E) Storage bucket'ları
+-- ============================================================
+select id, name, public, file_size_limit
+from storage.buckets
+where id in ('proofs', 'plan-images')
+order by 1;
+-- BEKLENEN: proofs public=false; plan-images public=true
 
-alter table public.idol_personas enable row level security;
+-- plan-images için geniş SELECT olmamalı (listing WARN)
+select policyname
+from pg_policies
+where schemaname = 'storage'
+  and policyname = 'plan_images_public_read';
+-- BEKLENEN: 0 satır (2026-08-02'de kaldırıldı)
 
--- RAG parçaları: 80-150 kelimelik bloklar, embedding önbelleğiyle birlikte.
--- pgvector kurulu değilse embedding float8[] olarak saklanır (kosinüs kodda).
-create table if not exists public.persona_chunks (
-  id uuid primary key default gen_random_uuid(),
-  persona_id uuid not null references public.idol_personas(id) on delete cascade,
-  section text not null,                     -- overview|mindset|habits|books|lessons...
-  chunk_index int not null default 0,
-  text text not null,
-  embedding float8[],                        -- null: keyword fallback kullanılır
-  created_at timestamptz not null default now()
-);
+-- ============================================================
+-- F) Tablo policy sayısı (bilinçli: 0 = deny-by-default + backend service_role)
+-- ============================================================
+select t.tablename,
+  (select count(*) from pg_policies p
+   where p.schemaname = 'public' and p.tablename = t.tablename) as policy_count
+from pg_tables t
+where t.schemaname = 'public'
+order by 1;
+-- BEKLENEN: çoğu 0 (anon/authenticated PostgREST'ten kapalı; FastAPI service_role)
 
-create index if not exists persona_chunks_persona_idx
-  on public.persona_chunks(persona_id, section);
-
-alter table public.persona_chunks enable row level security;
--- FAZ 8: sohbet kişiselleştirmesi için isteğe bağlı cinsiyet alanı.
--- KVKK notu: zorunlu değildir; yalnız hitap/örnek uyarlaması için kullanılır.
-alter table public.users
-  add column if not exists gender text
-  check (gender is null or gender in ('kadın', 'erkek', 'belirtmek istemiyorum'));
+-- ============================================================
+-- G) Gender check
+-- ============================================================
+select conname, pg_get_constraintdef(oid)
+from pg_constraint
+where conrelid = 'public.users'::regclass
+  and conname = 'users_gender_check';
+-- BEKLENEN: kadın | erkek | belirtmek istemiyorum

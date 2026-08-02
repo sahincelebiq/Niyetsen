@@ -58,8 +58,10 @@ def test_paths_endpoint_lists_five_paths():
 
     from app.main import app
     from app.services import path_service
+    from app.storage.repository import repo
 
     path_service.reset_cache()
+    repo.update_subscription("paths_user", subscription_status="active")
     client = TestClient(app)
     resp = client.get("/paths", headers={"X-User-Id": "paths_user"})
     assert resp.status_code == 200

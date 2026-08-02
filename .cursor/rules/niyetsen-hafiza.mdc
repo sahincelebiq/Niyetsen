@@ -3,11 +3,14 @@ description: Niyetsen proje hafızası — sözlük, kilitli kararlar, tuzaklar,
 alwaysApply: true
 ---
 
-# NİYETSEN HAFIZASI (proje beyni — v1, 2026-07-29)
+# NİYETSEN HAFIZASI (proje beyni — v2, 2026-08-02)
 
 Bu dosya projenin damıtılmış kurumsal hafızasıdır. Bir karar buradakiyle
 çelişiyorsa ÖNCE burada/MASTER_PLAN'da neden öyle olduğuna bak — çoğu madde
 canlıda yaşanmış bir hatanın veya Şahin'in verdiği bir kararın izidir.
+
+> **Play Store çıkış sprinti aktif** → ayrıntılı açık/kapalı liste:
+> `.cursor/rules/playstore-cikis-hafiza.mdc` (alwaysApply).
 
 ## Sözlük (Şahin'in dili → sistem karşılığı)
 
@@ -25,7 +28,9 @@ canlıda yaşanmış bir hatanın veya Şahin'in verdiği bir kararın izidir.
 - **KAPI** = faz çıkış kriteri. Geçmeden sonraki göreve BAŞLANMAZ.
 - **Wrapped / Rapor** = /me/recap story özeti. Yalnız kazanımlar gösterilir.
 - **İlkbahar** = UI v3 paleti (genç yaprak #35814A + mercan #E06842).
-  Sonbahar/pastel geri gelmez.
+  Sonbahar/pastel geri gelmez. Soft dark = simsiyah değil (`theme.ts` dark).
+- **Ücretsiz = 1 plan**; 2. plan = abone/dev. Rank/puan kullanıcı bazlı
+  (plan değişince score sıfırlanmaz). Public leaderboard = v3, şimdi YOK.
 
 ## Kilitli kararlar (tartışılmaz, tarihiyle)
 
@@ -77,9 +82,27 @@ canlıda yaşanmış bir hatanın veya Şahin'in verdiği bir kararın izidir.
   `zodiac.ts` (burç), plan: `docs/UI_V3_ILKBAHAR.md`.
 - RAG bilgi tabanı: `niyetsen-backend/knowledge/` (Railway imajına COPY'lenir).
 
+## Son UI kilitleri (2026-07-29 → 08-02, mobil)
+
+- Tab ikonları: VectorIcon + MaterialCommunityIcons (SF web'de çizilmez).
+- Sohbet: inverted FlatList; Niyetsen logo avatar; doodle wallpaper;
+  web Alert → `lib/web-alert.ts`.
+- Profil: soft dark Switch (`AppearanceProvider` + AsyncStorage).
+- Planım: ImageScrim hafifletildi (silik örtü gitti).
+- Font: Fraunces + Manrope — Figma'da Inter kullanma.
+
+## Supabase / Play notları (2026-08-02)
+
+- SQL Editor: yalnız VERIFY
+  (`supabase/migrations/RUN_IN_SUPABASE_SQL_EDITOR.sql`). DDL yığını yapıştırma.
+- Play Console Sahinology: kimlik onay aşamasında — SS güvenlik sızıntısı değil.
+- Supabase Pro yükseltme hedefi: 2026-08-05.
+
 ## Çalışma protokolü
 
-- Test: backend `pytest -q` (şu an 181 yeşil — düşürme); mobil
+- Test: backend `pytest -q` (~184 yeşil — düşürme); mobil
   `npx tsc --noEmit` 0 hata + Expo Go gerçek cihaz.
-- Commit: `faz8: <konu>` küçük/tek konulu. mobile/ AYRI git deposudur.
-- Kararsızlıkta: MASTER_PLAN §1 → bu dosya → yoksa Şahin'e sor. UYDURMA.
+- Commit: `faz8: <konu>` / `faz8-ui: <konu>` küçük/tek konulu.
+  mobile/ AYRI git deposudur (`Niyetsen-mobile`).
+- Kararsızlıkta: MASTER_PLAN §1 → bu dosya → playstore-cikis-hafiza →
+  yoksa Şahin'e sor. UYDURMA.

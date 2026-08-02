@@ -122,6 +122,20 @@ class PlanRenameRequest(BaseModel):
     name: str = Field(min_length=1, max_length=48)
 
 
+class TaskEditRequest(BaseModel):
+    """FAZ 8.3 — title/date düzenleme. Şemada time alanı yok (MASTER_PLAN §2)."""
+    title: Optional[str] = Field(default=None, min_length=1, max_length=200)
+    date: Optional[dt_date] = None
+
+
+class TaskCreateRequest(BaseModel):
+    """FAZ 8.3 — kullanıcı görevi; tamamlanınca normal +50 yolu."""
+    title: str = Field(min_length=1, max_length=200)
+    categories: list[Category] = Field(default_factory=lambda: ["İstikrar"])
+    tiny_version: str = ""
+    duration_min: int = Field(default=15, ge=1, le=240)
+
+
 class DailyTaskItem(BaseModel):
     plan_id: str
     plan_name: str
@@ -129,8 +143,18 @@ class DailyTaskItem(BaseModel):
 
 
 class PlanGenerateRequest(BaseModel):
-    collected: CollectedIntent
+    collected: CollectedIntent = Field(default_factory=CollectedIntent)
     duration_days: int = 365
+
+
+class DailyTasksResponse(BaseModel):
+    """Bugünün görevleri + parti kapsamı (boş günün nedeni + uzatma CTA)."""
+    items: list[DailyTaskItem] = Field(default_factory=list)
+    needs_extension: bool = False
+    plan_day: Optional[int] = None
+    batch_generated_until: Optional[int] = None
+    active_plan_name: str = ""
+    has_active_plan: bool = False
 
 
 # ---------- Kanıt ----------
@@ -207,7 +231,7 @@ class StateResponse(BaseModel):
 # ---------- Niyetsen Raporu / "Wrapped" (FAZ 8.8) ----------
 class RecapCard(BaseModel):
     """Tek story kartı. kind mobil tarafta görsel şablonu seçer."""
-    kind: Literal["intro", "tasks", "trait", "streak", "closing"]
+    kind: Literal["intro", "journey", "tasks", "trait", "streak", "closing"]
     title: str
     headline: str  # kartın büyük değeri ("47 görev", "Disiplin", "12 gün")
     subtitle: str = ""

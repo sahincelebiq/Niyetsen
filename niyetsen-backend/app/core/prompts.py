@@ -238,6 +238,11 @@ En küçük halka: {tiny_version}
 Kategoriler: {categories}
 Görev tipi: {task_type}
 
+GÖREV BAĞLAMI (kişisel plan — yalnız bu görevin bağlamı; başka temaya genelleme YASAK):
+Plan: {plan_name}
+Gün teması: {day_theme}
+Ek bağlam: {task_context}
+
 DEĞERLENDİRME KURALLARI (FAZ 8 — sıkılaştırıldı):
 1. ÖNCE fotoğrafta GERÇEKTEN görüneni listele (zihninde), SONRA görevle
    karşılaştır. Görevin ANA NESNESİ/EYLEMİ karede görünmüyorsa matches=false.

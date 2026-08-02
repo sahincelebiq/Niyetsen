@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 
 from app.main import app
 from app.services import fortune_service
+from app.storage.repository import repo
 from tests.conftest import grant_chat_consent
 
 client = TestClient(app)
@@ -13,8 +14,14 @@ client = TestClient(app)
 JPEG_BYTES = b"\xff\xd8\xff" + b"\x00" * 200
 
 
+def grant_pro(user_id: str) -> None:
+    """Fal uçları PRO (trial/active) — test kullanıcısını abone yap."""
+    repo.update_subscription(user_id, subscription_status="active")
+
+
 def grant_all_consents(user_id: str) -> None:
     grant_chat_consent(user_id, client)
+    grant_pro(user_id)
     response = client.post(
         "/me/consent",
         headers={"X-User-Id": user_id},
@@ -45,6 +52,7 @@ def _mock_gemini(monkeypatch):
 def test_tarot_draw_returns_three_cards_and_logs():
     user = "tarot_user"
     grant_chat_consent(user, client)
+    grant_pro(user)
     resp = client.post(
         "/fortune/tarot", headers={"X-User-Id": user}, json={"question": "işim?"}
     )
@@ -60,6 +68,7 @@ def test_tarot_draw_returns_three_cards_and_logs():
 def test_tarot_second_draw_same_day_returns_cached():
     user = "tarot_cached"
     grant_chat_consent(user, client)
+    grant_pro(user)
     first = client.post("/fortune/tarot", headers={"X-User-Id": user}, json={})
     second = client.post("/fortune/tarot", headers={"X-User-Id": user}, json={})
     assert second.status_code == 200
@@ -77,6 +86,7 @@ def test_tarot_requires_consent():
 def test_tarot_crisis_signal_stops_reading():
     user = "crisis_user"
     grant_chat_consent(user, client)
+    grant_pro(user)
     resp = client.post(
         "/fortune/tarot",
         headers={"X-User-Id": user},
@@ -152,6 +162,7 @@ def test_unknown_kind_404():
 def test_horoscope_requires_birth_date():
     user = "no_birth"
     grant_chat_consent(user, client)
+    grant_pro(user)
     resp = client.get("/fortune/horoscope", headers={"X-User-Id": user})
     assert resp.status_code == 400
 
@@ -159,6 +170,7 @@ def test_horoscope_requires_birth_date():
 def test_horoscope_with_profile_and_daily_cache():
     user = "burc_user"
     grant_chat_consent(user, client)
+    grant_pro(user)
     update = client.put(
         "/me/profile",
         headers={"X-User-Id": user},
@@ -178,6 +190,7 @@ def test_horoscope_with_profile_and_daily_cache():
 def test_weekly_horoscope_separate_cache():
     user = "burc_hafta"
     grant_chat_consent(user, client)
+    grant_pro(user)
     client.put(
         "/me/profile",
         headers={"X-User-Id": user},

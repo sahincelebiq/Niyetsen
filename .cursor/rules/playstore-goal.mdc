@@ -1,0 +1,16 @@
+---
+description: Aktif /goal — Play Store sprint (yatırımcı bug + UI + bağlam)
+alwaysApply: true
+---
+
+# PLAY STORE /goal (2026-08-02)
+
+Tek kaynak: `docs/PLAYSTORE_GOAL.md`. Özet:
+
+1. Sosyal medya credential dosyaları **ürün engeli değil** (ekip paylaşımı).
+2. Öncelik: **8.6 kanıt bağlamı**, **sohbet bağlam penceresi** (ChatHistorySheet),
+   **KULLANICI BELLEĞİ** zenginliği, sonra profil/plan/mistik UI, sonra store.
+3. Yatırımcı bug’ları B1–B9 `PLAYSTORE_GOAL.md` tablosunda — kapanmadan
+   “hazır” denmez.
+4. Public leaderboard v3 — bu sprintte YOK.
+5. Commit yalnız Şahin isteyince; mobil ayrı repo.

@@ -1,0 +1,53 @@
+{
+  "slug": "dayaniklilik-yolu",
+  "path_name": "Dayanıklılık Yolu",
+  "tagline": "esneyip kırılmamak",
+  "category": "dayaniklilik",
+  "inspired_by": "Angela Duckworth",
+  "source_note": "Bu yol Angela Duckworth'un kamuya açık 'grit' (azim) araştırmalarından ve dayanıklılık literatüründen ilham alır; kendisiyle bağlantılı değildir.",
+  "tags": [
+    "azim",
+    "dayanıklılık",
+    "uzun vadeli",
+    "tutku"
+  ],
+  "dossier": {
+    "why_important": "Dayanıklılık, yetenekten çok uzun vadeli tutku + ısrardır. Niyetsen'de 180-365 günlük planlar grit ister: motivasyon dalgası geçince kalan şey sistemdir.",
+    "core_beliefs": [
+      "İlgi, anlık hevesten uzun ömürlü meraka dönüşmeli.",
+      "Pratik kasıtlı olmalı.",
+      "Umut, yeniden deneme alışkanlığıdır.",
+      "Amaç, kişisel hazzın ötesinde bir 'neden' taşır."
+    ],
+    "mindset": "Kısa vadeli skoru değil uzun vadeli yönü koru. Düşüşün ardından 'yeniden başlama ritüeli' uygula.",
+    "habits": [
+      "Haftalık uzun vadeli niyet gözden geçirme",
+      "Kasıtlı pratik (zayıf halkaya odak)",
+      "Düşüş sonrası 24 saat kuralı",
+      "Amaç cümlesi (neden kartı)",
+      "Küçük zafer arşivi"
+    ],
+    "daily_routine": "Sabah neden cümlesini oku; günün zayıf halkasına 10 dk kasıtlı pratik; akşam bir küçük zafer kaydet.",
+    "sports_or_physical_practice": "Dayanıklılık temelli düzenli hareket (tempo koşu, uzun yürüyüş).",
+    "reading_profile": "Azim, öğrenme ve biyografi; uzun soluklu hikâyeler.",
+    "books_read_or_recommended": [
+      "Grit — Angela Duckworth"
+    ],
+    "decision_style": "Seçeneği '6 ay sonra hâlâ önemser miyim?' diye süz.",
+    "failure_and_recovery": "24 saat içinde en küçük görevi yap; kimlik 'bırakan' değil 'dönen' olsun.",
+    "public_quotes": [
+      "Azim, tutkunun ve ısrarın birleşimidir. (Grit — mealen)"
+    ],
+    "lessons_for_users": [
+      "Neden kartını 1 cümle yaz ve telefona kaydet.",
+      "Bugün zayıf halkana 10 dk kasıtlı pratik yap.",
+      "Kaçırdıysan 24 saat içinde mini görev yap.",
+      "Haftalık niyetini 5 dk gözden geçir.",
+      "Küçük bir zaferi arşive ekle."
+    ],
+    "sources": [
+      "https://angeladuckworth.com/grit-book/",
+      "https://en.wikipedia.org/wiki/Grit_(personality_trait)"
+    ]
+  }
+}

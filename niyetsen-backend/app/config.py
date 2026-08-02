@@ -52,8 +52,10 @@ class Settings:
         "GEMINI_MODEL_IMAGE", "gemini-2.5-flash-image"
     )
     GEMINI_IMAGE_TIMEOUT_SEC: int = int(os.environ.get("GEMINI_IMAGE_TIMEOUT_SEC", "60"))
+    # Varsayılan düşük: her plan partisinde Nano Banana maliyeti 3.1 Pro'yu
+    # katlar. Unsplash ana; AI görsel yalnız özel görevlerde (oran düşük).
     IMAGE_GEMINI_ENABLED: bool = _bool("IMAGE_GEMINI_ENABLED", "true")
-    IMAGE_GEMINI_RATIO: float = float(os.environ.get("IMAGE_GEMINI_RATIO", "0.5"))
+    IMAGE_GEMINI_RATIO: float = float(os.environ.get("IMAGE_GEMINI_RATIO", "0.15"))
 
     # --- Görsel ---
     UNSPLASH_ACCESS_KEY: str = os.environ.get("UNSPLASH_ACCESS_KEY", "")

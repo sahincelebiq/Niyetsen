@@ -260,7 +260,9 @@ def test_two_plan_switch_certification_five_times():
 
         daily = client.get("/tasks/daily", headers=_headers(user_id))
         assert daily.status_code == 200
-        daily_plan_ids = {item["plan_id"] for item in daily.json()}
+        daily_body = daily.json()
+        daily_items = daily_body.get("items", daily_body if isinstance(daily_body, list) else [])
+        daily_plan_ids = {item["plan_id"] for item in daily_items}
         # Bugün her iki planda da görev varsa ikisi de listede olabilir;
         # aktif planın görevleri mutlaka gelsin.
         assert expected_id in daily_plan_ids or not any(

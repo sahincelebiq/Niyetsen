@@ -1,5 +1,5 @@
 """FAZ 5 — deneme ve abonelik kuralları."""
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -111,7 +111,8 @@ def test_sync_expired_trials_updates_status(repo: InMemoryRepository) -> None:
 
 
 def test_cancellation_keeps_access_until_expiration(repo: InMemoryRepository) -> None:
-    expires = datetime(2026, 8, 1, 12, 0, tzinfo=timezone.utc)
+    # Sabit takvim tarihi değil — "şimdi"ye göre gelecek (flaky önlemi).
+    expires = datetime.now(timezone.utc) + timedelta(days=14)
     repo.update_subscription("user-1", subscription_status="active")
     info = subscription_service.apply_revenuecat_event(
         repo,
@@ -124,7 +125,7 @@ def test_cancellation_keeps_access_until_expiration(repo: InMemoryRepository) ->
 
 
 def test_cancellation_after_expiration_locks_access(repo: InMemoryRepository) -> None:
-    expires = datetime(2026, 6, 1, 12, 0, tzinfo=timezone.utc)
+    expires = datetime.now(timezone.utc) - timedelta(days=14)
     repo.update_subscription("user-1", subscription_status="active")
     info = subscription_service.apply_revenuecat_event(
         repo,

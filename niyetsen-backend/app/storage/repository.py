@@ -17,7 +17,8 @@ from typing import Optional
 from app.config import BONUS_POINTS, settings
 from app.models.schemas import (
     BonusOffer, ChatMessage, ChatThread, CollectedIntent, ConsentRecord, CronUser,
-    DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanSummary,
+    DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanDay,
+    PlanSummary,
     PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord,
     ScoreEvent, Task, UserProfile,
 )
@@ -228,9 +229,41 @@ class InMemoryRepository(Repository):
         for plan in self._user_plans(user_id).values():
             for day in plan.days:
                 for index, existing in enumerate(day.tasks):
-                    if existing.id == task.id:
+                    if existing.id != task.id:
+                        continue
+                    # day_no değiştiyse PlanDay listeleri arasında taşı
+                    if existing.day != task.day:
+                        day.tasks.pop(index)
+                        if not day.tasks:
+                            plan.days = [
+                                d for d in plan.days
+                                if d.day != day.day or d.tasks
+                            ]
+                        target = next(
+                            (d for d in plan.days if d.day == task.day), None
+                        )
+                        if target is None:
+                            target = PlanDay(day=task.day, theme="", tasks=[])
+                            plan.days.append(target)
+                            plan.days.sort(key=lambda d: d.day)
+                        target.tasks.append(task)
+                    else:
                         day.tasks[index] = task
-                        return
+                    return
+
+    def delete_task(self, user_id: str, task_id: str) -> bool:
+        for plan in self._user_plans(user_id).values():
+            for day in plan.days:
+                for index, existing in enumerate(day.tasks):
+                    if existing.id == task_id:
+                        day.tasks.pop(index)
+                        if not day.tasks:
+                            plan.days = [
+                                d for d in plan.days
+                                if d.day != day.day or d.tasks
+                            ]
+                        return True
+        return False
 
     def get_proof_attempts(self, user_id: str, task_id: str) -> int:
         if self.get_task(user_id, task_id) is None:
@@ -483,6 +516,17 @@ class InMemoryRepository(Repository):
             if intent["status"] == "active":
                 return CollectedIntent(**intent["collected"]), bool(intent["ready_for_plan"])
         return None
+
+    def get_latest_intent(self, user_id: str) -> CollectedIntent | None:
+        plan_id = self._active_plan_id.get(user_id) or self._ensure_active_plan_id(user_id)
+        intents = self._intents.get((user_id, plan_id), [])
+        if not intents:
+            return None
+        latest = intents[-1]
+        try:
+            return CollectedIntent(**latest["collected"])
+        except (TypeError, ValueError):
+            return CollectedIntent()
 
     def complete_active_intent(self, user_id: str) -> None:
         plan_id = self._active_plan_id.get(user_id)

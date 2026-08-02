@@ -14,7 +14,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import jwt
 from fastapi import (
-    APIRouter, BackgroundTasks, Depends, File, Form, Header, HTTPException, Request,
+    APIRouter, BackgroundTasks, Body, Depends, File, Form, Header, HTTPException, Request,
     Response, UploadFile,
 )
 from jwt import PyJWKClient
@@ -26,17 +26,20 @@ from app.core.rate_limit import limiter
 from app.models.schemas import (
     AttachmentIngestResponse, BonusCompletionRequest, BonusOfferResponse, ChatMessage,
     ChatGreetingResponse, ChatRequest, ChatResponse, ChatSessionResponse, CollectedIntent,
-    ChatThread, ConsentStatus, ConsentUpdate, DailyTaskItem, FortuneRecord,
+    ChatThread, ConsentStatus, ConsentUpdate, DailyTaskItem, DailyTasksResponse,
+    FortuneRecord,
     FortuneRightsResponse,
     HoroscopeResponse, PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
     RecapResponse,
     PlanSummary, ProfileUpdate, ProofRecord, ProofResult, PushTokenRecord,
     PushTokenRegistration, RevenueCatWebhookPayload, StateResponse, SubscriptionInfo,
-    TarotDrawRequest, TarotDrawResponse, UserProfile,
+    TarotDrawRequest, TarotDrawResponse, Task, TaskCreateRequest, TaskEditRequest,
+    UserProfile,
 )
 from app.services import (
     attachment_service, bonus_service, consent_service, fortune_service,
-    greeting_service, intent_service, notification_service, plan_service,
+    greeting_service, intent_service, notification_service, plan_edit_service,
+    plan_service,
     profile_service, project_service, proof_service, push_service, recap_service,
     scoring_service,
     subscription_service, task_lifecycle_service, tool_service,
@@ -78,6 +81,15 @@ def _require_premium(user_id: str) -> SubscriptionInfo:
     return info
 
 
+def _require_pro_modules(user_id: str) -> SubscriptionInfo:
+    """Mistik / idol / rapor: yalnız trial + active (free'de has_premium_access
+    true olsa bile kilitli — Şahin 2026-08-02). Dev hesabı status=active."""
+    info = _require_premium(user_id)
+    if info.status not in ("trial", "active"):
+        raise HTTPException(status_code=402, detail=PAYWALL_DETAIL)
+    return info
+
+
 def _legacy_message_id(user_id: str, index: int, role: str, content: str) -> str:
     digest = hashlib.sha256(
         f"{user_id}:{index}:{role}:{content}".encode()
@@ -100,11 +112,18 @@ def _task_memory(user_id: str, timezone_name: str) -> tuple[str, str]:
         status_counts: dict[str, int] = {}
         for task in todays_tasks:
             status_counts[task.status] = status_counts.get(task.status, 0) + 1
-        today_status = ", ".join(
+        counts = ", ".join(
             f"{count} {status}" for status, count in sorted(status_counts.items())
         )
+        # Bellek: sayılar yetmez — rehber bugünün görev başlıklarını da görsün.
+        titles = "; ".join(
+            f"{task.title} [{task.status}]" for task in todays_tasks[:6]
+        )
+        plan_bit = f"Plan «{plan.name}». " if getattr(plan, "name", None) else ""
+        today_status = f"{plan_bit}{counts}. Görevler: {titles}"
     else:
-        today_status = "Bugüne atanmış görev yok"
+        plan_bit = f"Plan «{plan.name}». " if getattr(plan, "name", None) else ""
+        today_status = f"{plan_bit}Bugüne atanmış görev yok"
     recent = sorted(
         (task for task in tasks if task.date and task.date <= today),
         key=lambda task: (task.date, task.day),
@@ -464,9 +483,10 @@ def rename_project(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
-@router.get("/tasks/daily", response_model=list[DailyTaskItem])
-def daily_tasks(user_id: str = Depends(get_current_user)) -> list[DailyTaskItem]:
-    return project_service.get_today_tasks(repo, user_id)
+@router.get("/tasks/daily", response_model=DailyTasksResponse)
+def daily_tasks(user_id: str = Depends(get_current_user)) -> DailyTasksResponse:
+    """Bugünün görevleri. Parti gerideyse needs_extension=true → mobil /plan/ensure-today."""
+    return project_service.get_daily_tasks_response(repo, user_id)
 
 
 @router.get("/plan", response_model=Plan)
@@ -518,8 +538,25 @@ async def generate_plan(
     return plan
 
 
+def _intent_for_plan_extension(
+    user_id: str, req: PlanGenerateRequest | None = None
+) -> CollectedIntent:
+    """İstemci collected göndermediyse saklı niyetten; yoksa varsayılan."""
+    if req is not None and req.collected.is_ready():
+        return req.collected
+    stored = repo.get_latest_intent(user_id)
+    if stored is not None:
+        return stored
+    if req is not None:
+        return req.collected
+    return CollectedIntent()
+
+
 @router.post("/plan/next", response_model=Plan)
-async def next_batch(req: PlanGenerateRequest, user_id: str = Depends(get_current_user)) -> Plan:
+async def next_batch(
+    req: PlanGenerateRequest = Body(default_factory=PlanGenerateRequest),
+    user_id: str = Depends(get_current_user),
+) -> Plan:
     """Partili üretim: mevcut planın kaldığı günden sonraki bölümü ekler."""
     _require_premium(user_id)
     current = repo.get_plan(user_id)
@@ -527,9 +564,10 @@ async def next_batch(req: PlanGenerateRequest, user_id: str = Depends(get_curren
         raise HTTPException(status_code=404, detail="Önce /plan/generate ile plan oluştur.")
     if current.batch_generated_until >= current.duration_days:
         return current
+    collected = _intent_for_plan_extension(user_id, req)
     try:
         batch = await plan_service.generate_batch(
-            req.collected,
+            collected,
             duration_days=current.duration_days,
             start_day=current.batch_generated_until + 1,
             start_date=current.start_date,  # aynı çapa: günler doğru takvim tarihine düşsün
@@ -540,6 +578,124 @@ async def next_batch(req: PlanGenerateRequest, user_id: str = Depends(get_curren
     current.batch_generated_until = batch.batch_generated_until
     repo.save_plan(user_id, current)
     return current
+
+
+@router.post("/plan/ensure-today", response_model=Plan)
+async def ensure_today_batch(user_id: str = Depends(get_current_user)) -> Plan:
+    """Bugünün gün numarası üretilmemişse bir sonraki partiyi üretir (Gemini — kullanıcı isteğiyle).
+
+    Açılışta otomatik ÇAĞRILMAZ; mobil yalnız Bugün boş + needs_extension iken tetikler.
+    Tek istekte en fazla 2 parti (timeout/maliyet tavanı).
+    """
+    _require_premium(user_id)
+    current = repo.get_plan(user_id)
+    if not current:
+        raise HTTPException(status_code=404, detail="Önce /plan/generate ile plan oluştur.")
+    profile = repo.get_profile(user_id)
+    try:
+        tz = ZoneInfo(profile.timezone)
+    except ZoneInfoNotFoundError:
+        tz = ZoneInfo("Europe/Istanbul")
+    today = datetime.now(timezone.utc).astimezone(tz).date()
+    plan_day = (today - current.start_date).days + 1
+    if plan_day < 1:
+        return current
+    collected = _intent_for_plan_extension(user_id)
+    batches = 0
+    while (
+        current.batch_generated_until < plan_day
+        and current.batch_generated_until < current.duration_days
+        and batches < 2
+    ):
+        try:
+            batch = await plan_service.generate_batch(
+                collected,
+                duration_days=current.duration_days,
+                start_day=current.batch_generated_until + 1,
+                start_date=current.start_date,
+            )
+        except GeminiUnavailable:
+            raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+        current.days.extend(batch.days)
+        current.batch_generated_until = batch.batch_generated_until
+        batches += 1
+    if batches:
+        repo.save_plan(user_id, current)
+    return current
+
+
+@router.patch("/plan/tasks/{task_id}", response_model=Task)
+@limiter.limit(f"{settings.CHAT_RATE_LIMIT_PER_MIN}/minute")
+def edit_plan_task(
+    request: Request,
+    task_id: str,
+    body: TaskEditRequest,
+    user_id: str = Depends(get_current_user),
+) -> Task:
+    """FAZ 8.3: görev title/date düzenle. Geçmişe taşıma ve done düzenleme yasak.
+    Şemada time alanı yok — yalnız title + date."""
+    try:
+        return plan_edit_service.edit_task(
+            repo,
+            user_id,
+            task_id,
+            title=body.title,
+            new_date=body.date,
+        )
+    except plan_edit_service.TaskNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except plan_edit_service.PlanNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except plan_edit_service.TaskNotEditable as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    except plan_edit_service.PlanEditError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@router.post("/plan/days/{date}/tasks", response_model=Task)
+@limiter.limit(f"{settings.CHAT_RATE_LIMIT_PER_MIN}/minute")
+def add_plan_day_task(
+    request: Request,
+    date: date,
+    body: TaskCreateRequest,
+    user_id: str = Depends(get_current_user),
+) -> Task:
+    """FAZ 8.3: aktif plana kullanıcı görevi ekle (+50 yolu normal complete ile)."""
+    try:
+        return plan_edit_service.add_task(
+            repo,
+            user_id,
+            date,
+            title=body.title,
+            categories=body.categories,
+            tiny_version=body.tiny_version,
+            duration_min=body.duration_min,
+        )
+    except plan_edit_service.PlanNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except plan_edit_service.PlanEditError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@router.delete("/plan/tasks/{task_id}", status_code=204)
+@limiter.limit(f"{settings.CHAT_RATE_LIMIT_PER_MIN}/minute")
+def delete_plan_task(
+    request: Request,
+    task_id: str,
+    user_id: str = Depends(get_current_user),
+) -> Response:
+    """FAZ 8.3: yalnız pending silinir; ceza/puan yok."""
+    try:
+        plan_edit_service.delete_task(repo, user_id, task_id)
+    except plan_edit_service.TaskNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except plan_edit_service.PlanNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except plan_edit_service.TaskNotEditable as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
+    except plan_edit_service.PlanEditError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return Response(status_code=204)
 
 
 @router.post("/task/{task_id}/proof", response_model=ProofResult)
@@ -598,6 +754,26 @@ async def upload_proof(
             detail="Bu görev için bir kanıt isteği hâlen işleniyor.",
         )
 
+    # FAZ 8.6: kişisel plan/gün bağlamı Vision'a gider — su≠meyve semantiği için.
+    plan = repo.get_plan(user_id)
+    day_theme = ""
+    plan_name = ""
+    task_context = ""
+    if plan is not None:
+        plan_name = plan.name or ""
+        for plan_day in plan.days:
+            if any(t.id == task.id for t in plan_day.tasks):
+                day_theme = plan_day.theme or ""
+                sibling = [
+                    t.title for t in plan_day.tasks if t.id != task.id
+                ][:3]
+                if sibling:
+                    task_context = "Aynı gün diğer görevler: " + "; ".join(sibling)
+                break
+        if task.image_keyword:
+            extra = f"Görsel anahtar: {task.image_keyword}"
+            task_context = f"{task_context}; {extra}" if task_context else extra
+
     try:
         result = await proof_service.evaluate_proof(
             task_title=task.title,
@@ -608,6 +784,9 @@ async def upload_proof(
             tiny_version=task.tiny_version,
             categories=task.categories,
             task_type=task.task_type,
+            plan_name=plan_name,
+            day_theme=day_theme,
+            task_context=task_context,
         )
     except GeminiUnavailable:
         repo.abort_proof_attempt(user_id, task_id, idempotency_key)
@@ -801,7 +980,9 @@ def my_recap(
     user_id: str = Depends(get_current_user),
 ) -> RecapResponse:
     """Niyetsen Raporu (FAZ 8.8 'Wrapped'): story kartları — 14 günlük/aylık özet.
-    Kural bazlı, Gemini çağrılmaz (hız/kota); kutlama tonu, kaçırılanlar sayılmaz."""
+    Kural bazlı, Gemini çağrılmaz (hız/kota); kutlama tonu, kaçırılanlar sayılmaz.
+    PRO (trial/active/dev) — ücretsiz kullanıcı 402."""
+    _require_pro_modules(user_id)
     if period not in recap_service.PERIOD_DAYS:
         period = "14d"
     profile = repo.get_profile(user_id)
@@ -917,7 +1098,7 @@ def list_philosophy_paths(user_id: str = Depends(get_current_user)) -> list[dict
     """
     from app.services import path_service
 
-    _require_premium(user_id)
+    _require_pro_modules(user_id)
     return [path.model_dump() for path in path_service.list_paths()]
 
 
@@ -938,8 +1119,9 @@ async def fortune_tarot(
     req: TarotDrawRequest,
     user_id: str = Depends(get_current_user),
 ) -> TarotDrawResponse:
-    """Günlük tarot: herkese 1 çekim; aynı gün ikinci istekte kayıtlı sonuç döner."""
+    """Günlük tarot — PRO (trial/active). Aynı gün ikinci istekte kayıtlı sonuç."""
     _require_consent(user_id, "chat")
+    _require_pro_modules(user_id)
     profile, is_premium, memory = _fortune_context(user_id)
     try:
         return await fortune_service.draw_tarot(
@@ -965,11 +1147,12 @@ async def fortune_photo(
     photo: UploadFile = File(...),
     user_id: str = Depends(get_current_user),
 ) -> PhotoFortuneResponse:
-    """Kahve/el falı: in-app kamera fotoğrafı → Gemini Vision yorumu."""
+    """Kahve/el falı: in-app kamera fotoğrafı → Gemini Vision yorumu. PRO."""
     if kind not in ("kahve", "el"):
         raise HTTPException(status_code=404, detail="Bilinmeyen fal türü.")
     _require_consent(user_id, "chat")
     _require_consent(user_id, "proof")  # fotoğraf işleme rızası (KVKK)
+    _require_pro_modules(user_id)
     if photo.size is not None and photo.size > settings.PROOF_MAX_BYTES:
         raise HTTPException(status_code=400, detail="Fotoğraf 5MB'den büyük olamaz.")
     image_bytes = await photo.read(settings.PROOF_MAX_BYTES + 1)
@@ -1003,8 +1186,9 @@ def fortune_history(
     limit: int = 30,
     user_id: str = Depends(get_current_user),
 ) -> list[FortuneRecord]:
-    """Fal geçmişi — en yeniden eskiye (tarot/kahve/el/burç)."""
+    """Fal geçmişi — en yeniden eskiye (tarot/kahve/el/burç). PRO."""
     _require_consent(user_id, "chat")
+    _require_pro_modules(user_id)
     return repo.list_fortunes(user_id, limit=max(1, min(limit, 100)))
 
 
@@ -1015,8 +1199,9 @@ async def fortune_horoscope(
     period: str = "daily",
     user_id: str = Depends(get_current_user),
 ) -> HoroscopeResponse:
-    """Burç yorumu: günlük veya haftalık (period=weekly) — önbellekli."""
+    """Burç yorumu: günlük veya haftalık (period=weekly) — önbellekli. PRO."""
     _require_consent(user_id, "chat")
+    _require_pro_modules(user_id)
     profile, _, memory = _fortune_context(user_id)
     sign = profile.zodiac_sign or (
         profile_service.zodiac_for(profile.birth_date) if profile.birth_date else ""

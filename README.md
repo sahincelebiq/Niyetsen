@@ -26,6 +26,9 @@ Android.
 | **Güvenlik** / Security overview & audit | [`docs/SECURITY.md`](docs/SECURITY.md) |
 | **Ürün yol haritası** / Product roadmap (single source of truth) | [`NIYETSEN_MASTER_PLAN.md`](NIYETSEN_MASTER_PLAN.md) |
 | **Tüm doküman dizini** / Full docs index | [`docs/README.md`](docs/README.md) |
+| **Aktif sprint (Play Store)** / Active Play Store goal | [`docs/PLAYSTORE_GOAL.md`](docs/PLAYSTORE_GOAL.md) |
+| **FAZ 8 lansman listesi** / Phase 8 checklist | [`docs/FAZ8_LANSMAN.md`](docs/FAZ8_LANSMAN.md) |
+| **Store ekran görselleri** / Store screenshots | [`store-listing/INDEX.md`](store-listing/INDEX.md) |
 | **Demo günü (28 Temmuz)** / Investor demo runbook | [`docs/DEMO_GUNU_28TEMMUZ.md`](docs/DEMO_GUNU_28TEMMUZ.md) |
 | **Mobil depo (GitHub)** / Mobile repo | [github.com/sahincelebiq/Niyetsen-mobile](https://github.com/sahincelebiq/Niyetsen-mobile) |
 
@@ -45,25 +48,26 @@ Android.
    App Store / Play                                     ▼               ▼               ▼
                                               ┌──────────────┐  ┌─────────────┐  ┌──────────────┐
                                               │  Supabase    │  │  Gemini API │  │  Unsplash    │
-                                              │ Postgres+Auth│  │ 2.5-flash   │  │  (görseller) │
-                                              │  +Storage    │  │ (multimodal)│  └──────────────┘
+                                              │ Postgres+Auth│  │ 3.1 Pro +   │  │  (görseller) │
+                                              │  +Storage    │  │ 2.5 fallback│  └──────────────┘
                                               └──────────────┘  └─────────────┘
                                                      ▲
-                                              Railway cron (5 dk / 5 min)
+                                              Railway cron (Config-as-code)
 ```
 
 - **Backend** — Python / FastAPI. Tüm iş mantığı, oyun motoru, AI çağrıları ve
   kanıt doğrulama burada. Railway'de iki servis: API + cron.
-- **Mobile** — Expo (React Native + TypeScript, expo-router). *Ayrı bir git
-  deposu* (`mobile/.git`).
-- **AI** — Google Gemini, 4 ayrı model rol için:
-  `gemini-2.5-flash` (sohbet, niyet toplama, fal, foto kanıt doğrulama/vision),
-  `gemini-2.5-pro` (plan üretimi — daha güçlü akıl yürütme gerektirir),
-  `gemini-2.5-flash-image` — "**Nano Banana**" (plan görseli üretimi, Unsplash ile hibrit),
-  `gemini-embedding-001` (RAG embedding).
+- **Mobile** — Expo (React Native + TypeScript, expo-router). *Ayrı git deposu*
+  (`mobile/.git` → [Niyetsen-mobile](https://github.com/sahincelebiq/Niyetsen-mobile)).
+- **AI** — Google Gemini, rol bazlı (adlar uydurulmaz — ai.google.dev):
+  `gemini-3.1-pro-preview` (**sohbet + plan** — bağlam/niyet kalitesi),
+  `gemini-2.5-flash` / `gemini-2.5-pro` (otomatik fallback),
+  `gemini-2.5-flash-image` — "**Nano Banana**" (plan görseli; Unsplash hibrit),
+  `gemini-embedding-001` (RAG; sohbette varsayılan keyword — maliyet için).
 - **DB / Auth / Storage** — Supabase (Postgres + Auth + Storage).
 - **Abonelik / Subscriptions** — RevenueCat (yalnız uygulama içi satın alma / IAP only).
 - **Gözlemlenebilirlik** — Sentry (hata), PostHog (analitik).
+- **Website** — `website/` statik tanıtım; Vercel (`website/vercel.json`).
 
 ---
 
@@ -84,8 +88,9 @@ Niyetsen/
 │   ├── FAZ*.md / *_SYNC.md    ← faz geçmişi ve ajan devir notları
 │   └── arsiv-planlama/        ← eski .docx/.xlsx planlama belgeleri (arşiv)
 ├── niyetsen-backend/          ← Python/FastAPI backend ("ana beyin")
-├── mobile/                    ← Expo uygulaması (ayrı git deposu)
-└── website/                   ← tanıtım sitesi + blog (statik)
+├── mobile/                    ← Expo uygulaması (ayrı git deposu — commit edilmez)
+├── store-listing/             ← Play / App Store ekran görselleri + üretici
+└── website/                   ← tanıtım sitesi + blog (statik / Vercel)
 ```
 
 > Ayrıntılı harita için / For the full map: [`docs/REPO_MAP.md`](docs/REPO_MAP.md).
@@ -219,10 +224,16 @@ mazeret sabit −25 · puan tabanı 0 · 6 kategori (İrade, İstikrar, Disiplin
 
 ## 📱 Durum / Status
 
-Aktif geliştirme — mağaza yayını hazırlığı (bkz. [`STORE_READINESS.md`](STORE_READINESS.md)).
-Faz 7 (v2) kod tarafı tamamlandı: fal modülü, RAG, sohbet oturumları, İdol Modu
-ve store güvenlik altyapısı devrede; **175 otomatik backend testi yeşil**.
-Güncel faz ve kilitli kararlar için tek kaynak: [`NIYETSEN_MASTER_PLAN.md`](NIYETSEN_MASTER_PLAN.md).
+**Aktif sprint:** Play Store çıkışı — [`docs/PLAYSTORE_GOAL.md`](docs/PLAYSTORE_GOAL.md)
+(+ [`docs/FAZ8_LANSMAN.md`](docs/FAZ8_LANSMAN.md)). Mağaza kontrol listesi:
+[`STORE_READINESS.md`](STORE_READINESS.md).
+
+Kod tarafında FAZ 7–8 iskeleti hazır: sohbet (3.1 Pro), plan/kanıt, çoklu niyet,
+İdol Modu (10 Felsefe Yolu), mistik katman, Wrapped rapor, PRO kapıları.
+Backend: **`pytest -q` ~200 yeşil**. Mobil ayrı depoda (`npx tsc --noEmit`).
+
+Kilitli kararlar / yol haritası: [`NIYETSEN_MASTER_PLAN.md`](NIYETSEN_MASTER_PLAN.md).
+Public leaderboard **v3** — bu sprintte yok.
 
 ---
 
