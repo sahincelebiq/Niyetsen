@@ -30,17 +30,28 @@ WHITE = (255, 255, 255)
 CARD = (255, 255, 255)
 SOFT_DARK = (28, 36, 27)
 
-FONT_REG = "/System/Library/Fonts/Supplemental/Arial.ttf"
-FONT_BOLD = "/System/Library/Fonts/Supplemental/Arial Bold.ttf"
+# Marka tipografisi (uygulamayla birebir): Manrope. node_modules'tan okunur —
+# hem macOS hem CI/sandbox'ta çalışır. Arial yalnız son çare.
+_ROOT = Path(__file__).resolve().parents[1]
+_GF = _ROOT / "mobile" / "node_modules" / "@expo-google-fonts"
+FONT_CANDIDATES_REG = [
+    str(_GF / "manrope" / "500Medium" / "Manrope_500Medium.ttf"),
+    "/System/Library/Fonts/Supplemental/Arial.ttf",
+]
+FONT_CANDIDATES_BOLD = [
+    str(_GF / "manrope" / "800ExtraBold" / "Manrope_800ExtraBold.ttf"),
+    "/System/Library/Fonts/Supplemental/Arial Bold.ttf",
+]
 FONT_UNI = "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
 
 
 def font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
-    path = FONT_BOLD if bold else FONT_REG
-    try:
-        return ImageFont.truetype(path, size)
-    except OSError:
-        return ImageFont.truetype(FONT_UNI, size)
+    for path in (FONT_CANDIDATES_BOLD if bold else FONT_CANDIDATES_REG):
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    return ImageFont.truetype(FONT_UNI, size)
 
 
 def load_bg(name: str, size: tuple[int, int]) -> Image.Image:

@@ -37,7 +37,7 @@ Yeniden üret: `cd store-listing && python3 generate_screenshots.py`
 2. **Phone screenshots** → `phone/play_1080x1920/*.png` (01→07 sırayla)
 3. Format: PNG, alpha yok, her biri &lt; 8 MB ✅
 4. En az 2, en fazla 8 — biz 7 verdik
-5. Hesap açılınca ekleyebilirsin: **Feature graphic** 1024×500 (henüz bu pakette yok — istersen sonraki tur)
+5. **Feature graphic v2 hazır:** `feature/feature_1024x500.png` · **Play icon:** `icon/icon_512x512.png` · **Video:** `video/niyetsen_promo_1920x1080.mp4` (YouTube unlisted → link)
 
 **Yapma:** iPhone çerçeveli görseli Play’e “Android UI” diye sunma; bu sette jenerik telefon çerçevesi var (OK).
 
