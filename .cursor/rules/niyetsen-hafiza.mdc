@@ -29,6 +29,12 @@ canlıda yaşanmış bir hatanın veya Şahin'in verdiği bir kararın izidir.
 - **Wrapped / Rapor** = /me/recap story özeti. Yalnız kazanımlar gösterilir.
 - **İlkbahar** = UI v3 paleti (genç yaprak #35814A + mercan #E06842).
   Sonbahar/pastel geri gelmez. Soft dark = simsiyah değil (`theme.ts` dark).
+- **Minimal ölçek (v3.1, 2026-08-05, KİLİTLİ)**: title 32 / screenTitle 22 /
+  subtitle 18 (`themed-text.tsx`) — büyütme; vurgu boşluk/renkle.
+- **"KAPI İÇERİDE"** (Şahin kuralı): PRO bölümler (rapor/İdol) ücretsiz
+  kullanıcıya GÖRÜNÜR — dışarı atma yok, içeride kilitli önizleme + "PRO ile
+  aç" CTA (örnek: rapor.tsx). Fal ise tamamen ücretsiz (hak sayaçları
+  sunucuda). Detay: `.cursor/skills/niyetsen-tasarim/SKILL.md`.
 - **Ücretsiz = 1 plan**; 2. plan = abone/dev. Rank/puan kullanıcı bazlı
   (plan değişince score sıfırlanmaz). Public leaderboard = v3, şimdi YOK.
 

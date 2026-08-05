@@ -205,6 +205,33 @@ Cursor görevleri:
       plan rozeti. Veri artık gerçek — UI onu göstersin.
 - [ ] Backend testleri 207 yeşil — düşürme. `pytest -q` + `npx tsc --noEmit`.
 
+### 8.10 — Minimal UI + "Kapı İçeride" (2026-08-05, Claude Cowork)
+
+Şahin geri bildirimi: "her şey çok hantal, çok kalın, çok büyük — daha
+minimalist" + "ücretli bölümleri ücretsiz kullanıcı da GÖRMELİ, dışarı
+atılmamalı".
+
+**Koda entegre EDİLDİ:**
+- [x] **Minimal tipografi ölçeği (KİLİTLİ):** `themed-text.tsx` — title 44→32,
+      screenTitle 28→22, subtitle 30→18. Tek dosya, tüm uygulama inceldi.
+      Vurgu puntoyla değil boşluk/renkle verilir. Ölçeği BÜYÜTME.
+- [x] **"Kapı İçeride" deseni:** rapor.tsx artık ücretsiz kullanıcıyı paywall'a
+      ATMIYOR — ekran açılır, kilitli önizleme kartı (değer vaadi + "PRO ile
+      aç" CTA) gösterilir. `useRequirePremium` yönlendirmesi bu ekrandan
+      kaldırıldı; sunucu 402 son sözü söyler.
+- [x] **Tasarım skill'i:** `.cursor/skills/niyetsen-tasarim/SKILL.md` —
+      tipografi tablosu, İlkbahar token kuralları, kapı-içeride deseni,
+      7 maddelik ekran QA listesi. HER UI işinde bu skill uygulanır.
+
+**Cursor görevleri:**
+- [ ] Kapı-içeride desenini kalan PRO yüzeylerine uygula (İdol/yol-detay,
+      varsa diğer useRequirePremium kullanıcıları) — rapor.tsx örnek.
+- [ ] Minimal ölçek sonrası ekran turu: dev başlık/boşluk artıkları
+      (özellikle settings, dil seçici, mystic hub) — niyetsen-tasarim
+      skill'indeki QA listesiyle ekran ekran geç.
+- [ ] Dil seçici kompaktlaştır: tam liste yerine tek satır (mevcut dil +
+      chevron) → seçim bottom sheet'te.
+
 ### 8.7 — Lansman kontrol listesi (2-3 gün, store bekleme hariç)
 
 - [ ] Store metinleri güncelle (fal İKİNCİL özellik — Apple 4.3 riski).
