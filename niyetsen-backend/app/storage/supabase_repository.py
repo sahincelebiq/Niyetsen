@@ -830,8 +830,8 @@ class SupabaseRepository(Repository):
     def get_profile(self, user_id: str) -> UserProfile:
         self._ensure_user(user_id)
         row = self._db.table("users").select(
-            "name,birth_date,zodiac_sign,gender,timezone,notif_hour,notif_minute,"
-            "irade_modu_active,kvkk_consent_at"
+            "name,birth_date,zodiac_sign,gender,timezone,preferred_language,"
+            "notif_hour,notif_minute,irade_modu_active,kvkk_consent_at"
         ).eq("id", user_id).single().execute().data
         complete = bool(
             row.get("name")
@@ -848,6 +848,7 @@ class SupabaseRepository(Repository):
             "zodiac_sign": profile.zodiac_sign,
             "gender": profile.gender,
             "timezone": profile.timezone,
+            "preferred_language": profile.preferred_language,
             "notif_hour": profile.notif_hour,
             "notif_minute": profile.notif_minute,
             "irade_modu_active": profile.irade_modu_active,

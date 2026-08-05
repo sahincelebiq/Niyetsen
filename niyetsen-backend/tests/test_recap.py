@@ -92,3 +92,42 @@ def test_is_recap_push_due_schedule():
     assert recap_service.is_recap_push_due(44)
     assert recap_service.recap_push_period_days(14) == 14
     assert recap_service.recap_push_period_days(44) == 30
+
+
+def test_build_recap_aggregates_all_plans_and_period_trait():
+    """FAZ 8.9: çoklu plan gerçek veri — iki planın görevleri toplanır,
+    dönem kategorisi fiilen işlenen görevlerden çıkar."""
+    today = date.today()
+
+    def plan_with(cat: str, n_done: int, pid: str, start_offset: int) -> Plan:
+        start = today - timedelta(days=start_offset)
+        days = [
+            PlanDay(day=i + 1, tasks=[Task(
+                id=f"{pid}-t{i}", day=i + 1, title=f"{cat} görevi {i}",
+                categories=[cat],
+                status="done" if i < n_done else "pending",
+                date=start + timedelta(days=i),
+                proof_id="p1" if i == 0 else None,
+            )])
+            for i in range(5)
+        ]
+        return Plan(id=pid, duration_days=5, batch_generated_until=5,
+                    start_date=start, days=days)
+
+    plan_a = plan_with("Disiplin", 3, "pa", 4)   # 3 done
+    plan_b = plan_with("Sosyallik", 2, "pb", 20)  # start 20 gün önce, 2 done (dönem dışı)
+    recap = recap_service.build_recap(
+        state=GameState(user_id="u"),
+        plan=plan_a,
+        plans=[plan_a, plan_b],
+        period="14d",
+        today=today,
+    )
+    assert recap.days_in == 21  # yolculuk EN ESKİ plandan sayılır
+    assert recap.completed_tasks == 3  # dönem içi: yalnız plan_a'nın 3'ü
+    trait = next(c for c in recap.cards if c.kind == "trait")
+    assert trait.headline == "Disiplin"  # dönem-gerçek kategori
+    tasks_card = next(c for c in recap.cards if c.kind == "tasks")
+    assert "kanıtla" in tasks_card.subtitle  # proof_id sayıldı
+    intro = next(c for c in recap.cards if c.kind == "intro")
+    assert "2 niyeti" in intro.subtitle

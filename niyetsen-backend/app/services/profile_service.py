@@ -35,6 +35,11 @@ def build_profile(update: ProfileUpdate, current: UserProfile) -> UserProfile:
         # FAZ 8: isteğe bağlı — gönderilmezse mevcut değer korunur.
         gender=update.gender if update.gender is not None else current.gender,
         timezone=update.timezone,
+        preferred_language=(
+            update.preferred_language
+            if update.preferred_language is not None
+            else current.preferred_language
+        ),
         notif_hour=update.notif_hour,
         notif_minute=update.notif_minute,
         irade_modu_active=update.irade_modu_active,

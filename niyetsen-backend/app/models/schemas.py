@@ -257,6 +257,8 @@ class UserProfile(BaseModel):
     # değil, sadece hitap/örnek uyarlaması için; klişe üretimi prompt'ta yasak).
     gender: Optional[Literal["kadın", "erkek", "belirtmek istemiyorum"]] = None
     timezone: str = "Europe/Istanbul"
+    # Play Store çok dilli: tr | en-US | en-GB | de | fr | ar
+    preferred_language: Optional[str] = None
     notif_hour: int = 8
     notif_minute: int = 0
     irade_modu_active: bool = False
@@ -269,6 +271,7 @@ class ProfileUpdate(BaseModel):
     birth_date: dt_date
     gender: Optional[Literal["kadın", "erkek", "belirtmek istemiyorum"]] = None
     timezone: str = Field(default="Europe/Istanbul", min_length=1, max_length=80)
+    preferred_language: Optional[str] = Field(default=None, max_length=16)
     notif_hour: int = Field(default=8, ge=0, le=23)
     notif_minute: int = Field(default=0, ge=0, le=59)
     # Legacy onboarding clients may still send true. Omitted/false never revokes

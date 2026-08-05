@@ -22,15 +22,15 @@ from app.services.scoring_service import overall_rank, rank_for
 PERIOD_DAYS = {"7d": 7, "14d": 14, "30d": 30}
 
 
-def _completed_in_period(plan: Plan | None, start: date, end: date) -> int:
-    if plan is None:
-        return 0
-    return sum(
-        1
+def _done_tasks_in_period(plans: list[Plan], start: date, end: date) -> list:
+    """Dönem içinde tamamlanan görevler — TÜM planlardan (FAZ 8.9 gerçek veri)."""
+    return [
+        task
+        for plan in plans
         for day in plan.days
         for task in day.tasks
         if task.status == "done" and task.date and start <= task.date <= end
-    )
+    ]
 
 
 def _top_category(points: dict[str, int]) -> tuple[str, int]:
@@ -38,28 +38,58 @@ def _top_category(points: dict[str, int]) -> tuple[str, int]:
     return top, points.get(top, 0)
 
 
+def _period_top_category(done_tasks: list) -> tuple[str, int]:
+    """Dönemin GERÇEK kategori dağılımı: tamamlanan görevlerin kategorileri.
+    'Verilerimi raporlayamıyor' şikâyetinin çözümü — state toplamı değil,
+    bu dönemde fiilen işlenen kategori sayılır."""
+    counts: dict[str, int] = {}
+    for task in done_tasks:
+        for cat in task.categories:
+            counts[cat] = counts.get(cat, 0) + 1
+    if not counts:
+        return "", 0
+    top = max(counts, key=lambda c: counts[c])
+    return top, counts[top]
+
+
 def build_recap(
     *,
     state: GameState,
     plan: Plan | None,
+    plans: list[Plan] | None = None,
     user_name: str = "",
     period: str = "14d",
     today: date | None = None,
 ) -> RecapResponse:
-    """Story kartlarını üret. Saf fonksiyon — test edilebilir, yan etkisiz."""
+    """Story kartlarını üret. Saf fonksiyon — test edilebilir, yan etkisiz.
+
+    FAZ 8.9: `plans` verilirse rapor TÜM planları toplar (çoklu plan gerçek
+    veri); verilmezse eski davranış (yalnız aktif plan) korunur.
+    """
     days = PERIOD_DAYS.get(period, 14)
     end = today or date.today()
     start = end - timedelta(days=days - 1)
 
-    days_in = (end - plan.start_date).days + 1 if plan else 0
-    completed = _completed_in_period(plan, start, end)
+    all_plans = [p for p in (plans if plans is not None else [plan]) if p is not None]
+    if plan is None and all_plans:
+        plan = all_plans[0]
+
+    # Yolculuk = Niyetsen'deki İLK planın başlangıcından bugüne.
+    earliest_start = min((p.start_date for p in all_plans), default=None)
+    days_in = (end - earliest_start).days + 1 if earliest_start else 0
+
+    done_tasks = _done_tasks_in_period(all_plans, start, end)
+    completed = len(done_tasks)
+    proofed = sum(1 for task in done_tasks if getattr(task, "proof_id", None))
     total_points = sum(state.points.get(c, 0) for c in CATEGORIES)
     top_cat, top_pts = _top_category(state.points)
+    period_cat, period_cat_count = _period_top_category(done_tasks)
     name = (user_name or "").strip()
 
     first_theme = ""
-    if plan and plan.days:
-        day0 = plan.days[0]
+    earliest_plan = min(all_plans, key=lambda p: p.start_date) if all_plans else None
+    if earliest_plan and earliest_plan.days:
+        day0 = earliest_plan.days[0]
         first_theme = (day0.theme or "").strip()
         if not first_theme and day0.tasks:
             first_theme = (day0.tasks[0].title or "").strip()
@@ -75,7 +105,11 @@ def build_recap(
             kind="intro",
             title=f"{name}, yolculuğun" if name else "Yolculuğun",
             headline=f"{max(days_in, 1)}. gün",
-            subtitle="Niyetsen'e başladığından beri her gün bir halka.",
+            subtitle=(
+                f"{len(all_plans)} niyeti birden yürütüyorsun — her gün bir halka."
+                if len(all_plans) > 1
+                else "Niyetsen'e başladığından beri her gün bir halka."
+            ),
         ),
         RecapCard(
             kind="journey",
@@ -88,16 +122,27 @@ def build_recap(
             title=f"Son {days} gün",
             headline=f"{completed} görev",
             subtitle=(
-                "Tamamladın — her biri karakterine işlendi."
+                (
+                    f"Tamamladın — {proofed}'ini fotoğrafla kanıtladın."
+                    if proofed
+                    else "Tamamladın — her biri karakterine işlendi."
+                )
                 if completed
                 else "Yeni dönem temiz bir sayfa. İlk halka seni bekliyor."
             ),
         ),
         RecapCard(
             kind="trait",
+            # FAZ 8.9: dönem-gerçek veri — bu dönemde fiilen işlenen kategori.
+            # Dönem boşsa tüm zamanların puan lideri gösterilir.
             title="En çok gelişen yönün",
-            headline=top_cat,
-            subtitle=f"{top_pts} puan · {rank_for(top_pts)} kademesi",
+            headline=period_cat or top_cat,
+            subtitle=(
+                f"Bu dönem {period_cat_count} görev {period_cat}'e işledi · "
+                f"toplam {state.points.get(period_cat, 0)} puan"
+                if period_cat
+                else f"{top_pts} puan · {rank_for(top_pts)} kademesi"
+            ),
         ),
         RecapCard(
             kind="streak",

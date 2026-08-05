@@ -229,6 +229,7 @@ async def chat(
     request: Request,
     req: ChatRequest,
     user_id: str = Depends(get_current_user),
+    x_app_locale: str | None = Header(default=None, alias="X-App-Locale"),
 ) -> ChatResponse:
     """Çekirdek halka 1/2: niyet toplama sohbeti.
 
@@ -277,6 +278,10 @@ async def chat(
         )
     else:
         try:
+            preferred_language = (
+                (x_app_locale or "").strip()
+                or (profile.preferred_language or "").strip()
+            )
             response = await intent_service.handle_chat(
                 req,
                 state=state,
@@ -288,6 +293,7 @@ async def chat(
                 today_status=today_status,
                 recent_tasks=recent_tasks,
                 mood_notes=_recent_mood(req.messages),
+                preferred_language=preferred_language,
                 has_active_plan=repo.get_plan(user_id) is not None,
                 plan_has_content=plan_has_content,
             )
@@ -986,9 +992,22 @@ def my_recap(
     if period not in recap_service.PERIOD_DAYS:
         period = "14d"
     profile = repo.get_profile(user_id)
+    # FAZ 8.9: rapor TÜM planları toplar (çoklu plan gerçek veri) — yalnız
+    # aktif plan yetmiyordu ("verilerimi raporlayamıyor" düzeltmesi).
+    all_plans = []
+    try:
+        for summary in repo.list_plan_summaries(user_id):
+            if not summary.has_content:
+                continue
+            full = repo.get_plan_by_id(user_id, summary.id)
+            if full is not None:
+                all_plans.append(full)
+    except Exception:  # noqa: BLE001 — plan listesi düşerse aktif planla devam
+        log.warning("recap: plan listesi okunamadı, aktif planla devam", exc_info=True)
     return recap_service.build_recap(
         state=repo.get_state(user_id),
         plan=repo.get_plan(user_id),
+        plans=all_plans or None,
         user_name=profile.name or "",
         period=period,
     )
@@ -1085,8 +1104,25 @@ def _fortune_context(user_id: str) -> tuple[UserProfile, bool, str]:
         birth_date=profile.birth_date.isoformat() if profile.birth_date else "",
         zodiac=profile.zodiac_sign or "",
         gender=profile.gender or "",
+        preferred_language=profile.preferred_language or "",
     )
     return profile, info.has_premium_access, memory
+
+
+@router.get("/paths/{slug}")
+def get_philosophy_path_detail(
+    slug: str, user_id: str = Depends(get_current_user)
+) -> dict:
+    """FAZ 8.9 — İdol/Felsefe Yolu detay ekranı: dossier'den güvenli bölümler
+    (inançlar, alışkanlıklar, rutin, dersler, kitaplar). Premium (İdol kuralı);
+    kişi adı yalnız source_note'ta (yasal kural)."""
+    from app.services import persona_service
+
+    _require_pro_modules(user_id)
+    persona = persona_service.get_persona(slug)
+    if persona is None:
+        raise HTTPException(status_code=404, detail="Felsefe yolu bulunamadı.")
+    return persona.detail_dict()
 
 
 @router.get("/paths")

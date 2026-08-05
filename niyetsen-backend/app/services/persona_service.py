@@ -50,6 +50,23 @@ class Persona:
             "source_note": self.source_note,
         }
 
+    # FAZ 8.9: İdol detay ekranı için zengin ama GÜVENLİ görünüm.
+    # YASAL KURAL değişmez: kişi adı yalnız source_note'ta; public_quotes
+    # bilerek DIŞARIDA (alıntı = kişiye atıf, gri alanı açar).
+    _DETAIL_FIELDS = (
+        "core_beliefs", "mindset", "habits", "daily_routine",
+        "decision_style", "failure_and_recovery", "lessons_for_users", "books",
+    )
+
+    def detail_dict(self) -> dict:
+        detail = self.public_dict()
+        detail["sections"] = [
+            {"key": key, "value": self.dossier[key]}
+            for key in self._DETAIL_FIELDS
+            if self.dossier.get(key)
+        ]
+        return detail
+
 
 _cache: list[Persona] | None = None
 _lock = Lock()

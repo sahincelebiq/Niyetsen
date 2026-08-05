@@ -164,6 +164,47 @@ Cursor görevleri:
 - KAPI: 14+ günlük dev hesabında rapor gerçek verilerle akıyor; boş/yeni
   kullanıcıda çökmüyor (kartlar dolu geliyor); reduce-motion'da sorunsuz.
 
+### 8.9 — Çalışırlık turu (2026-08-05, Claude Cowork — Şahin'in canlı hata listesi)
+
+**Tanılar + kod tarafında YAPILANLAR (yeniden yazma, üzerine inşa et):**
+
+1. **Mistik çalışmıyor → KÖK NEDEN BULUNDU ve DÜZELTİLDİ:** `mystic.tsx`
+   `openModule` her modülü (tarot/astroloji/fal/geçmiş) paywall'a
+   yönlendiriyordu. KİLİTLİ KARARA aykırı regresyon: fal ÜCRETSİZ katmanda
+   paywall'suzdur, hak sayaçları sunucuda, premium yalnız EK hak açar.
+   Yönlendirme + ProBadge'ler kaldırıldı. Fal modüllerine paywall kapısı
+   GERİ EKLENMEZ (İdol/yollar ayrı — o premium kalır).
+2. **"Yeni plan oluştur → sohbete bağlanmıyor":** backend sözleşmesi uçtan uca
+   test ile KANITLANDI (`tests/test_new_plan_chat_flow.py`): /projects/new →
+   temiz /chat/session → /chat intent modunda yanıt + eski plan sohbeti
+   sızmıyor. Bellek-içi akış kusursuz ⇒ canlıdaki kırılmanın 1 numaralı
+   şüphelisi PROD SUPABASE'DE chat_threads MİGRATION'ININ EKSİK OLMASI
+   (8.1 hâlâ kapanmadı — İLK İŞ). Cihazda tekrar ederse: Railway logunda
+   /chat/session yanıtına bak, mobile'da focus-yenileme zaten var.
+3. **Rapor gerçek veri ("verilerimi raporlayamıyor") → DÜZELTİLDİ:**
+   `build_recap` artık TÜM planları toplar (routes tüm plan özetlerinden
+   içerikli planları yükler), yolculuk EN ESKİ planın gününden sayılır,
+   "trait" kartı dönem-GERÇEK veridir (o dönemde tamamlanan görevlerin
+   kategorileri; boşsa tüm zaman puan lideri), görev kartı kanıtlı görev
+   sayısını söyler, çoklu planda intro "N niyeti birden yürütüyorsun" der.
+   Testler: `test_build_recap_aggregates_all_plans_and_period_trait`.
+4. **İdol detay temeli → EKLENDİ:** `GET /paths/{slug}` (PRO kapılı,
+   `_require_pro_modules`) — dossier'den güvenli bölümler: core_beliefs,
+   mindset, habits, daily_routine, decision_style, failure_and_recovery,
+   lessons_for_users, books. `public_quotes` BİLEREK dışarıda (yasal gri
+   alan). Mobil istemci hazır: `api.ts getPathDetail` + `PathDetail` tipi.
+
+**Cursor görevleri (UI detaylandırma):**
+- [ ] İdol detay ekranı `src/app/yol-detay.tsx`: yollar.tsx karttan
+      `getPathDetail(slug)` ile aç; sections listesi başlık+madde olarak
+      MysticColors/İlkbahar hibrit kartlarda; source_note ekran altında
+      küçük ve DAİMA görünür (yasal). "Bu yolu planıma uygula" CTA →
+      mevcut yol seçim akışına bağlanır.
+- [ ] Rapor kart şablonları zenginleştirme: trait kartında CategoryBadge +
+      dönem sayısı; journey kartında Gün 1 → Gün N çizgisi; intro'da çoklu
+      plan rozeti. Veri artık gerçek — UI onu göstersin.
+- [ ] Backend testleri 207 yeşil — düşürme. `pytest -q` + `npx tsc --noEmit`.
+
 ### 8.7 — Lansman kontrol listesi (2-3 gün, store bekleme hariç)
 
 - [ ] Store metinleri güncelle (fal İKİNCİL özellik — Apple 4.3 riski).

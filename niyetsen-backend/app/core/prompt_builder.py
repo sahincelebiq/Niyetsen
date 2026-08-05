@@ -14,6 +14,16 @@ from app.models.schemas import GameState
 from app.services import scoring_service
 
 
+_LOCALE_NAMES = {
+    "tr": "Turkish",
+    "en-US": "American English",
+    "en-GB": "British English",
+    "de": "German",
+    "fr": "French",
+    "ar": "Arabic",
+}
+
+
 def build_memory_block(
     state: Optional[GameState],
     name: str = "",
@@ -24,6 +34,7 @@ def build_memory_block(
     today_status: str = "",
     recent_tasks: str = "",
     mood_notes: str = "",
+    preferred_language: str = "",
 ) -> str:
     """
     README'deki şablonla birebir. Alan boşsa satır atlanır — modele gürültü verme.
@@ -39,6 +50,13 @@ def build_memory_block(
         lines.append(f"Burç: {zodiac}")
     if gender and gender != "belirtmek istemiyorum":
         lines.append(f"Cinsiyet: {gender}")
+    if preferred_language:
+        lang_name = _LOCALE_NAMES.get(preferred_language, preferred_language)
+        lines.append(f"Tercih edilen dil: {preferred_language} ({lang_name})")
+        lines.append(
+            f"YANIT DİLİ: Reply to the user in {lang_name}. "
+            "Keep Niyetsen's honest, non-shaming tone."
+        )
     if active_intent:
         lines.append(f"Aktif niyet: \"{active_intent}\"")
     if state is not None:
