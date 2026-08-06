@@ -232,6 +232,36 @@ atılmamalı".
 - [ ] Dil seçici kompaktlaştır: tam liste yerine tek satır (mevcut dil +
       chevron) → seçim bottom sheet'te.
 
+### 8.11 — Cihaz testi geri bildirimi (2026-08-05 akşam, Şahin — KRİTİK)
+
+**Büyük gerçek:** Şahin'in test ettiği Play kapalı sürümü ESKİ build —
+son haftaların hiçbir düzeltmesi içinde yok. İlk iş: push → yeni EAS build
+(`eas build --profile play-internal --platform android`) → dahili teste yükle.
+
+**Koda giren düzeltmeler (Claude Cowork):**
+- [x] **Consent hızlı yolu:** her açılıştaki "Yasal tercihler kontrol
+      ediliyor…" beklemesi bitti — onay bir kez verildiyse cache'ten anında
+      geçilir, sunucu arka planda doğrular; yasal sürüm artarsa gate otomatik
+      döner (`consent-gate.tsx`).
+- [x] **Çökme tanı rehberi:** `docs/ANDROID_CRASH_TANI.md` — adb logcat
+      yakalama komutu + elenen/açık şüpheli listesi. Kesin kök logcat'le bulunur.
+- [x] i18n iskelet tanısı: `Copy.` kullanan 8 çekirdek dosya listelendi.
+
+**Cursor görevleri (SIRAYLA):**
+- [ ] 8.11.1 **i18n iskelet göçü:** şu 8 dosyada `Copy.*` → `useLocale().t.*`:
+      `app/index.tsx`, `app/daily.tsx`, `app/paywall.tsx`, `app/rank.tsx`,
+      `app/explore.tsx`, `components/chat-composer.tsx`,
+      `components/plan-task-editor.tsx`, `components/chat-header.tsx`.
+      Eksik anahtarları `i18n/catalog`'a ekle (TR birebir mevcut metin).
+      KAPI: dil değiştirince TÜM sekme içerikleri değişir.
+- [ ] 8.11.2 RTL kontrolü: `I18nManager.forceRTL` yalnız restart uyarısıyla;
+      Arapçada açılış döngüsü testi (logcat).
+- [ ] 8.11.3 "Öylesine duran" ekran avı: her ekranda ölü buton/boş dokunuş
+      taraması — niyetsen-tasarim skill QA listesi madde 5 (yükleniyor/boş/
+      hata) her ekrana uygulanır. Ölü yüzey = ya bağla ya kaldır.
+- [ ] 8.11.4 Şahin logcat çıktısını getirince: ANDROID_CRASH_TANI şüpheli
+      listesiyle eşleştir, kökü kapat, yeni build.
+
 ### 8.7 — Lansman kontrol listesi (2-3 gün, store bekleme hariç)
 
 - [ ] Store metinleri güncelle (fal İKİNCİL özellik — Apple 4.3 riski).
