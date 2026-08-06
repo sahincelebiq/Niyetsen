@@ -247,7 +247,20 @@ son haftaların hiçbir düzeltmesi içinde yok. İlk iş: push → yeni EAS bui
       yakalama komutu + elenen/açık şüpheli listesi. Kesin kök logcat'le bulunur.
 - [x] i18n iskelet tanısı: `Copy.` kullanan 8 çekirdek dosya listelendi.
 
+**Şahin'in çökme hipotezi (2026-08-05 akşam):** "Backend beynimiz çökme
+nedeni." Canlı kontrol (Claude, aynı akşam): `/health` = ok, env=prod,
+model=gemini-3.1-pro-preview — beyin ŞU AN ayakta. Ama Railway'in kesinti
+geçmişi var → hipotezin güçlü hali: **test anında backend yerdeyse ve ESKİ
+build açılışta API hatasını yutamıyorsa, uygulama kapanır.** Bu yüzden
+8.11.0 görevi eklendi.
+
 **Cursor görevleri (SIRAYLA):**
+- [ ] 8.11.0 **Açılış dayanıklılığı (backend ölüyken bile açılan uygulama):**
+      uygulamanın boot zincirini tara (_layout provider'ları, splash sonrası
+      ilk fetch'ler) — HİÇBİR açılış isteği reddedilince ekranı/uygulamayı
+      düşürmemeli: her boot fetch'i try/catch + "çevrimdışı görünüm" (önbellek
+      + nazik banner "Bağlantı kurulamadı — tekrar dene"). KAPI: uçak modunda
+      uygulama açılır, sekmeler gezilir, banner görünür, crash yok.
 - [ ] 8.11.1 **i18n iskelet göçü:** şu 8 dosyada `Copy.*` → `useLocale().t.*`:
       `app/index.tsx`, `app/daily.tsx`, `app/paywall.tsx`, `app/rank.tsx`,
       `app/explore.tsx`, `components/chat-composer.tsx`,
