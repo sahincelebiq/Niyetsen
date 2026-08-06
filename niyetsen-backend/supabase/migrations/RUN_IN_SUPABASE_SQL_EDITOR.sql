@@ -128,3 +128,8 @@ from pg_constraint
 where conrelid = 'public.users'::regclass
   and conname = 'users_gender_check';
 -- BEKLENEN: kadın | erkek | belirtmek istemiyorum
+
+-- VERIFY: preferred_language (Play i18n)
+select column_name, data_type
+from information_schema.columns
+where table_schema = 'public' and table_name = 'users' and column_name = 'preferred_language';

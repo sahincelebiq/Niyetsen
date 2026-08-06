@@ -25,6 +25,8 @@ class PhilosophyPath(BaseModel):
     tagline: str       # "engeli fırsata çevirmek"
     philosophy: str    # FELSEFE paragrafı (rehber tonu satırına kadar)
     source_note: str   # "...den ilham alır" cümlesi (hukuki çerçeve)
+    # Persona dossier slug (detay ekranı GET /paths/{slug}); markdown yolu boş olabilir.
+    slug: str = ""
 
 
 _cache: list[PhilosophyPath] | None = None
@@ -50,6 +52,7 @@ def list_paths() -> list[PhilosophyPath]:
 
         persona_paths = [
             PhilosophyPath(
+                slug=p.slug,
                 name=p.path_name,
                 tagline=p.tagline,
                 philosophy=str(
