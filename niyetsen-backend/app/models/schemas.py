@@ -239,6 +239,23 @@ class RecapCard(BaseModel):
     subtitle: str = ""
 
 
+class RecapDashboard(BaseModel):
+    """faz8.13/3: gerçek KPI dashboard'u — ilk günden bugüne toplam sayılar.
+    Wrapped kuralı korunur: kaçırılan görevler GÖSTERİLMEZ, yalnız kazanımlar."""
+    total_tasks: int          # ilk günden bugüne verilen görev (tüm planlar)
+    completed_tasks: int      # tamamlanan görev (tüm zaman)
+    proofed_tasks: int        # fotoğrafla kanıtlanan
+    completion_rate: int      # 0-100 (%)
+    category_counts: dict[str, int]  # 6 kategori tamamlanan görev dağılımı
+    points: dict[str, int]
+    total_points: int
+    streak_len: int
+    best_streak: int
+    days_in: int
+    plans_count: int
+    weekly_completed: list[int]  # son 8 hafta, eskiden yeniye (gelişim eğrisi)
+
+
 class RecapResponse(BaseModel):
     period: str  # "14d" | "30d"
     start_date: dt_date
@@ -248,6 +265,7 @@ class RecapResponse(BaseModel):
     total_points: int
     top_category: str
     cards: list[RecapCard]
+    dashboard: Optional[RecapDashboard] = None
 
 
 # ---------- Profil / Onboarding ----------

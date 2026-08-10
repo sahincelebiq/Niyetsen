@@ -16,7 +16,9 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from app.config import CATEGORIES
-from app.models.schemas import GameState, Plan, RecapCard, RecapResponse
+from app.models.schemas import (
+    GameState, Plan, RecapCard, RecapDashboard, RecapResponse,
+)
 from app.services.scoring_service import overall_rank, rank_for
 
 PERIOD_DAYS = {"7d": 7, "14d": 14, "30d": 30}
@@ -50,6 +52,50 @@ def _period_top_category(done_tasks: list) -> tuple[str, int]:
         return "", 0
     top = max(counts, key=lambda c: counts[c])
     return top, counts[top]
+
+
+def _build_dashboard(
+    all_plans: list[Plan], state: GameState, days_in: int, end: date,
+) -> RecapDashboard:
+    """faz8.13/3: ilk günden bugüne gerçek KPI'lar — kural bazlı, Gemini yok."""
+    all_tasks = [
+        task
+        for plan in all_plans
+        for day in plan.days
+        for task in day.tasks
+        if task.date and task.date <= end  # gelecek günler sayılmaz
+    ]
+    done = [t for t in all_tasks if t.status == "done"]
+    proofed = sum(1 for t in done if getattr(t, "proof_id", None))
+    category_counts: dict[str, int] = {c: 0 for c in CATEGORIES}
+    for task in done:
+        for cat in task.categories:
+            if cat in category_counts:
+                category_counts[cat] += 1
+    total = len(all_tasks)
+    rate = round(100 * len(done) / total) if total else 0
+    # Gelişim eğrisi: son 8 haftanın tamamlanan görev sayıları (eski → yeni).
+    weekly: list[int] = []
+    for week in range(7, -1, -1):
+        w_end = end - timedelta(days=7 * week)
+        w_start = w_end - timedelta(days=6)
+        weekly.append(
+            sum(1 for t in done if t.date and w_start <= t.date <= w_end)
+        )
+    return RecapDashboard(
+        total_tasks=total,
+        completed_tasks=len(done),
+        proofed_tasks=proofed,
+        completion_rate=rate,
+        category_counts=category_counts,
+        points=dict(state.points),
+        total_points=sum(state.points.get(c, 0) for c in CATEGORIES),
+        streak_len=state.streak_len,
+        best_streak=state.best_streak,
+        days_in=max(days_in, 0),
+        plans_count=len(all_plans),
+        weekly_completed=weekly,
+    )
 
 
 def build_recap(
@@ -171,6 +217,7 @@ def build_recap(
         total_points=total_points,
         top_category=top_cat,
         cards=cards,
+        dashboard=_build_dashboard(all_plans, state, days_in, end),
     )
 
 

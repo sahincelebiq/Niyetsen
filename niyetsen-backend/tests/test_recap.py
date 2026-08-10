@@ -131,3 +131,21 @@ def test_build_recap_aggregates_all_plans_and_period_trait():
     assert "kanıtla" in tasks_card.subtitle  # proof_id sayıldı
     intro = next(c for c in recap.cards if c.kind == "intro")
     assert "2 niyeti" in intro.subtitle
+
+def test_dashboard_kpis_all_time():
+    """faz8.13/3: dashboard ilk günden bugüne gerçek KPI'ları taşır."""
+    state = GameState(user_id="u", streak_len=2, best_streak=5)
+    state.points["Disiplin"] = 200
+    recap = recap_service.build_recap(
+        state=state, plan=_plan_with_done_tasks(4),
+    )
+    dash = recap.dashboard
+    assert dash is not None
+    assert dash.total_tasks == 10
+    assert dash.completed_tasks == 4
+    assert dash.completion_rate == 40
+    assert dash.category_counts["Disiplin"] == 4
+    assert dash.best_streak == 5
+    assert dash.plans_count == 1
+    assert len(dash.weekly_completed) == 8
+    assert sum(dash.weekly_completed) == 4
