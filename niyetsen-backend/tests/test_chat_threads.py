@@ -69,3 +69,71 @@ def test_active_thread_flag_in_list(isolated_in_memory_repo):
     active = [t for t in threads if t["is_active"]]
     assert len(active) == 1
     assert active[0]["title"] == ""  # yeni oturum henüz başlıksız
+
+def test_thread_title_from_topic(isolated_in_memory_repo, monkeypatch):
+    """faz8.13/1b: 2. kullanıcı mesajından sonra başlık konu özetine döner."""
+    from app.models.schemas import ChatResponse, CollectedIntent
+    from app.services import intent_service
+
+    user = "thread_title_topic"
+    grant_chat_consent(user, client)
+
+    async def fake_handle_chat(req, **kwargs):
+        return ChatResponse(
+            reply="Maraton için harika bir başlangıç.",
+            ready_for_plan=False,
+            collected=req.collected or CollectedIntent(),
+            thread_title="Maraton hazırlığı",
+        )
+
+    monkeypatch.setattr(intent_service, "handle_chat", fake_handle_chat)
+
+    resp = client.post(
+        "/chat", headers={"X-User-Id": user},
+        json={
+            "messages": [
+                {"role": "user", "content": "maraton koşmak istiyorum"},
+                {"role": "assistant", "content": "ne zamandır koşuyorsun?"},
+                {"role": "user", "content": "6 aydır, haftada 3 gün"},
+            ],
+            "collected": {},
+        },
+    )
+    assert resp.status_code == 200
+    assert resp.json()["thread_title"] == "Maraton hazırlığı"
+
+    threads = client.get("/chat/threads", headers={"X-User-Id": user}).json()
+    active = next(t for t in threads if t["is_active"])
+    assert active["title"] == "Maraton hazırlığı"
+
+
+def test_thread_title_not_set_on_first_message(isolated_in_memory_repo, monkeypatch):
+    """İlk mesajda konu başlığı yazılmaz — ilk-mesaj kesiti korunur."""
+    from app.models.schemas import ChatResponse, CollectedIntent
+    from app.services import intent_service
+
+    user = "thread_title_first"
+    grant_chat_consent(user, client)
+
+    async def fake_handle_chat(req, **kwargs):
+        return ChatResponse(
+            reply="Anlat bakalım.",
+            ready_for_plan=False,
+            collected=req.collected or CollectedIntent(),
+            thread_title="Erken başlık",
+        )
+
+    monkeypatch.setattr(intent_service, "handle_chat", fake_handle_chat)
+
+    resp = client.post(
+        "/chat", headers={"X-User-Id": user},
+        json={
+            "messages": [{"role": "user", "content": "selam"}],
+            "collected": {},
+        },
+    )
+    assert resp.status_code == 200
+
+    threads = client.get("/chat/threads", headers={"X-User-Id": user}).json()
+    active = next(t for t in threads if t["is_active"])
+    assert active["title"] == "selam"  # ilk kullanıcı mesajı kesiti

@@ -307,6 +307,41 @@ Supabase/Backend kimlik zinciri.
 - [ ] Profil (settings) yeniden tasarımı hâlâ 8.4'te bekliyor — "web gibi"
       şikâyetinin kalıcı çözümü orası; minimal ölçek yeni build'de görünecek.
 
+### 8.13 — BÜYÜK SENKRON (2026-08-10, Şahin cihaz testi kararları)
+
+> UI/UX + frontend odaklı büyük tur. Her madde küçük commit ("faz8.13: <konu>"),
+> her adımda `npx tsc --noEmit` 0 hata; backend değişikliğinde `pytest -q` yeşil.
+> İş bitince tek commit+push ve YENİ EAS AAB (play-internal).
+
+1. **SOHBET**
+   - [x] 1a Klavye: Android'de KeyboardAvoidingView çifte küçültme kaldırıldı
+         (pencere `resize` zaten hallediyor); kompozer zıplamaz/kaybolmaz.
+   - [x] 1b Otomatik sohbet başlığı: /chat yanıtına `thread_title` alanı —
+         ilk mesajlardan tek seferlik üretim, `chat_threads.title`a yazılır;
+         drawer başlıkları konudan türer.
+   - [x] 1c ☾ butonu: Reanimated nabız animasyonu (Motion token, reduce-motion).
+2. **MİSTİK — yeni ev**
+   - [x] 2a Giriş noktası: Bugün sekmesinde mistik panel kartı (ayarlar üzerinden değil).
+   - [x] 2b Mistik arayüz: MysticColors üstünde SOHBET merkezli ekran + sol
+         kısayol ikonları (tarot/kahve/el); fal sonuçları sohbete düşer.
+   - [x] 2c Mistik hafıza: fortune_log geçmişi rehber bağlamına girer
+         ("geçen haftaki kartında şu görünmüştü…").
+   - [x] 2d Fallar uçtan uca çalışır; el falında gerçek el zorunlu (Vision),
+         kahvede maks 3 foto; yanlış foto hak yakmaz. Fal ÜCRETSİZ kalır.
+3. **RAPOR** — [x] Gerçek KPI dashboard (toplam görev, tamamlama, kategori
+   dağılımı, zincir istatistikleri) + görünür giriş; kapı-içeride korunur.
+4. **ONLINE REKABET** — [x] Leaderboard v3 ÖNE ÇEKİLDİ (Şahin, 2026-08-10):
+   opt-in takma adlı haftalık gelişim ligi; KVKK: yalnız rumuz+puan;
+   Supabase şema + backend uçları + profilde "Arkadaşlar" girişi.
+5. **PLAN DEĞİŞTİR → SOHBET** — [x] Akış cihazda çalışır: plan değiştir →
+   sohbete düş → konuş → yeni plan (backend sözleşme test'li).
+6. **ZİNCİR EVRİMİ** — [x] 12 hayvanlı evrim: bebeklik→ergenlik→yetişkinlik;
+   zincir uzadıkça hayvan büyür; streak-pill/rank senkron; ton kuralı korunur.
+7. **PROFİL** — [x] Açılır bölüm grupları (Güvenlik & Gizlilik / Arkadaşlar /
+   Hesap / Bildirimler); kısa kaydırma, minimal ölçek kilitli.
+8. **PLAN GÖRSELLERİ** — [x] ImageScrim dengesi: görsel canlı, yazı okunur.
+9. **GÜÇLENME** — [x] Yeni tablolar RUN_IN_SUPABASE_SQL_EDITOR.sql'e eklendi.
+
 ### 8.7 — Lansman kontrol listesi (2-3 gün, store bekleme hariç)
 
 - [ ] Store metinleri güncelle (fal İKİNCİL özellik — Apple 4.3 riski).

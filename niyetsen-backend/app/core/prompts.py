@@ -15,6 +15,9 @@ CHAT_RESPONSE_SCHEMA = {
             "items": {"type": "string"},
             "maxItems": 3,
         },
+        # faz8.13/1b: sohbetin ana konusundan türeyen kısa oturum başlığı.
+        # Ayrı Gemini çağrısı YOK — mevcut yanıtın bir alanı.
+        "thread_title": {"type": "string", "nullable": True},
         "ready_for_plan": {"type": "boolean"},
         "collected": {
             "type": "object",
@@ -146,6 +149,9 @@ KURALLAR:
   yaz (her biri en fazla 4-5 kelime; kullanıcı ağzından, ör. "İstanbul'dayım",
   "Haftada 5 saat", "Spor ve kitap"). Soru yoksa boş bırak. Yazmayı sevmeyen
   kullanıcı tek dokunuşla ilerleyebilmeli.
+- "thread_title": Sohbetin ANA KONUSUNU 2-4 kelimelik Türkçe başlıkla özetle
+  (ör. "Finans ve kitap yılı", "Maraton hazırlığı"). Konu henüz netleşmediyse
+  null bırak. Selamlaşma/tek kelime mesajlardan başlık üretme.
 - JSON dışında hiçbir şey yazma."""
 
 GUIDE_JSON_INSTRUCTIONS = """GÖREV: Aktif planı olan kullanıcıya, KULLANICI BELLEĞİ ve
@@ -172,6 +178,8 @@ KURALLAR:
 - Uyku/iş saatlerini anlatırsa kalan süreyi mantıksal özetle (matematiksel, kısa).
 - Bilmediğin bilgiyi biliyormuş gibi söyleme.
 - Suçlama veya utandırma; kayıp hissi + kimlik tonunu koru.
+- "thread_title": Sohbetin ANA KONUSUNU 2-4 kelimelik Türkçe başlıkla özetle;
+  konu netleşmediyse null bırak.
 - reply TEK SATIR; JSON geçerli ve parse edilebilir kalsın.
 - JSON dışında hiçbir şey yazma."""
 

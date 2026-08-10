@@ -479,6 +479,13 @@ class InMemoryRepository(Repository):
         meta = self._user_threads(user_id)[thread_id]
         return ChatThread(id=thread_id, title="", is_active=True, updated_at=meta["updated_at"])
 
+    def set_active_thread_title(self, user_id: str, title: str) -> None:
+        cleaned = " ".join(title.split()).strip()
+        if not cleaned:
+            return
+        thread_id = self._ensure_active_thread(user_id)
+        self._user_threads(user_id)[thread_id]["title"] = cleaned
+
     def activate_chat_thread(self, user_id: str, thread_id: str) -> bool:
         if thread_id not in self._user_threads(user_id):
             return False

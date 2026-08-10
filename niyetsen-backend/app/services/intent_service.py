@@ -223,10 +223,14 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
         if str(item).strip()
     ][:3]
 
+    # faz8.13/1b: sohbetin konusundan üretilen oturum başlığı (maks 48 karakter).
+    thread_title = " ".join(str(data.get("thread_title") or "").split())[:48].strip() or None
+
     return ChatResponse(
         reply=reply,
         ready_for_plan=ready,
         collected=merged,
         tool_calls=tool_calls,
         suggestions=suggestions,
+        thread_title=thread_title,
     )

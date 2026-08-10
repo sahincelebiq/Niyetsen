@@ -54,6 +54,8 @@ class ChatResponse(BaseModel):
     tool_calls: list[ToolCall] = Field(default_factory=list)
     # Tek dokunuşluk hızlı yanıtlar (FAZ 7.5) — kullanıcıyı yazarak yormadan akış.
     suggestions: list[str] = Field(default_factory=list)
+    # faz8.13/1b: sohbetin konusundan türeyen oturum başlığı (tek seferlik yazılır).
+    thread_title: Optional[str] = None
 
 
 class ChatSessionResponse(BaseModel):

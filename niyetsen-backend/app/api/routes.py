@@ -328,6 +328,18 @@ async def chat(
     )
     # Tek toplu upsert: eski hâli mesaj başına 4+ Supabase sorgusuydu (N+1).
     repo.append_chat_messages(user_id, to_persist)
+
+    # faz8.13/1b: konu netleşince (2-4. kullanıcı mesajı) oturum başlığı bir kez
+    # konu özetiyle güncellenir. Degrade: hata sohbeti düşürmez.
+    thread_title = getattr(response, "thread_title", None)
+    if thread_title:
+        user_msg_count = sum(1 for m in req.messages if m.role == "user")
+        if 2 <= user_msg_count <= 4:
+            try:
+                repo.set_active_thread_title(user_id, thread_title)
+            except Exception:  # noqa: BLE001
+                log.warning("Oturum başlığı güncellenemedi (yoksayıldı).", exc_info=True)
+
     repo.save_intent(
         user_id,
         response.collected,

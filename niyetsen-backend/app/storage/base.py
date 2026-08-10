@@ -154,6 +154,14 @@ class Repository(ABC):
         """Var olan bir oturuma geçer; bulunamazsa False."""
 
     @abstractmethod
+    def set_active_thread_title(self, user_id: str, title: str) -> None:
+        """faz8.13/1b: aktif oturumun başlığını konu özetiyle günceller.
+
+        Degrade kural: thread altyapısı hata verirse sessizce yutulur —
+        başlık güncellemesi sohbeti ASLA düşüremez.
+        """
+
+    @abstractmethod
     def save_intent(
         self,
         user_id: str,

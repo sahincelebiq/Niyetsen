@@ -676,6 +676,21 @@ class SupabaseRepository(Repository):
             for row in rows
         ]
 
+    def set_active_thread_title(self, user_id: str, title: str) -> None:
+        # faz8.13/1b degrade modu: başlık güncellemesi sohbeti asla düşürmez.
+        cleaned = " ".join(title.split()).strip()
+        if not cleaned:
+            return
+        try:
+            thread_id = self._active_thread_id(user_id)
+            if not thread_id:
+                return
+            self._db.table("chat_threads").update(
+                {"title": cleaned[:80]}
+            ).eq("id", thread_id).eq("user_id", user_id).execute()
+        except Exception as exc:  # noqa: BLE001
+            log.warning("Thread başlığı yazılamadı (yoksayıldı): %s", exc)
+
     def create_chat_thread(self, user_id: str) -> ChatThread:
         self._ensure_user(user_id)
         thread_id = self._create_thread_row(user_id)
