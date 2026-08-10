@@ -10,7 +10,7 @@ from app.services import proof_service
 def test_evaluate_proof_prompt_includes_personal_context(monkeypatch):
     captured: dict[str, str] = {}
 
-    async def fake_generate_json_with_image(*, prompt, image_bytes, mime_type):
+    async def fake_generate_json_with_image(*, prompt, image_bytes, mime_type, **kwargs):
         captured["prompt"] = prompt
         return {"matches": True, "confidence": 80, "reason": "Meyve tabağı görünüyor."}
 

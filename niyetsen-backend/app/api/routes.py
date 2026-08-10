@@ -10,6 +10,7 @@ import logging
 import secrets
 import uuid
 from datetime import date, datetime, timezone
+from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import jwt
@@ -20,14 +21,14 @@ from fastapi import (
 from jwt import PyJWKClient
 
 from app.config import BONUS_POINTS, CATEGORIES, settings
-from app.core import dev_accounts
+from app.core import dev_accounts, prompts
 from app.core.gemini_client import GeminiUnavailable
 from app.core.rate_limit import limiter
 from app.models.schemas import (
     AttachmentIngestResponse, BonusCompletionRequest, BonusOfferResponse, ChatMessage,
     ChatGreetingResponse, ChatRequest, ChatResponse, ChatSessionResponse, CollectedIntent,
     ChatThread, ConsentStatus, ConsentUpdate, DailyTaskItem, DailyTasksResponse,
-    FortuneRecord,
+    FortuneChatRequest, FortuneChatResponse, FortuneRecord,
     FortuneRightsResponse,
     HoroscopeResponse, PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
     RecapResponse,
@@ -1118,6 +1119,10 @@ def _fortune_context(user_id: str) -> tuple[UserProfile, bool, str]:
         gender=profile.gender or "",
         preferred_language=profile.preferred_language or "",
     )
+    # faz8.13/2c: mistik hafıza — geçmiş fallar rehber bağlamına girer.
+    mystic_memory = fortune_service.build_mystic_memory(repo, user_id)
+    if mystic_memory:
+        memory = f"{memory}\n\n{mystic_memory}"
     return profile, info.has_premium_access, memory
 
 
@@ -1167,9 +1172,12 @@ async def fortune_tarot(
     req: TarotDrawRequest,
     user_id: str = Depends(get_current_user),
 ) -> TarotDrawResponse:
-    """Günlük tarot — PRO (trial/active). Aynı gün ikinci istekte kayıtlı sonuç."""
+    """Günlük tarot. Aynı gün ikinci istekte kayıtlı sonuç döner.
+
+    faz8.13 kök düzeltmesi: fal ÜCRETSİZDİR (kilitli karar — "fal modüllerine
+    paywall ASLA"). Buradaki eski PRO kapısı kaldırıldı; premium yalnız EK
+    günlük hak açar (hak sayaçları sunucuda)."""
     _require_consent(user_id, "chat")
-    _require_pro_modules(user_id)
     profile, is_premium, memory = _fortune_context(user_id)
     try:
         return await fortune_service.draw_tarot(
@@ -1192,31 +1200,41 @@ async def fortune_tarot(
 async def fortune_photo(
     request: Request,
     kind: str,
-    photo: UploadFile = File(...),
+    photo: Optional[UploadFile] = File(None),
+    photos: Optional[list[UploadFile]] = File(None),
     user_id: str = Depends(get_current_user),
 ) -> PhotoFortuneResponse:
-    """Kahve/el falı: in-app kamera fotoğrafı → Gemini Vision yorumu. PRO."""
+    """Kahve/el falı: in-app kamera fotoğrafı → Gemini Vision yorumu.
+
+    faz8.13: fal ÜCRETSİZ (PRO kapısı kaldırıldı — kilitli karar); kahvede
+    fincanın farklı açıları için en fazla 3 kare kabul edilir (photos alanı),
+    tek kare gönderen eski istemciler (photo alanı) çalışmaya devam eder."""
     if kind not in ("kahve", "el"):
         raise HTTPException(status_code=404, detail="Bilinmeyen fal türü.")
     _require_consent(user_id, "chat")
     _require_consent(user_id, "proof")  # fotoğraf işleme rızası (KVKK)
-    _require_pro_modules(user_id)
-    if photo.size is not None and photo.size > settings.PROOF_MAX_BYTES:
-        raise HTTPException(status_code=400, detail="Fotoğraf 5MB'den büyük olamaz.")
-    image_bytes = await photo.read(settings.PROOF_MAX_BYTES + 1)
-    mime_type = photo.content_type or ""
-    try:
-        proof_service.validate_upload(image_bytes, mime_type)
-    except proof_service.ProofRejected as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
+    uploads = [f for f in ((photos or []) + ([photo] if photo else [])) if f]
+    if not uploads:
+        raise HTTPException(status_code=400, detail="Fotoğraf gerekli.")
+    uploads = uploads[: fortune_service.MAX_FORTUNE_PHOTOS]
+    images: list[tuple[bytes, str]] = []
+    for upload in uploads:
+        if upload.size is not None and upload.size > settings.PROOF_MAX_BYTES:
+            raise HTTPException(status_code=400, detail="Fotoğraf 5MB'den büyük olamaz.")
+        image_bytes = await upload.read(settings.PROOF_MAX_BYTES + 1)
+        mime_type = upload.content_type or ""
+        try:
+            proof_service.validate_upload(image_bytes, mime_type)
+        except proof_service.ProofRejected as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        images.append((image_bytes, mime_type))
 
     profile, is_premium, memory = _fortune_context(user_id)
     try:
         return await fortune_service.read_photo_fortune(
             repo, user_id,
             kind=kind,
-            image_bytes=image_bytes,
-            mime_type=mime_type,
+            images=images,
             timezone_name=profile.timezone,
             is_premium=is_premium,
             memory_block=memory,
@@ -1234,9 +1252,8 @@ def fortune_history(
     limit: int = 30,
     user_id: str = Depends(get_current_user),
 ) -> list[FortuneRecord]:
-    """Fal geçmişi — en yeniden eskiye (tarot/kahve/el/burç). PRO."""
+    """Fal geçmişi — en yeniden eskiye (tarot/kahve/el/burç). Ücretsiz (faz8.13)."""
     _require_consent(user_id, "chat")
-    _require_pro_modules(user_id)
     return repo.list_fortunes(user_id, limit=max(1, min(limit, 100)))
 
 
@@ -1247,9 +1264,8 @@ async def fortune_horoscope(
     period: str = "daily",
     user_id: str = Depends(get_current_user),
 ) -> HoroscopeResponse:
-    """Burç yorumu: günlük veya haftalık (period=weekly) — önbellekli. PRO."""
+    """Burç yorumu: günlük veya haftalık (period=weekly) — önbellekli. Ücretsiz (faz8.13)."""
     _require_consent(user_id, "chat")
-    _require_pro_modules(user_id)
     profile, _, memory = _fortune_context(user_id)
     sign = profile.zodiac_sign or (
         profile_service.zodiac_for(profile.birth_date) if profile.birth_date else ""
@@ -1266,6 +1282,32 @@ async def fortune_horoscope(
         raise HTTPException(status_code=400, detail=str(exc))
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+
+
+@router.post("/fortune/chat", response_model=FortuneChatResponse)
+@limiter.limit(f"{settings.FORTUNE_RATE_LIMIT_PER_MIN}/minute")
+async def fortune_chat(
+    request: Request,
+    req: FortuneChatRequest,
+    user_id: str = Depends(get_current_user),
+) -> FortuneChatResponse:
+    """faz8.13/2b — mistik rehberle serbest sohbet (fal modülünün merkezi).
+
+    /chat'ten AYRI uç: FORTUNE_SYSTEM_PROMPT + mistik hafıza (fortune_log)
+    bağlamıyla konuşur. Ücretsizdir; kriz sinyalinde fal yorumu durur ve
+    yanıt istemcide her zaman disclaimer ile gösterilir (store uyumu)."""
+    _require_consent(user_id, "chat")
+    if not req.messages or not any(m.role == "user" for m in req.messages):
+        raise HTTPException(status_code=400, detail="Mesaj gerekli.")
+    profile, _, memory = _fortune_context(user_id)
+    try:
+        reply = await fortune_service.mystic_chat(
+            repo, user_id, messages=req.messages, memory_block=memory,
+        )
+    except GeminiUnavailable:
+        raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+    crisis = reply == prompts.CRISIS_RESPONSE
+    return FortuneChatResponse(reply=reply, crisis=crisis)
 
 
 @router.get("/me/consent", response_model=ConsentStatus)

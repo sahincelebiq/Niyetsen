@@ -24,7 +24,7 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from app.config import FORTUNE_DAILY_RIGHTS, TAROT_CARDS_PER_DRAW, settings
 from app.core import prompts
 from app.core.gemini_client import (
-    GeminiUnavailable, generate_json, generate_json_with_image,
+    GeminiUnavailable, generate_json, generate_json_with_images,
 )
 from app.models.schemas import (
     FortuneRecord, FortuneRightsItem, FortuneRightsResponse,
@@ -149,6 +149,99 @@ def _crisis_signal(text: str) -> bool:
 
 
 # ------------------------------------------------------------------
+# faz8.13/2c — Mistik hafıza: fortune_log geçmişi rehber bağlamına girer.
+# ------------------------------------------------------------------
+def build_mystic_memory(repository: Repository, user_id: str, limit: int = 8) -> str:
+    """Kullanıcının geçmiş fallarından kısa hafıza bloğu üretir.
+
+    Rehber bu blokla "geçen haftaki kartında şu görünmüştü — bugün bu
+    gerçekleşti mi?" gibi bağlam soruları sorabilir. Hata durumunda boş
+    döner — hafıza fal akışını ASLA düşürmez.
+    """
+    try:
+        records = repository.list_fortunes(user_id, limit=limit)
+    except Exception:  # noqa: BLE001
+        log.warning("Mistik hafıza okunamadı (yoksayıldı)", exc_info=True)
+        return ""
+    if not records:
+        return ""
+    lines: list[str] = []
+    for record in records:
+        result = record.result or {}
+        if record.type == "tarot":
+            cards = ", ".join(
+                f"{c.get('name', '?')}{' (ters)' if c.get('reversed') else ''}"
+                for c in result.get("cards", [])
+            )
+            detail = cards or "kartlar"
+        elif record.type == "burc":
+            detail = f"{result.get('sign', '')} burcu"
+        else:
+            detail = ", ".join(result.get("symbols", [])) or "semboller"
+        snippet = " ".join(str(result.get("interpretation", "")).split())[:140]
+        lines.append(f"- {record.day.isoformat()} {record.type}: {detail} — {snippet}")
+    return "MİSTİK HAFIZA (kullanıcının geçmiş falları, en yeniden eskiye):\n" + "\n".join(lines)
+
+
+# ------------------------------------------------------------------
+# faz8.13/2b — Mistik rehber sohbeti (merkez ekran)
+# ------------------------------------------------------------------
+MYSTIC_CHAT_HISTORY_LIMIT = 12
+
+MYSTIC_CHAT_SCHEMA = {
+    "type": "object",
+    "properties": {"reply": {"type": "string"}},
+    "required": ["reply"],
+}
+
+
+async def mystic_chat(
+    repository: Repository,
+    user_id: str,
+    *,
+    messages: list,                 # ChatMessage listesi
+    memory_block: str = "",
+) -> str:
+    """Mistik rehberle serbest sohbet. Kriz sinyali fal yorumunu durdurur;
+    her yanıt istemcide disclaimer ile gösterilir (store uyumu)."""
+    last_user = next(
+        (m.content for m in reversed(messages) if m.role == "user"), ""
+    )
+    if prompts.contains_crisis_signal(last_user) or _crisis_signal(last_user):
+        return prompts.CRISIS_RESPONSE
+
+    mystic_memory = build_mystic_memory(repository, user_id)
+    rag_chunks = rag_service.retrieve(
+        f"mistik {last_user}"[:200], sources=["tarot", "burclar", "motivasyon"],
+    )
+    history_lines = "\n".join(
+        f"{'KULLANICI' if m.role == 'user' else 'REHBER'}: {m.content}"
+        for m in messages[-MYSTIC_CHAT_HISTORY_LIMIT:]
+    )
+    contents = "\n\n".join(filter(None, [
+        "\n".join(rag_chunks) if rag_chunks else "",
+        memory_block,
+        mystic_memory,
+        f"SOHBET GEÇMİŞİ:\n{history_lines}",
+        prompts.MYSTIC_CHAT_JSON_INSTRUCTIONS,
+    ]))
+    data = await generate_json(
+        contents,
+        system_instruction=prompts.FORTUNE_SYSTEM_PROMPT,
+        model=settings.GEMINI_MODEL,
+        response_schema=MYSTIC_CHAT_SCHEMA,
+        json_retries=2,
+    )
+    reply = str(data.get("reply") or "").strip()
+    if not reply:
+        reply = (
+            "Sezgilerim bu an biraz sessiz kaldı 🌙 Sorunu bir daha, "
+            "biraz daha açarak sorar mısın?"
+        )
+    return reply
+
+
+# ------------------------------------------------------------------
 # Tarot
 # ------------------------------------------------------------------
 async def draw_tarot(
@@ -242,30 +335,55 @@ async def draw_tarot(
 # ------------------------------------------------------------------
 # Kahve / El fotoğrafı
 # ------------------------------------------------------------------
+PHOTO_FORTUNE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "is_valid_photo": {"type": "boolean"},
+        "symbols": {"type": "array", "items": {"type": "string"}, "maxItems": 5},
+        "interpretation": {"type": "string"},
+    },
+    "required": ["is_valid_photo", "interpretation"],
+}
+
+MAX_FORTUNE_PHOTOS = 3  # faz8.13/2d: kahve falında en fazla 3 kare
+
+
 async def read_photo_fortune(
     repository: Repository,
     user_id: str,
     *,
     kind: str,                      # "kahve" | "el"
-    image_bytes: bytes,
-    mime_type: str,
+    images: list[tuple[bytes, str]],
     timezone_name: str = "Europe/Istanbul",
     is_premium: bool = False,
     memory_block: str = "",
 ) -> PhotoFortuneResponse:
     if kind not in ("kahve", "el"):
         raise FortuneError("Geçersiz fal türü.")
+    if not images:
+        raise FortuneError("Fotoğraf gerekli.")
+    # El falı tek kare; kahvede fincanın farklı açıları için en fazla 3 kare.
+    images = images[:1] if kind == "el" else images[:MAX_FORTUNE_PHOTOS]
     day = _local_today(timezone_name)
     remaining_before = _check_right(repository, user_id, kind, day, is_premium)
 
     kind_label = "kahve telvesi" if kind == "kahve" else "el/avuç içi"
+    strictness = (
+        prompts.PALM_PHOTO_STRICTNESS if kind == "el" else prompts.COFFEE_PHOTO_STRICTNESS
+    )
     prompt = (
         prompts.FORTUNE_SYSTEM_PROMPT
         + "\n\n" + memory_block
+        + "\n\n" + strictness
         + "\n\n" + prompts.PHOTO_FORTUNE_JSON_INSTRUCTIONS.format(kind=kind_label)
     )
-    data = await generate_json_with_image(
-        prompt, image_bytes, mime_type, model=settings.GEMINI_MODEL
+    # faz8.13 kök düzeltmesi: fal kendi şemasını geçirir (önceden kanıt
+    # şemasına sabitti → yorum hep boş dönüyordu) + yorum için geniş token.
+    data = await generate_json_with_images(
+        prompt, images,
+        model=settings.GEMINI_MODEL,
+        response_schema=PHOTO_FORTUNE_SCHEMA,
+        max_output_tokens=1024,
     )
     if not data.get("is_valid_photo", True):
         # Yanlış fotoğraf hak YAKMAZ (kanıt akışıyla aynı ilke).

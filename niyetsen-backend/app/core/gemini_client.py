@@ -269,45 +269,74 @@ async def generate_function_calls(
     raise GeminiUnavailable(str(last_err))
 
 
-async def generate_json_with_image(
+PROOF_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "matches": {"type": "boolean"},
+        "confidence": {"type": "integer"},
+        "reason": {"type": "string"},
+    },
+    "required": ["matches", "confidence", "reason"],
+}
+
+
+async def generate_json_with_images(
     prompt: str,
-    image_bytes: bytes,
-    mime_type: str,
+    images: list[tuple[bytes, str]],
     *,
     model: Optional[str] = None,
+    response_schema: Optional[dict] = None,
+    max_output_tokens: int = 256,
 ) -> dict:
-    """Vision çağrısı (kanıt doğrulama)."""
+    """Çoklu görselli vision çağrısı (faz8.13/2d: kahve falı maks 3 foto).
+
+    faz8.13 kök düzeltmesi: response_schema önceden kanıt şemasına SABİTTİ —
+    fal ve ek özeti çağrıları yanlış şemayla boş dönüyordu. Artık her çağrı
+    kendi şemasını geçirir.
+    """
     from google.genai import types
 
-    parts = [
-        types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
-        prompt,
+    parts: list = [
+        types.Part.from_bytes(data=data, mime_type=mime)
+        for data, mime in images
     ]
+    parts.append(prompt)
     try:
         return await asyncio.wait_for(
             generate_json(
                 parts,
                 model=model,
-                max_output_tokens=256,
+                max_output_tokens=max_output_tokens,
                 json_retries=2,
                 max_retries=settings.GEMINI_MAX_RETRIES,
-                response_schema={
-                    "type": "object",
-                    "properties": {
-                        "matches": {"type": "boolean"},
-                        "confidence": {"type": "integer"},
-                        "reason": {"type": "string"},
-                    },
-                    "required": ["matches", "confidence", "reason"],
-                },
+                response_schema=response_schema,
                 disable_thinking=True,
             ),
             timeout=settings.GEMINI_PROOF_TIMEOUT_SEC,
         )
     except asyncio.TimeoutError as exc:
         raise GeminiUnavailable(
-            f"Kanıt görüntüsü {settings.GEMINI_PROOF_TIMEOUT_SEC}s içinde işlenemedi."
+            f"Görüntü {settings.GEMINI_PROOF_TIMEOUT_SEC}s içinde işlenemedi."
         ) from exc
+
+
+async def generate_json_with_image(
+    prompt: str,
+    image_bytes: bytes,
+    mime_type: str,
+    *,
+    model: Optional[str] = None,
+    response_schema: Optional[dict] = None,
+    max_output_tokens: int = 256,
+) -> dict:
+    """Tek görselli vision çağrısı (kanıt doğrulama, ek özeti, fal)."""
+    return await generate_json_with_images(
+        prompt,
+        [(image_bytes, mime_type)],
+        model=model,
+        response_schema=response_schema,
+        max_output_tokens=max_output_tokens,
+    )
 
 
 async def generate_image_bytes(

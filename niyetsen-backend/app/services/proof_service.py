@@ -12,7 +12,9 @@ from __future__ import annotations
 
 from app.config import settings
 from app.core import prompts
-from app.core.gemini_client import GeminiUnavailable, generate_json_with_image
+from app.core.gemini_client import (
+    GeminiUnavailable, PROOF_RESPONSE_SCHEMA, generate_json_with_image,
+)
 from app.models.schemas import ProofResult
 
 ALLOWED_MIME = {"image/jpeg", "image/png"}
@@ -74,6 +76,8 @@ async def evaluate_proof(
             ),
             image_bytes=image_bytes,
             mime_type=mime_type,
+            # faz8.13: şema artık çağrı bazlı — kanıt kendi şemasını geçirir.
+            response_schema=PROOF_RESPONSE_SCHEMA,
         )
     except GeminiUnavailable as exc:
         msg = str(exc).casefold()

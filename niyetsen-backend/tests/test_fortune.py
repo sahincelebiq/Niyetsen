@@ -35,7 +35,7 @@ def _mock_gemini(monkeypatch):
     async def fake_generate_json(*args, **kwargs):
         return {"interpretation": "Kartlar bugünkü niyetine ayna tutuyor."}
 
-    async def fake_generate_json_with_image(*args, **kwargs):
+    async def fake_generate_json_with_images(*args, **kwargs):
         return {
             "is_valid_photo": True,
             "symbols": ["kuş", "yol"],
@@ -44,7 +44,7 @@ def _mock_gemini(monkeypatch):
 
     monkeypatch.setattr(fortune_service, "generate_json", fake_generate_json)
     monkeypatch.setattr(
-        fortune_service, "generate_json_with_image", fake_generate_json_with_image
+        fortune_service, "generate_json_with_images", fake_generate_json_with_images
     )
 
 
@@ -132,7 +132,7 @@ def test_invalid_photo_does_not_burn_right(monkeypatch):
     async def rejecting(*args, **kwargs):
         return {"is_valid_photo": False}
 
-    monkeypatch.setattr(fortune_service, "generate_json_with_image", rejecting)
+    monkeypatch.setattr(fortune_service, "generate_json_with_images", rejecting)
     user = "bad_photo_user"
     grant_all_consents(user)
     resp = _upload(user, "kahve")
@@ -141,7 +141,7 @@ def test_invalid_photo_does_not_burn_right(monkeypatch):
     async def accepting(*args, **kwargs):
         return {"is_valid_photo": True, "symbols": [], "interpretation": "yorum"}
 
-    monkeypatch.setattr(fortune_service, "generate_json_with_image", accepting)
+    monkeypatch.setattr(fortune_service, "generate_json_with_images", accepting)
     assert _upload(user, "kahve").status_code == 200  # hak yanmadı
 
 
@@ -225,6 +225,77 @@ def test_fortune_history_lists_recent_first():
 def test_fortune_history_requires_consent():
     resp = client.get("/fortune/history", headers={"X-User-Id": "hist_no_consent"})
     assert resp.status_code == 403
+
+
+# ---------------- faz8.13 — fal ücretsiz + çoklu foto + mistik sohbet ------
+def test_tarot_free_user_no_paywall():
+    """faz8.13: fal ÜCRETSİZDİR — PRO kapısı yok, hak sayaçları sunucuda."""
+    user = "tarot_free"
+    grant_chat_consent(user, client)  # abonelik YOK
+    resp = client.post("/fortune/tarot", headers={"X-User-Id": user}, json={})
+    assert resp.status_code == 200
+    assert len(resp.json()["cards"]) == 3
+
+
+def test_photo_fortune_free_user_no_paywall():
+    user = "photo_free"
+    grant_chat_consent(user, client)
+    client.post(
+        "/me/consent", headers={"X-User-Id": user},
+        json={"proof_photo_processing": {"accepted": True}},
+    )
+    assert _upload(user, "kahve").status_code == 200
+
+
+def test_coffee_multi_photo_capped_at_three():
+    """faz8.13/2d: kahvede en fazla 3 kare — fazlası sessizce kırpılır."""
+    user = "kahve_multi"
+    grant_all_consents(user)
+    files = [
+        ("photos", (f"fal{i}.jpg", JPEG_BYTES, "image/jpeg")) for i in range(4)
+    ]
+    resp = client.post(
+        f"/fortune/photo/kahve", headers={"X-User-Id": user}, files=files
+    )
+    assert resp.status_code == 200
+    assert resp.json()["kind"] == "kahve"
+
+
+def test_mystic_chat_replies_with_disclaimer():
+    """faz8.13/2b: mistik rehber sohbeti — yanıt + disclaimer, kriz değil."""
+    user = "mystic_chat_user"
+    grant_chat_consent(user, client)
+    resp = client.post(
+        "/fortune/chat", headers={"X-User-Id": user},
+        json={"messages": [{"role": "user", "content": "bugün nasıl bir gün olacak?"}]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["reply"]
+    assert body["crisis"] is False
+    assert "eğlence" in body["disclaimer"].lower()
+
+
+def test_mystic_chat_crisis_stops_reading():
+    user = "mystic_crisis"
+    grant_chat_consent(user, client)
+    resp = client.post(
+        "/fortune/chat", headers={"X-User-Id": user},
+        json={"messages": [{"role": "user", "content": "yaşamak istemiyorum artık"}]},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["crisis"] is True
+    assert "destek" in body["reply"]
+
+
+def test_mystic_chat_requires_message():
+    user = "mystic_empty"
+    grant_chat_consent(user, client)
+    resp = client.post(
+        "/fortune/chat", headers={"X-User-Id": user}, json={"messages": []}
+    )
+    assert resp.status_code == 400
 
 
 # ---------------- Haklar ----------------

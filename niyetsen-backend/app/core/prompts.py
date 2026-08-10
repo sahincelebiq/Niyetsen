@@ -353,6 +353,32 @@ avuç çizgileri), uydurma detay ekleme. Fotoğraf {kind} fotoğrafı değilse
 {{"is_valid_photo": true, "symbols": ["<görülen 2-5 sembol/işaret>"],
 "interpretation": "<2-3 paragraf yorum + bugünkü en küçük adım>"}}"""
 
+# faz8.13/2d — foto doğrulama sıkılığı (PROOF anlamsal eşleşme ilkesiyle aynı):
+# GERÇEK içerik görünmeden onay YOK; yanlış fotoğraf hak yakmaz.
+PALM_PHOTO_STRICTNESS = """DOĞRULAMA (KATI): Fotoğrafta GERÇEK bir insan avuç içi
+net ve çizgileri seçilir şekilde görünmüyorsa "is_valid_photo": false döndür.
+Şunların HEPSİ geçersizdir: el sırtı, yumruk, eldivenli el, çizim/illüstrasyon,
+ekran görüntüsü, başka bir nesne/vücut bölgesi, aşırı karanlık/bulanık kare.
+Emin değilsen geçersiz say — kullanıcıdan daha net bir kare istenir ve hakkı yanmaz."""
+
+COFFEE_PHOTO_STRICTNESS = """DOĞRULAMA (KATI): Fotoğraf(lar)da gerçek bir kahve
+fincanı/tabağındaki TELVE deseni net görünmüyorsa "is_valid_photo": false döndür.
+Boş fincan, dolu kahve, çay, ekran görüntüsü, çizim geçersizdir. Birden fazla
+kare geldiyse hepsini aynı fincanın açıları olarak birlikte yorumla."""
+
+# faz8.13/2b — mistik rehber sohbeti (fal modülünün merkez ekranı).
+MYSTIC_CHAT_JSON_INSTRUCTIONS = """GÖREV: Kullanıcıyla mistik rehber olarak sohbet et.
+MİSTİK HAFIZA bölümünde kullanıcının geçmiş falları (tarot/kahve/el/burç) var —
+uygun anda bağ kur: "geçen çekiminde X görünmüştü — bu hafta o konuda ne değişti?"
+gibi bağlam soruları sorabilirsin (her mesajda değil, doğal aktığında).
+KURALLAR:
+- Fal AYNA'dır, kader değil; kesin gelecek tahmini verme, korku satma.
+- Tıbbi/hukuki/finansal tavsiye YASAK; kriz sinyalinde mistik yorum durur.
+- Kullanıcının niyetine ve bugünkü en küçük adımına köprü kur.
+- Kısa tut (2-4 cümle); tekrarlayan açılış kalıpları kullanma.
+SADECE şu JSON'u döndür:
+{"reply": "<sıcak, sezgili Türkçe cevap>"}"""
+
 HOROSCOPE_JSON_INSTRUCTIONS = """GÖREV: {sign} burcu için {day} tarihli günlük
 yorum yaz. Genel astroloji klişesi değil; KULLANICI BELLEĞİ'ndeki niyet ve
 zincir durumuna bağlan. SADECE şu JSON'u döndür:

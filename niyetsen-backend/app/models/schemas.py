@@ -477,6 +477,17 @@ class PhotoFortuneResponse(BaseModel):
     disclaimer: str = FORTUNE_DISCLAIMER
 
 
+# faz8.13/2b — mistik rehber sohbeti
+class FortuneChatRequest(BaseModel):
+    messages: list[ChatMessage] = Field(default_factory=list)
+
+
+class FortuneChatResponse(BaseModel):
+    reply: str
+    crisis: bool = False
+    disclaimer: str = FORTUNE_DISCLAIMER
+
+
 class HoroscopeResponse(BaseModel):
     sign: str
     day: dt_date
