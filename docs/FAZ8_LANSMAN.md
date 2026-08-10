@@ -275,6 +275,38 @@ build açılışta API hatasını yutamıyorsa, uygulama kapanır.** Bu yüzden
 - [ ] 8.11.4 Şahin logcat çıktısını getirince: ANDROID_CRASH_TANI şüpheli
       listesiyle eşleştir, kökü kapat, yeni build.
 
+### 8.12 — SİSTEMİK KÖK: Play build'inde Supabase env eksik (2026-08-06, Claude)
+
+**Şahin'in cihaz bulgusu:** sohbet yok, Bugün çalışmıyor, plan→sohbet yok,
+rapor görünmüyor. **Bunlar 5 ayrı hata değil — TEK kopuk boru:** uygulama ↔
+Supabase/Backend kimlik zinciri.
+
+**Kanıt zinciri (Claude, canlı doğrulama):**
+1. Railway `/health` = OK (gemini-3.1-pro-preview çalışıyor) → backend ayakta.
+2. Supabase JWKS ES256 anahtarı yayında → backend JWT doğrulaması uyumlu.
+3. **`mobile/.env` gitignore'da ve EAS ona erişemez; eas.json env bloklarında
+   `EXPO_PUBLIC_SUPABASE_URL` + `EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY` YOKTU.**
+   → Play build'i Supabase istemcisiz derleniyor → oturum/istek zinciri ölü →
+   tüm ekranlar "çalışmıyor" görünüyor. (Rapor girişi rank'te var ama
+   `recapReady` backend'e bağlı — o yüzden "rapor yok" sanılıyor.)
+
+**Düzeltmeler (koda girdi):**
+- [x] eas.json `production` + `play-internal` env'ine Supabase URL +
+      publishable key eklendi (bunlar PUBLIC istemci anahtarları — binary'de
+      taşınması tasarım gereği; sır DEĞİL, commit güvenli).
+- [x] `supabase.ts`: env eksikse module-load çökmesi yerine placeholder
+      istemci + `supabaseConfigured` bayrağı — uygulama her koşulda açılır.
+
+**Sıradaki (Cursor + Şahin):**
+- [ ] EAS dashboard → proje Environment Variables'ta da aynı ikiliyi doğrula
+      (varsa çakışma yok; yoksa eas.json yeter).
+- [ ] YENİ BUILD: `eas build --profile play-internal --platform android` →
+      kapalı teste yükle. KAPI: cihazda giriş → sohbet yanıtı → Bugün listesi
+      → yeni plan → sohbete dönüş → rank'te "Raporun" girişi — TEK OTURUMDA.
+- [ ] Auth ekranına `supabaseConfigured=false` durumunda açık hata kartı.
+- [ ] Profil (settings) yeniden tasarımı hâlâ 8.4'te bekliyor — "web gibi"
+      şikâyetinin kalıcı çözümü orası; minimal ölçek yeni build'de görünecek.
+
 ### 8.7 — Lansman kontrol listesi (2-3 gün, store bekleme hariç)
 
 - [ ] Store metinleri güncelle (fal İKİNCİL özellik — Apple 4.3 riski).
