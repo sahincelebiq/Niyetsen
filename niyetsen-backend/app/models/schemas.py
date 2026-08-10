@@ -477,6 +477,28 @@ class PhotoFortuneResponse(BaseModel):
     disclaimer: str = FORTUNE_DISCLAIMER
 
 
+# faz8.13/4 — Online rekabet: opt-in takma adlı gelişim ligi (Şahin kararı,
+# 2026-08-10: leaderboard öne çekildi). KVKK: gerçek isim/veri sızmaz —
+# yalnız kullanıcının seçtiği RUMUZ + puan + zincir görünür.
+class LeagueJoinRequest(BaseModel):
+    alias: str = Field(min_length=2, max_length=24)
+
+
+class LeagueMember(BaseModel):
+    alias: str
+    score: int = 0
+    streak: int = 0
+    rank: int = 0
+    is_me: bool = False
+
+
+class LeagueResponse(BaseModel):
+    opted_in: bool = False
+    alias: Optional[str] = None
+    my_rank: Optional[int] = None
+    members: list[LeagueMember] = Field(default_factory=list)
+
+
 # faz8.13/2b — mistik rehber sohbeti
 class FortuneChatRequest(BaseModel):
     messages: list[ChatMessage] = Field(default_factory=list)

@@ -1169,6 +1169,41 @@ class SupabaseRepository(Repository):
                 for chunk in chunks
             ]).execute()
 
+    # --- faz8.13/4: Online rekabet (opt-in takma adlı lig) ---
+    # Tablo: league_members(user_id, alias, score, streak, updated_at) —
+    # RUN_IN_SUPABASE_SQL_EDITOR.sql'de. KVKK: yalnız rumuz + sayı tutulur.
+    def league_get_member(self, user_id: str) -> Optional[dict]:
+        row = _maybe_single(
+            self._db.table("league_members")
+            .select("alias,score,streak")
+            .eq("user_id", user_id).limit(1)
+        )
+        return dict(row) if row else None
+
+    def league_upsert_member(
+        self, user_id: str, alias: str, score: int, streak: int
+    ) -> None:
+        self._db.table("league_members").upsert({
+            "user_id": user_id,
+            "alias": alias,
+            "score": score,
+            "streak": streak,
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }, on_conflict="user_id").execute()
+
+    def league_remove_member(self, user_id: str) -> None:
+        self._db.table("league_members").delete().eq("user_id", user_id).execute()
+
+    def league_top(self, limit: int = 50) -> list[dict]:
+        rows = (
+            self._db.table("league_members")
+            .select("user_id,alias,score,streak")
+            .order("score", desc=True).order("streak", desc=True)
+            .limit(limit)
+            .execute().data
+        )
+        return [dict(row) for row in rows]
+
     def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
         rows = (
             self._db.table("fortune_log")

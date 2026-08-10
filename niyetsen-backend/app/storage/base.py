@@ -269,6 +269,25 @@ class Repository(ABC):
     def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
         """Fal geçmişi — en yeniden eskiye."""
 
+    # --- faz8.13/4: Online rekabet (opt-in takma adlı lig) ---
+    @abstractmethod
+    def league_get_member(self, user_id: str) -> Optional[dict]:
+        """Kullanıcının lig üyeliği: {alias, score, streak} ya da None."""
+
+    @abstractmethod
+    def league_upsert_member(
+        self, user_id: str, alias: str, score: int, streak: int
+    ) -> None:
+        """Üyelik + puan/zincir anlık görüntüsünü yazar (opt-in)."""
+
+    @abstractmethod
+    def league_remove_member(self, user_id: str) -> None:
+        """Opt-out: üyelik silinir — KVKK gereği iz bırakmaz."""
+
+    @abstractmethod
+    def league_top(self, limit: int = 50) -> list[dict]:
+        """Puana göre ilk N üye: [{user_id, alias, score, streak}]."""
+
     # --- İdol Modu persona deposu (Dalga 4.3) ---
     def list_idol_personas(self) -> list[dict]:
         """Aktif persona dosyaları (DB). Varsayılan: boş → dosya kaynağı kullanılır."""

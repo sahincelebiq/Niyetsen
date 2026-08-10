@@ -30,7 +30,8 @@ from app.models.schemas import (
     ChatThread, ConsentStatus, ConsentUpdate, DailyTaskItem, DailyTasksResponse,
     FortuneChatRequest, FortuneChatResponse, FortuneRecord,
     FortuneRightsResponse,
-    HoroscopeResponse, PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
+    HoroscopeResponse, LeagueJoinRequest, LeagueResponse,
+    PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
     RecapResponse,
     PlanSummary, ProfileUpdate, ProofRecord, ProofResult, PushTokenRecord,
     PushTokenRegistration, RevenueCatWebhookPayload, StateResponse, SubscriptionInfo,
@@ -1282,6 +1283,37 @@ async def fortune_horoscope(
         raise HTTPException(status_code=400, detail=str(exc))
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+
+
+@router.get("/league", response_model=LeagueResponse)
+def league_board(user_id: str = Depends(get_current_user)) -> LeagueResponse:
+    """faz8.13/4 — opt-in takma adlı gelişim ligi. Üyeysen kendi anlık
+    görüntün tazelenir; değilsen yalnız panoyu görürsün (katılım CTA'sı
+    istemcide). KVKK: yalnız rumuz + puan + zincir döner."""
+    from app.services import league_service
+
+    return league_service.get_board(repo, user_id)
+
+
+@router.post("/league/join", response_model=LeagueResponse)
+def league_join(
+    req: LeagueJoinRequest, user_id: str = Depends(get_current_user)
+) -> LeagueResponse:
+    """Lige rumuzla katıl (opt-in). Rumuzda e-posta/bağlantı reddedilir."""
+    from app.services import league_service
+
+    try:
+        return league_service.join(repo, user_id, req.alias)
+    except league_service.LeagueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.post("/league/leave", response_model=LeagueResponse)
+def league_leave(user_id: str = Depends(get_current_user)) -> LeagueResponse:
+    """Ligden ayrıl — üyelik kaydı SİLİNİR (KVKK: iz bırakmaz)."""
+    from app.services import league_service
+
+    return league_service.leave(repo, user_id)
 
 
 @router.post("/fortune/chat", response_model=FortuneChatResponse)

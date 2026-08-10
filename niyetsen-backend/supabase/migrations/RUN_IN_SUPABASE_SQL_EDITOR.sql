@@ -133,3 +133,24 @@ where conrelid = 'public.users'::regclass
 select column_name, data_type
 from information_schema.columns
 where table_schema = 'public' and table_name = 'users' and column_name = 'preferred_language';
+
+-- ============================================================
+-- H) faz8.13/4 — Lig tablosu (league_members)
+-- Önce migration'ı uygula: 20260810120000_faz813_league_members.sql
+-- ============================================================
+create table if not exists public.league_members (
+  user_id uuid primary key references auth.users (id) on delete cascade,
+  alias text not null check (char_length(alias) between 2 and 24),
+  score integer not null default 0 check (score >= 0),
+  streak integer not null default 0 check (streak >= 0),
+  updated_at timestamptz not null default now()
+);
+create index if not exists league_members_score_idx
+  on public.league_members (score desc, streak desc);
+alter table public.league_members enable row level security;
+
+-- VERIFY: league_members var + RLS açık + policy 0 (deny-by-default)
+select relname, relrowsecurity
+from pg_class
+where relnamespace = 'public'::regnamespace and relname = 'league_members';
+-- BEKLENEN: 1 satır, relrowsecurity = true

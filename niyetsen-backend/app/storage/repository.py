@@ -48,6 +48,8 @@ class InMemoryRepository(Repository):
         self._bonus_offers: dict[str, BonusOffer] = {}
         self._subscriptions: dict[str, dict] = {}
         self._fortunes: dict[str, list[FortuneRecord]] = {}
+        # faz8.13/4: lig üyelikleri — user_id -> {alias, score, streak}
+        self._league: dict[str, dict] = {}
         # FAZ 7.6: sohbet oturumları — user -> thread_id -> meta
         self._threads: dict[str, dict[str, dict]] = {}
         self._active_thread: dict[str, str] = {}
@@ -736,6 +738,26 @@ class InMemoryRepository(Repository):
             reverse=True,
         )
         return records[:limit]
+
+    # --- faz8.13/4: Online rekabet (opt-in takma adlı lig) ---
+    def league_get_member(self, user_id: str) -> Optional[dict]:
+        member = self._league.get(user_id)
+        return dict(member) if member else None
+
+    def league_upsert_member(
+        self, user_id: str, alias: str, score: int, streak: int
+    ) -> None:
+        self._league[user_id] = {"alias": alias, "score": score, "streak": streak}
+
+    def league_remove_member(self, user_id: str) -> None:
+        self._league.pop(user_id, None)
+
+    def league_top(self, limit: int = 50) -> list[dict]:
+        rows = [
+            {"user_id": uid, **member} for uid, member in self._league.items()
+        ]
+        rows.sort(key=lambda r: (-r["score"], -r["streak"], r["alias"]))
+        return rows[:limit]
 
     def get_subscription_row(self, user_id: str) -> dict:
         profile = self._profiles.get(user_id, UserProfile())
