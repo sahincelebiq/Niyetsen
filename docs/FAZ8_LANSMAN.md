@@ -326,13 +326,20 @@ Supabase/Backend kimlik zinciri.
          kısayol ikonları (tarot/kahve/el); fal sonuçları sohbete düşer.
    - [x] 2c Mistik hafıza: fortune_log geçmişi rehber bağlamına girer
          ("geçen haftaki kartında şu görünmüştü…").
-   - [x] 2d Fallar uçtan uca çalışır; el falında gerçek el zorunlu (Vision),
-         kahvede maks 3 foto; yanlış foto hak yakmaz. Fal ÜCRETSİZ kalır.
+   - [x] 2d Fallar uçtan uca çalışır; el falında gerçek el zorunlu (Vision,
+         katı doğrulama promptu), kahvede maks 3 foto (photos alanı; tek
+         kare gönderen eski istemci de çalışır); yanlış foto hak yakmaz.
+         KÖK DÜZELTME: vision çağrıları önceden kanıt şemasına sabitti —
+         fal yorumu boş dönüyordu; artık her çağrı kendi şemasını geçirir.
+         Backend'deki eski PRO kapıları (tarot/foto/geçmiş/burç) kaldırıldı —
+         fal ÜCRETSİZ (kilitli karar); /fortune/chat yeni mistik sohbet ucu.
 3. **RAPOR** — [x] Gerçek KPI dashboard (toplam görev, tamamlama, kategori
    dağılımı, zincir istatistikleri) + görünür giriş; kapı-içeride korunur.
 4. **ONLINE REKABET** — [x] Leaderboard v3 ÖNE ÇEKİLDİ (Şahin, 2026-08-10):
-   opt-in takma adlı haftalık gelişim ligi; KVKK: yalnız rumuz+puan;
-   Supabase şema + backend uçları + profilde "Arkadaşlar" girişi.
+   opt-in takma adlı gelişim ligi (v1: toplam puan + zincir sıralaması;
+   haftalık sıfırlama v2). KVKK: yalnız rumuz+puan+zincir; opt-out kaydı
+   SİLER. `league_members` tablosu (RUN_IN_SUPABASE_SQL_EDITOR §H) +
+   GET/POST /league uçları + profilde "Arkadaşlar & Lig" → /arkadaslar.
 5. **PLAN DEĞİŞTİR → SOHBET** — [x] Akış cihazda çalışır: plan değiştir →
    sohbete düş → konuş → yeni plan (backend sözleşme test'li).
 6. **ZİNCİR EVRİMİ** — [x] 12 hayvanlı evrim: bebeklik→ergenlik→yetişkinlik;

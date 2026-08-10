@@ -51,6 +51,8 @@ def _extract_docx_text(data: bytes) -> str:
 
 
 async def _summarize_image(data: bytes, mime_type: str, filename: str) -> str:
+    # faz8.13: şema artık çağrı bazlı — ek özeti kendi şemasını geçirir
+    # (önceden kanıt şemasına sabitti → summary hep boş dönebiliyordu).
     result = await generate_json_with_image(
         prompt=(
             f'Bu görsel sohbet eki ({filename}). Kullanıcının niyet planına yardımcı olacak '
@@ -59,6 +61,11 @@ async def _summarize_image(data: bytes, mime_type: str, filename: str) -> str:
         ),
         image_bytes=data,
         mime_type=mime_type,
+        response_schema={
+            "type": "object",
+            "properties": {"summary": {"type": "string"}},
+            "required": ["summary"],
+        },
     )
     return str(result.get("summary") or "Görsel eklendi.")
 
