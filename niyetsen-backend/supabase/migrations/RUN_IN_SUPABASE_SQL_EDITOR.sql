@@ -81,7 +81,7 @@ where not exists (
 -- ============================================================
 -- D) RPC (service_role) — kanıt / bonus
 -- ============================================================
-select p.proname
+select need.proname
 from (
   values
     ('claim_proof_attempt'),
