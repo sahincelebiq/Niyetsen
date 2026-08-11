@@ -1,14 +1,17 @@
-/**
- * Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (nizami, 2026-08-02)
- *
- * AMAÇ: Dashboard SQL Editor'da biriken Claude/Cursor yapıştırmalarını
- * TEKRAR ÇALIŞTIRMA. Bu dosya salt DOĞRULAMA sorgularıdır.
- *
- * Şema değişiklikleri → `supabase/migrations/*.sql` veya MCP apply_migration.
- * Eski "her şeyi create if not exists" yığını kaldırıldı; prod zaten uygulanmış.
- *
- * Kullanım: SQL Editor'a yapıştır → Run → sonuç tablolarını kontrol et.
- */
+-- Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (nizami, 2026-08-02)
+--
+-- AMAÇ: Dashboard SQL Editor'da biriken Claude/Cursor yapıştırmalarını
+-- TEKRAR ÇALIŞTIRMA. Bu dosya salt DOĞRULAMA sorgularıdır.
+--
+-- Şema değişiklikleri → supabase/migrations dizinindeki .sql dosyaları
+-- veya MCP apply_migration. Eski "her şeyi create if not exists" yığını
+-- kaldırıldı; prod zaten uygulanmış.
+--
+-- Kullanım: SQL Editor'a yapıştır → Run → sonuç tablolarını kontrol et.
+--
+-- NOT (2026-08-11): Başlık blok yorumuydu; içindeki yıldız+bölü karakter
+-- dizisi Postgres'te İÇ İÇE yorum açtığı için "unterminated comment"
+-- hatası veriyordu. Başlık bilerek çift tire satır yorumuna çevrildi.
 
 -- ============================================================
 -- A) Tablolar + RLS (hepsi true olmalı; rls_off = 0)
