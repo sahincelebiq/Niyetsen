@@ -1,20 +1,23 @@
--- Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (nizami, 2026-08-02)
+-- Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (nizami, 2026-08-13)
 --
--- AMAÇ: Dashboard SQL Editor'da biriken Claude/Cursor yapıştırmalarını
--- TEKRAR ÇALIŞTIRMA. Bu dosya salt DOĞRULAMA sorgularıdır.
+-- AMAÇ: Dashboard'daki 33 kayıtlı sorguyu TEKRAR ÇALIŞTIRMA.
+-- Bu dosya salt DOĞRULAMA'dır (bölüm I hariç — o bir kez güvenlik).
 --
--- Şema değişiklikleri → supabase/migrations dizinindeki .sql dosyaları
--- veya MCP apply_migration. Eski "her şeyi create if not exists" yığını
--- kaldırıldı; prod zaten uygulanmış.
+-- SQL Editor'da ÇALIŞTIRMA (DDL / backfill — şema zaten prod'da):
+--   Toplu şema, idol persona, İdol Modu persona dosyaları,
+--   chat_threads (+ backfill), faz 8 kadın erkek algılaması,
+--   Untitled fortune_log CREATE, last_tarot_push_date ALTER.
 --
--- Kullanım: SQL Editor'a yapıştır → Run → sonuç tablolarını kontrol et.
+-- Güvenli (bu dosyanın A–H kopyaları): RLS, kritik tablo/kolon, RPC,
+--   storage, policy sayıları, cinsiyet + dil.
 --
--- NOT (2026-08-11): Başlık blok yorumuydu; içindeki yıldız+bölü karakter
--- dizisi Postgres'te İÇ İÇE yorum açtığı için "unterminated comment"
--- hatası veriyordu. Başlık bilerek çift tire satır yorumuna çevrildi.
+-- Kullanım: A–H'yi yapıştır → Run. Beklenen: eksik satır yok, rls_off=0.
+-- I yalnız bir kez: anon GRANT kapatma (PostgREST savunması).
+--
+-- NOT: Başlık çift tire. Eski /** */ iç içe yorum = 42601.
 
 -- ============================================================
--- A) Tablolar + RLS (hepsi true olmalı; rls_off = 0)
+-- A) Tablolar + RLS (hepsi true; rls_off = 0)
 -- ============================================================
 select c.relname as table_name, c.relrowsecurity as rls_on
 from pg_class c
@@ -40,6 +43,7 @@ from (
     ('users','trial_started_at'),
     ('users','subscription_status'),
     ('users','notif_minute'),
+    ('users','preferred_language'),
     ('plans','name'),
     ('plans','slot_no'),
     ('chat_msgs','thread_id'),
@@ -70,7 +74,8 @@ from (
     ('proof_requests'),
     ('user_consents'),
     ('bonus_offers'),
-    ('push_tokens')
+    ('push_tokens'),
+    ('league_members')
 ) as t(tbl)
 where not exists (
   select 1 from information_schema.tables x
@@ -105,7 +110,6 @@ where id in ('proofs', 'plan-images')
 order by 1;
 -- BEKLENEN: proofs public=false; plan-images public=true
 
--- plan-images için geniş SELECT olmamalı (listing WARN)
 select policyname
 from pg_policies
 where schemaname = 'storage'
@@ -113,7 +117,7 @@ where schemaname = 'storage'
 -- BEKLENEN: 0 satır (2026-08-02'de kaldırıldı)
 
 -- ============================================================
--- F) Tablo policy sayısı (bilinçli: 0 = deny-by-default + backend service_role)
+-- F) Tablo policy sayısı (0 = deny-by-default + backend service_role)
 -- ============================================================
 select t.tablename,
   (select count(*) from pg_policies p
@@ -121,10 +125,10 @@ select t.tablename,
 from pg_tables t
 where t.schemaname = 'public'
 order by 1;
--- BEKLENEN: çoğu 0 (anon/authenticated PostgREST'ten kapalı; FastAPI service_role)
+-- BEKLENEN: hepsi 0
 
 -- ============================================================
--- G) Gender check
+-- G) Gender + dil + fal tipi (kayıtlı sorgulardaki 'Tarot' YANLIŞ)
 -- ============================================================
 select conname, pg_get_constraintdef(oid)
 from pg_constraint
@@ -132,28 +136,40 @@ where conrelid = 'public.users'::regclass
   and conname = 'users_gender_check';
 -- BEKLENEN: kadın | erkek | belirtmek istemiyorum
 
--- VERIFY: preferred_language (Play i18n)
 select column_name, data_type
 from information_schema.columns
-where table_schema = 'public' and table_name = 'users' and column_name = 'preferred_language';
+where table_schema = 'public' and table_name = 'users'
+  and column_name = 'preferred_language';
+-- BEKLENEN: 1 satır, text
+
+select pg_get_constraintdef(oid) as fortune_type_check
+from pg_constraint
+where conrelid = 'public.fortune_log'::regclass
+  and conname = 'fortune_log_type_check';
+-- BEKLENEN: tarot | kahve | el | burc  (büyük T 'Tarot' DEĞİL)
 
 -- ============================================================
--- H) faz8.13/4 — Lig tablosu (league_members)
--- Önce migration'ı uygula: 20260810120000_faz813_league_members.sql
+-- H) Lig tablosu — yalnız doğrula (CREATE yok; tablo prod'da var)
 -- ============================================================
-create table if not exists public.league_members (
-  user_id uuid primary key references auth.users (id) on delete cascade,
-  alias text not null check (char_length(alias) between 2 and 24),
-  score integer not null default 0 check (score >= 0),
-  streak integer not null default 0 check (streak >= 0),
-  updated_at timestamptz not null default now()
-);
-create index if not exists league_members_score_idx
-  on public.league_members (score desc, streak desc);
-alter table public.league_members enable row level security;
-
--- VERIFY: league_members var + RLS açık + policy 0 (deny-by-default)
 select relname, relrowsecurity
 from pg_class
 where relnamespace = 'public'::regnamespace and relname = 'league_members';
 -- BEKLENEN: 1 satır, relrowsecurity = true
+
+-- ============================================================
+-- I) BİR KEZ — anon/authenticated GRANT kapat (PostgREST savunması)
+-- RLS policy=0 satırları keser; GRANT ALL (TRUNCATE dahil) yine yüzey.
+-- A–H yeşil kaldıktan sonra AYRI çalıştır. Tekrar çalıştırmak güvenli.
+-- ============================================================
+-- revoke all on all tables in schema public from anon, authenticated;
+-- revoke all on all sequences in schema public from anon, authenticated;
+-- alter default privileges in schema public
+--   revoke all on tables from anon, authenticated;
+-- alter default privileges in schema public
+--   revoke all on sequences from anon, authenticated;
+--
+-- select count(*) as leftover_grants
+-- from information_schema.role_table_grants
+-- where table_schema = 'public'
+--   and grantee in ('anon', 'authenticated');
+-- BEKLENEN leftover_grants: 0  (şu an canlıda 252 — I çalışınca 0)
