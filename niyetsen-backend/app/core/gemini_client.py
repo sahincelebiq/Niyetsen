@@ -218,10 +218,22 @@ async def generate_json(
             timeout_sec=timeout_sec,
         )
         last_raw = raw
+        stripped = _strip_json_fences(raw)
+        if not stripped:
+            log.warning("Gemini boş JSON yanıtı, tekrar deneniyor")
+            continue
         try:
-            return json.loads(_strip_json_fences(raw))
+            parsed = json.loads(stripped)
         except json.JSONDecodeError:
             log.warning("Gemini bozuk JSON döndürdü, tekrar deneniyor: %.200s", raw)
+            continue
+        if not isinstance(parsed, dict):
+            log.warning(
+                "Gemini JSON nesne değil (%s), tekrar deneniyor",
+                type(parsed).__name__,
+            )
+            continue
+        return parsed
     raise GeminiUnavailable(f"Model geçerli JSON üretemedi: {last_raw[:200]}")
 
 
@@ -231,6 +243,7 @@ async def generate_function_calls(
     system_instruction: Optional[str] = None,
     *,
     model: Optional[str] = None,
+    timeout_sec: Optional[int] = None,
 ) -> list[dict]:
     """Return native Gemini function calls without executing model-selected code."""
     from google.genai import types
@@ -246,21 +259,45 @@ async def generate_function_calls(
     )
     client = get_client()
     resolved_model = _resolve_model(model)
+    attempt_timeout = timeout_sec or settings.GEMINI_TIMEOUT_SEC
     last_err: Exception | None = None
     for attempt in range(settings.GEMINI_MAX_RETRIES + 1):
         try:
-            response = await asyncio.to_thread(
-                client.models.generate_content,
-                model=resolved_model,
-                contents=contents,
-                config=config,
+            response = await asyncio.wait_for(
+                asyncio.to_thread(
+                    client.models.generate_content,
+                    model=resolved_model,
+                    contents=contents,
+                    config=config,
+                ),
+                timeout=attempt_timeout,
             )
             return [
                 {"name": call.name, "args": dict(call.args or {})}
                 for call in (response.function_calls or [])
             ]
+        except asyncio.TimeoutError as exc:
+            last_err = exc
+            if attempt >= settings.GEMINI_MAX_RETRIES:
+                break
+            log.warning(
+                "Gemini araç çağrısı zaman aşımı (%s, deneme %s): %ss",
+                resolved_model,
+                attempt + 1,
+                attempt_timeout,
+            )
+            continue
         except Exception as exc:  # noqa: BLE001
             last_err = exc
+            if _is_model_unavailable(exc):
+                fallback = _fallback_for(resolved_model)
+                if fallback:
+                    log.warning(
+                        "Araç modeli erişilemez (%s) — fallback: %s",
+                        resolved_model, fallback,
+                    )
+                    resolved_model = fallback
+                    continue
             if not _is_retryable(exc):
                 break
             if attempt >= settings.GEMINI_MAX_RETRIES:

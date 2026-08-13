@@ -22,7 +22,9 @@ from app.models.schemas import (
     PlanSummary, PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult,
     PushTokenRecord, ScoreEvent, Task, UserProfile,
 )
+from app.core.datetimes import coerce_datetime
 from app.storage.base import Repository
+from app.storage.db_coerce import is_unique_violation, parse_json_object
 
 log = logging.getLogger("niyetsen.storage")
 
@@ -85,8 +87,24 @@ def _task_row(plan_id: str, day: PlanDay, task: Task) -> dict:
     }
 
 
+def _fortune_from_row(row: dict) -> FortuneRecord:
+    return FortuneRecord(
+        id=row["id"],
+        type=row["type"],
+        day=row["day"],
+        result=parse_json_object(row.get("result_json")),
+        created_at=coerce_datetime(row.get("created_at")) or datetime.now(timezone.utc),
+    )
+
+
 def _bonus_from_row(row: dict) -> BonusOffer:
-    return BonusOffer(**row)
+    payload = dict(row)
+    offered = coerce_datetime(payload.get("offered_at"))
+    if offered is not None:
+        payload["offered_at"] = offered
+    completed = coerce_datetime(payload.get("completed_at"))
+    payload["completed_at"] = completed
+    return BonusOffer(**payload)
 
 
 class SupabaseRepository(Repository):
@@ -160,8 +178,14 @@ class SupabaseRepository(Repository):
 
     def _ensure_user(self, user_id: str) -> None:
         existing = self._db.table("users").select("id").eq("id", user_id).execute().data
-        if not existing:
+        if existing:
+            return
+        try:
             self._db.table("users").insert({"id": user_id}).execute()
+        except Exception as exc:  # noqa: BLE001 — eşzamanlı ilk istek
+            if is_unique_violation(exc):
+                return
+            raise
 
     # ------------------------------------------------------------------
     # Plan / Görev
@@ -252,12 +276,16 @@ class SupabaseRepository(Repository):
             .eq("user_id", user_id).order("slot_no").execute().data
         )
         if not rows:
-            plan_id = self.create_draft_plan(user_id, name="Plan 1", slot_no=1)
-            active_id = plan_id
+            try:
+                self.create_draft_plan(user_id, name="Plan 1", slot_no=1)
+            except Exception as exc:  # noqa: BLE001
+                log.warning("Taslak plan oluşturulamadı (okuma yolu yutuyor): %s", exc)
             rows = (
                 self._db.table("plans").select("id,name,slot_no,batch_generated_until")
                 .eq("user_id", user_id).order("slot_no").execute().data
-            )
+            ) or []
+            if rows:
+                active_id = self._active_plan_id(user_id) or rows[0]["id"]
         summaries: list[PlanSummary] = []
         for row in rows:
             task_count = (
@@ -302,16 +330,34 @@ class SupabaseRepository(Repository):
 
     def create_draft_plan(self, user_id: str, *, name: str, slot_no: int) -> str:
         self._ensure_user(user_id)
+        existing = _maybe_single(
+            self._db.table("plans").select("id")
+            .eq("user_id", user_id).eq("slot_no", slot_no)
+        )
+        if existing:
+            self._set_active_plan_id(user_id, existing["id"])
+            return existing["id"]
         plan_id = str(uuid.uuid4())
-        self._db.table("plans").insert({
-            "id": plan_id,
-            "user_id": user_id,
-            "duration_days": 365,
-            "batch_generated_until": 0,
-            "start_date": dt_date.today().isoformat(),
-            "name": name,
-            "slot_no": slot_no,
-        }).execute()
+        try:
+            self._db.table("plans").insert({
+                "id": plan_id,
+                "user_id": user_id,
+                "duration_days": 365,
+                "batch_generated_until": 0,
+                "start_date": dt_date.today().isoformat(),
+                "name": name,
+                "slot_no": slot_no,
+            }).execute()
+        except Exception as exc:  # noqa: BLE001
+            if is_unique_violation(exc):
+                raced = _maybe_single(
+                    self._db.table("plans").select("id")
+                    .eq("user_id", user_id).eq("slot_no", slot_no)
+                )
+                if raced:
+                    self._set_active_plan_id(user_id, raced["id"])
+                    return raced["id"]
+            raise
         self._set_active_plan_id(user_id, plan_id)
         return plan_id
 
@@ -453,10 +499,8 @@ class SupabaseRepository(Repository):
             raise ValueError("Görev bulunamadı.")
         if row.get("claim_status") == "resolved":
             raise RuntimeError("Görev zaten sonuçlanmış.")
-        result = (
-            ProofResult(**row["result_json"])
-            if row.get("result_json") else None
-        )
+        result_payload = parse_json_object(row.get("result_json")) if row.get("result_json") else {}
+        result = ProofResult(**result_payload) if result_payload else None
         return ProofAttemptClaim(
             status=row["claim_status"],
             attempt_no=row["attempt_no"],
@@ -805,13 +849,13 @@ class SupabaseRepository(Repository):
         )
         if not active:
             return None
+        payload = parse_json_object(active.get("text"))
         try:
-            payload = json.loads(active["text"])
             return (
                 CollectedIntent(**payload.get("collected", {})),
                 bool(payload.get("ready_for_plan", False)),
             )
-        except (TypeError, ValueError, json.JSONDecodeError):
+        except (TypeError, ValueError):
             return CollectedIntent(), False
 
     def get_latest_intent(self, user_id: str) -> CollectedIntent | None:
@@ -825,10 +869,10 @@ class SupabaseRepository(Repository):
         )
         if not row:
             return None
+        payload = parse_json_object(row.get("text"))
         try:
-            payload = json.loads(row["text"])
             return CollectedIntent(**payload.get("collected", {}))
-        except (TypeError, ValueError, json.JSONDecodeError):
+        except (TypeError, ValueError):
             return CollectedIntent()
 
     def complete_active_intent(self, user_id: str) -> None:
@@ -1031,7 +1075,9 @@ class SupabaseRepository(Repository):
         row = self._db.table("users").select(
             "subscription_status,trial_started_at,timezone"
         ).eq("id", user_id).single().execute().data
-        return row
+        payload = dict(row or {})
+        payload["trial_started_at"] = coerce_datetime(payload.get("trial_started_at"))
+        return payload
 
     def update_subscription(
         self,
@@ -1107,14 +1153,7 @@ class SupabaseRepository(Repository):
         )
         if not row:
             return None
-        try:
-            result = json.loads(row.get("result_json") or "{}")
-        except (TypeError, ValueError):
-            result = {}
-        return FortuneRecord(
-            id=row["id"], type=row["type"], day=row["day"], result=result,
-            created_at=row.get("created_at") or datetime.now(timezone.utc),
-        )
+        return _fortune_from_row(row)
 
     # ------------------------------------------------------------------
     # İdol Modu persona deposu (Dalga 4.3) — yeni idol = deploy YOK
@@ -1128,11 +1167,8 @@ class SupabaseRepository(Repository):
         personas: list[dict] = []
         for row in rows:
             dossier = row.get("dossier")
-            if isinstance(dossier, str):
-                try:
-                    dossier = json.loads(dossier)
-                except (TypeError, ValueError):
-                    dossier = {}
+            if not isinstance(dossier, dict):
+                dossier = parse_json_object(dossier)
             personas.append({**row, "dossier": dossier or {}})
         return personas
 
@@ -1215,11 +1251,7 @@ class SupabaseRepository(Repository):
         records: list[FortuneRecord] = []
         for row in rows:
             try:
-                result = json.loads(row.get("result_json") or "{}")
-            except (TypeError, ValueError):
-                result = {}
-            records.append(FortuneRecord(
-                id=row["id"], type=row["type"], day=row["day"], result=result,
-                created_at=row.get("created_at") or datetime.now(timezone.utc),
-            ))
+                records.append(_fortune_from_row(row))
+            except Exception:  # noqa: BLE001 — bozuk satır tüm geçmişi düşürmesin
+                log.warning("fortune_log satırı okunamadı (yoksayıldı)", extra={"id": row.get("id")})
         return records

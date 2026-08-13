@@ -63,6 +63,45 @@ def test_leave_removes_membership_completely():
     assert all(m["alias"] != "Gecici" for m in body["members"])  # iz yok
 
 
+def test_board_marks_me_when_user_id_type_differs():
+    """PostgREST uuid nesnesi vs JWT text — is_me kaybolmasın."""
+    from app.services import league_service
+
+    uid = "86681cf1-aaaa-4bbb-8ccc-ddddeeeeffff"
+    assert league_service._same_user_id(uid, uid.upper())
+    assert league_service._same_user_id(uid, uid)
+    assert not league_service._same_user_id(uid, "other")
+
+    client.post("/league/join", headers={"X-User-Id": uid}, json={"alias": "Ada"})
+
+    class Uuidish:
+        def __init__(self, value: str) -> None:
+            self.value = value
+
+        def __str__(self) -> str:
+            return self.value
+
+        def __eq__(self, other: object) -> bool:
+            return False
+
+    original = repo.league_top
+
+    def fake_top(limit: int = 50):
+        rows = original(limit)
+        for row in rows:
+            row["user_id"] = Uuidish(str(row["user_id"]).upper())
+        return rows
+
+    repo.league_top = fake_top  # type: ignore[method-assign]
+    try:
+        board = client.get("/league", headers={"X-User-Id": uid}).json()
+    finally:
+        repo.league_top = original  # type: ignore[method-assign]
+    me = next(m for m in board["members"] if m["alias"] == "Ada")
+    assert me["is_me"] is True
+    assert board["my_rank"] == me["rank"]
+
+
 def test_board_refreshes_own_score_snapshot():
     user = "lig_taze"
     client.post("/league/join", headers={"X-User-Id": user}, json={"alias": "Taze"})

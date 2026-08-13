@@ -159,6 +159,10 @@ class InMemoryRepository(Repository):
             self._create_thread(user_id)
 
     def create_draft_plan(self, user_id: str, *, name: str, slot_no: int) -> str:
+        for plan_id, meta in self._user_meta(user_id).items():
+            if meta.get("slot_no") == slot_no:
+                self._active_plan_id[user_id] = plan_id
+                return plan_id
         plan_id = str(uuid.uuid4())
         draft = Plan(
             id=plan_id,

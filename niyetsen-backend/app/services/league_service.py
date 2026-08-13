@@ -57,6 +57,15 @@ def leave(repository: Repository, user_id: str) -> LeagueResponse:
     return get_board(repository, user_id)
 
 
+def _same_user_id(left: object, right: object) -> bool:
+    """PostgREST uuid vs JWT text — büyük/küçük harf ve str() farkını yut."""
+    a = str(left or "").strip()
+    b = str(right or "").strip()
+    if not a or not b:
+        return False
+    return a == b or a.casefold() == b.casefold()
+
+
 def get_board(repository: Repository, user_id: str) -> LeagueResponse:
     member = repository.league_get_member(user_id)
     if member:
@@ -72,7 +81,7 @@ def get_board(repository: Repository, user_id: str) -> LeagueResponse:
     members: list[LeagueMember] = []
     my_rank: int | None = None
     for index, row in enumerate(rows, start=1):
-        is_me = row.get("user_id") == user_id
+        is_me = _same_user_id(row.get("user_id"), user_id)
         if is_me:
             my_rank = index
         members.append(LeagueMember(

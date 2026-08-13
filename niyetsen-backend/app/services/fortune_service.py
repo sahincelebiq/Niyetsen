@@ -13,6 +13,7 @@ Hak sayaçları (docs/niyetsen-03-algoritma.md §5, günlük sıfırlanır):
 """
 from __future__ import annotations
 
+import asyncio
 import logging
 import random
 import re
@@ -45,6 +46,17 @@ class FortuneError(ValueError):
 
 class FortuneRightsExhausted(FortuneError):
     """429/409 — günlük hak bitti."""
+
+
+async def _rag_async(query: str, sources: list[str] | None = None) -> list[str]:
+    """RAG sohbeti düşürmez; embedding senkron olduğu için thread'de çalışır."""
+    try:
+        return await asyncio.to_thread(
+            rag_service.retrieve, query, sources=sources
+        )
+    except Exception:  # noqa: BLE001
+        log.warning("Fal RAG atlandı", exc_info=True)
+        return []
 
 
 # ------------------------------------------------------------------
@@ -211,8 +223,9 @@ async def mystic_chat(
         return prompts.CRISIS_RESPONSE
 
     mystic_memory = build_mystic_memory(repository, user_id)
-    rag_chunks = rag_service.retrieve(
-        f"mistik {last_user}"[:200], sources=["tarot", "burclar", "motivasyon"],
+    rag_chunks = await _rag_async(
+        f"mistik {last_user}"[:200],
+        sources=["tarot", "burclar", "motivasyon"],
     )
     history_lines = "\n".join(
         f"{'KULLANICI' if m.role == 'user' else 'REHBER'}: {m.content}"
@@ -289,7 +302,7 @@ async def draw_tarot(
         f"- {c.position}: {c.name}{' (ters)' if c.reversed else ''} — {c.meaning}"
         for c in cards
     )
-    rag_chunks = rag_service.retrieve(
+    rag_chunks = await _rag_async(
         f"tarot {' '.join(c.name for c in cards)} {question}",
         sources=["tarot", "motivasyon"],
     )
@@ -447,7 +460,7 @@ async def daily_horoscope(
             interpretation=cached.result.get("interpretation", ""),
         )
 
-    rag_chunks = rag_service.retrieve(f"{sign} burcu", sources=["burclar"])
+    rag_chunks = await _rag_async(f"{sign} burcu", sources=["burclar"])
     period_note = (
         "Bu HAFTALIK bir yorum: haftanın genel enerjisi + haftaya yayılan "
         "2-3 küçük adım öner." if period == "weekly" else ""

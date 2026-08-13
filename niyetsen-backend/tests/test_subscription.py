@@ -135,3 +135,48 @@ def test_cancellation_after_expiration_locks_access(repo: InMemoryRepository) ->
     )
     assert info.status == "cancelled"
     assert info.has_premium_access is False
+
+
+def test_trial_started_at_iso_string_does_not_500(repo: InMemoryRepository) -> None:
+    """Canlı 500: PostgREST trial_started_at'i str verir; .astimezone patlıyordu."""
+    repo.update_subscription("user-str", subscription_status="trial")
+    row = repo.get_subscription_row("user-str")
+    row["trial_started_at"] = "2026-08-10T08:00:00+00:00"
+    info = subscription_service.get_subscription(repo, "user-str")
+    assert info.status in {"trial", "expired"}
+    assert info.trial_days_remaining >= 0
+
+
+def test_trial_started_at_z_suffix_and_naive_datetime(repo: InMemoryRepository) -> None:
+    repo.update_subscription("user-z", subscription_status="trial")
+    row = repo.get_subscription_row("user-z")
+    row["trial_started_at"] = "2026-08-12T08:00:00Z"
+    info = subscription_service.build_subscription_info(
+        status="trial",
+        trial_started_at=row["trial_started_at"],
+        timezone_name="Europe/Istanbul",
+        has_plan=True,
+        today=date(2026, 8, 13),
+    )
+    assert info.trial_days_remaining == 6
+    naive = datetime(2026, 8, 10, 8, 0)
+    remaining = subscription_service.trial_days_remaining(
+        naive, "Europe/Istanbul", today=date(2026, 8, 13)
+    )
+    assert remaining == 4
+
+
+def test_subscription_http_survives_iso_string_trial(isolated_in_memory_repo) -> None:
+    from fastapi.testclient import TestClient
+    from app.main import app
+
+    user = "http-str-trial"
+    isolated_in_memory_repo.update_subscription(user, subscription_status="trial")
+    isolated_in_memory_repo.get_subscription_row(user)["trial_started_at"] = (
+        "2026-08-11T06:00:00Z"
+    )
+    res = TestClient(app).get("/me/subscription", headers={"X-User-Id": user})
+    assert res.status_code == 200
+    body = res.json()
+    assert body["status"] in {"trial", "expired"}
+    assert "trial_days_remaining" in body

@@ -118,7 +118,11 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
 
     tool_calls: list[ToolCall] = []
     normalized_message = last_user_msg.casefold()
-    if any(marker in normalized_message for marker in TOOL_INTENT_MARKERS):
+    wants_tools = any(marker in normalized_message for marker in TOOL_INTENT_MARKERS)
+
+    async def _detect_tools() -> list[ToolCall]:
+        if not wants_tools:
+            return []
         try:
             raw_calls = await generate_function_calls(
                 last_user_msg,
@@ -129,13 +133,26 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
                     "Listede olmayan hiçbir işlemi çağırma."
                 ),
             )
-            tool_calls = [
+            return [
                 ToolCall(name=call["name"], args=call.get("args", {}))
                 for call in raw_calls
                 if tools.is_allowed(call.get("name", ""))
             ]
         except Exception:  # noqa: BLE001 — araç tespiti sohbeti düşürmemeli
             log.warning("Araç tespiti başarısız; sohbet devam ediyor.", exc_info=True)
+            return []
+
+    async def _retrieve_rag() -> list[str]:
+        try:
+            return await asyncio.to_thread(
+                rag_service.retrieve_for_chat, last_user_msg
+            )
+        except Exception:  # noqa: BLE001
+            log.warning("RAG bağlamı atlandı", exc_info=True)
+            return []
+
+    detected_tools, rag_chunks = await asyncio.gather(_detect_tools(), _retrieve_rag())
+    tool_calls = detected_tools
 
     intent_mode = _use_intent_mode(has_active_plan, plan_has_content, last_user_msg)
 
@@ -153,17 +170,6 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
         preferred_language=preferred_language,
     )
     history = [m.model_dump() for m in req.messages[-CHAT_HISTORY_LIMIT:]]
-
-    # V2 RAG: rehber felsefe/motivasyon/kişisel gelişim bilgi tabanıyla,
-    # bağlama göre konuşur. Hata/gecikme sohbeti asla düşürmez; embedding
-    # senkron olduğundan event loop'u kilitlememek için thread'de çalışır.
-    rag_chunks: list[str] = []
-    try:
-        rag_chunks = await asyncio.to_thread(
-            rag_service.retrieve_for_chat, last_user_msg
-        )
-    except Exception:  # noqa: BLE001
-        log.warning("RAG bağlamı atlandı", exc_info=True)
 
     contents = prompt_builder.build_chat_contents(
         context=prompt_builder.build_context(memory, rag_chunks),
