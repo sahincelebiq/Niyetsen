@@ -54,8 +54,55 @@ def _period_top_category(done_tasks: list) -> tuple[str, int]:
     return top, counts[top]
 
 
+def _mirror_line(
+    all_plans: list[Plan],
+    state: GameState,
+    start: date,
+    end: date,
+) -> str:
+    """Dürüst ayna: en güçlü/zayıf yön + erteleme örüntüsü. Sayıyla utandırma yok."""
+    ranked = sorted(CATEGORIES, key=lambda c: state.points.get(c, 0))
+    weak, strong = ranked[0], ranked[-1]
+    period_tasks = [
+        task
+        for plan in all_plans
+        for day in plan.days
+        for task in day.tasks
+        if task.date and start <= task.date <= end
+    ]
+    silent = sum(1 for t in period_tasks if t.status == "missed_silent")
+    excused = sum(1 for t in period_tasks if t.status == "missed_excused")
+    done = sum(1 for t in period_tasks if t.status == "done")
+    if done == 0 and silent == 0 and excused == 0:
+        return "Henüz yeterli iz yok. Birkaç kanıtlı gün sonra ayna netleşir."
+
+    strong_pts = state.points.get(strong, 0)
+    weak_pts = state.points.get(weak, 0)
+    if strong_pts == weak_pts:
+        trait = "Yönlerin henüz dengede"
+    else:
+        trait = f"{strong} büyüyor; {weak} daha ince kalmış"
+
+    if silent > excused and silent > 0:
+        habit = (
+            "Takıldığın günlerde çoğu zaman sessizce geçtin — "
+            "yüzleşme, zinciri korur."
+        )
+    elif excused > silent and excused > 0:
+        habit = (
+            "Takılınca haber veriyorsun; bu dürüstlük. "
+            "Şimdi aynı dürüstlüğü göreve çevir."
+        )
+    elif done:
+        habit = "Bu dönemde iz bıraktın — ritmi korumak özgüveni büyütür."
+    else:
+        habit = ""
+    return f"{trait}. {habit}".strip()
+
+
 def _build_dashboard(
     all_plans: list[Plan], state: GameState, days_in: int, end: date,
+    start: date | None = None,
 ) -> RecapDashboard:
     """faz8.13/3: ilk günden bugüne gerçek KPI'lar — kural bazlı, Gemini yok."""
     all_tasks = [
@@ -95,6 +142,7 @@ def _build_dashboard(
         days_in=max(days_in, 0),
         plans_count=len(all_plans),
         weekly_completed=weekly,
+        mirror_line=_mirror_line(all_plans, state, start or (end - timedelta(days=6)), end),
     )
 
 
@@ -217,7 +265,7 @@ def build_recap(
         total_points=total_points,
         top_category=top_cat,
         cards=cards,
-        dashboard=_build_dashboard(all_plans, state, days_in, end),
+        dashboard=_build_dashboard(all_plans, state, days_in, end, start=start),
     )
 
 

@@ -19,10 +19,10 @@
 ### 1. RevenueCat Dashboard
 1. [app.revenuecat.com](https://app.revenuecat.com) → proje oluştur
 2. **Project Settings → API keys → Secret keys** → backend için `REVENUECAT_API_KEY`
-3. **Apps** → iOS (`com.niyetsen.app`) + Android (`com.niyetsen.app`) bağla → her biri için **public SDK key** (`appl_` / `goog_`)
+3. **Apps** → iOS (`com.niyetsen.app`) + Android (`com.niyetsenai`) bağla → her biri için **public SDK key** (`appl_` / `goog_`). Play app 2026-08-16’da eklendi; yeniden oluşturma.
 3. **Entitlements** → `premium` oluştur
 4. **Products** → mağaza ürünlerini bağla (aşağıdaki ID'ler örnek):
-   - `niyetsen_monthly` — aylık ~450 TL
+   - `niyetsen_monthly` — aylık **150 TL** (2026-08-16)
    - `niyetsen_yearly` — yıllık ~3.600 TL
 5. **Offerings** → `default` offering, monthly + annual paketler
 6. **Integrations → Webhooks**:

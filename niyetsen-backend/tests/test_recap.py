@@ -84,7 +84,35 @@ def test_recap_endpoint_free_user_gets_paywall():
     assert response.json()["detail"]["code"] == "paywall_required"
 
 
-def test_is_recap_push_due_schedule():
+def test_mirror_line_is_honest_not_shaming():
+    today = date.today()
+    start = today - timedelta(days=4)
+    state = GameState(user_id="u", streak_len=2, best_streak=4)
+    state.points["Disiplin"] = 200
+    for cat in ("İrade", "İstikrar", "Özgüven", "Sosyallik"):
+        state.points[cat] = 40
+    state.points["Özsaygı"] = 0
+    plan = Plan(
+        id="p-mirror", duration_days=5, batch_generated_until=5,
+        start_date=start, days=[
+            PlanDay(day=1, tasks=[Task(
+                id="d1", day=1, title="Koşu", categories=["Disiplin"],
+                status="done", date=start,
+            )]),
+            PlanDay(day=2, tasks=[Task(
+                id="s1", day=2, title="Sessiz", categories=["Özsaygı"],
+                status="missed_silent", date=start + timedelta(days=1),
+            )]),
+        ],
+    )
+    recap = recap_service.build_recap(state=state, plan=plan, period="7d")
+    line = recap.dashboard.mirror_line if recap.dashboard else ""
+    assert "Disiplin" in line
+    assert "Özsaygı" in line
+    assert "sessiz" in line.lower()
+    assert "kaçırdın" not in line.lower()
+    assert "ceza" not in line.lower()
+
     assert not recap_service.is_recap_push_due(13)
     assert recap_service.is_recap_push_due(14)
     assert not recap_service.is_recap_push_due(15)

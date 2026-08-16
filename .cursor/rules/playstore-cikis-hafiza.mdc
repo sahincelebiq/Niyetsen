@@ -8,6 +8,19 @@ alwaysApply: true
 Şahin'in talimatı: uygulamayı **Play Store** için çıkartacağız. Önce hafıza
 + plan; sonraki prompt'ta uygulama. Hiçbir kilitli karar unutulmaz.
 
+## 2026-08-16 kilit (Şahin — henüz BAŞLAMA)
+
+Kuyruk tek kaynak: `docs/SONRAKI_SIRA.md`. “devam et” demeden rapor / mistik /
+örüntü / MiniMax’e geçilmez.
+
+Sıra: Alpha 1.0.1 yayını → (gerekirse aynı AAB dahili teste) → Play abonelik
++ RevenueCat ürün bağlama → paywall UI → raporlar açılır + örüntü → mistik
+akışlar → ana sohbet ajanı. Model: Gemini 3.1 Pro durur; MiniMax-M3 yalnız
+aday. CNN = ConvNet eğitimi değil, 6 kategori örüntü katmanı. v1 fine-tune yok.
+
+Dahili test ≠ Kapalı test (Alpha). Biri diğerini güncellemez. v10 Alpha’da
+inceleniyor; dahili “5 Ağustos” ise o raya yüklenmemiş demektir.
+
 ## Bu oturumda kilitlenen niyet
 
 1. **UYGULAMA AÇIK** (2026-08-02): `/goal` = `docs/PLAYSTORE_GOAL.md` —

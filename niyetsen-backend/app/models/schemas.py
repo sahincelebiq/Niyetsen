@@ -254,6 +254,9 @@ class RecapDashboard(BaseModel):
     days_in: int
     plans_count: int
     weekly_completed: list[int]  # son 8 hafta, eskiden yeniye (gelişim eğrisi)
+    # 2026-08-16 Şahin: panel açılışında 1 cümle ayna (yön + erteleme örüntüsü).
+    # Kaçırılan görev listesi / ceza sayısı YOK.
+    mirror_line: Optional[str] = None
 
 
 class RecapResponse(BaseModel):

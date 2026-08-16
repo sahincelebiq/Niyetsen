@@ -73,6 +73,11 @@ Public leaderboard, Pinterest, fine-tuning.
 - Test: `pytest -q` yeşil; mobil `npx tsc --noEmit`.
 - Kararsızlık: MASTER_PLAN §1 → hafıza → Şahin.
 
+## 2026-08-16 kuyruk
+
+Şahin “devam et” demeden rapor/mistik/örüntü/model işine girme.
+Tek sıra: `docs/SONRAKI_SIRA.md`.
+
 ## Bu sprint çıkış KAPI’sı
 
 - [ ] Su fotoğrafı meyve görevini geçemez (cihaz veya fixture).
