@@ -1,6 +1,7 @@
 """Niyetsen — deneme ve abonelik erişim kuralları (MASTER_PLAN §1.1, §1.7)."""
 from __future__ import annotations
 
+import logging
 from datetime import date, datetime, timedelta, timezone
 from typing import Literal, Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -9,10 +10,20 @@ from app.core.datetimes import coerce_datetime
 from app.models.schemas import SubscriptionInfo
 from app.storage.base import Repository
 
+log = logging.getLogger("niyetsen.subscription")
+
 SubscriptionStatus = Literal["free", "trial", "active", "expired", "cancelled"]
 
 TRIAL_DAYS = 7
 PREMIUM_STATUSES = frozenset({"trial", "active"})
+
+# RevenueCat, girişsiz satın almada bu önekle anonim kimlik üretir. Böyle bir
+# kimliği Supabase user_id sanıp DB'ye yazmak hayalet abonelik satırı doğurur.
+ANONYMOUS_ID_PREFIX = "$RCAnonymousID:"
+
+
+def is_anonymous_app_user_id(app_user_id: str) -> bool:
+    return app_user_id.startswith(ANONYMOUS_ID_PREFIX)
 
 
 def _user_timezone(name: str) -> ZoneInfo:
@@ -171,12 +182,22 @@ def apply_revenuecat_event(
         "UNCANCELLATION",
         "PRODUCT_CHANGE",
         "SUBSCRIPTION_EXTENDED",
+        # Tek seferlik (yenilenmeyen) satın alma da erişim açar.
+        "NON_RENEWING_PURCHASE",
     }
     inactive_events = {
         "CANCELLATION",
         "EXPIRATION",
         "BILLING_ISSUE",
+        # Play'de duraklatılan abonelik: dönem sonunda erişim kapanır.
+        "SUBSCRIPTION_PAUSED",
     }
+
+    if event_type not in active_events and event_type not in inactive_events:
+        log.warning(
+            "RevenueCat: bilinmeyen olay tipi '%s' — yalnız expiration'a bakılıyor",
+            event_type,
+        )
 
     if event_type in active_events:
         repo.update_subscription(app_user_id, subscription_status="active")
@@ -207,6 +228,40 @@ def apply_revenuecat_event(
     return get_subscription(repo, app_user_id)
 
 
+def apply_revenuecat_transfer(
+    repo: Repository,
+    *,
+    transferred_from: list[str],
+    transferred_to: list[str],
+) -> None:
+    """TRANSFER olayı: abonelik başka hesaba taşındı.
+
+    Devreden hesapların erişimi KAPANIR (aksi halde tek satın alma iki hesapta
+    birden premium bırakır — gelir sızıntısı). Devralan hesaplar aktifleşir.
+    Anonim kimlikler yok sayılır.
+    """
+    for old_id in transferred_from:
+        if not old_id or is_anonymous_app_user_id(old_id):
+            continue
+        row = repo.get_subscription_row(old_id)
+        if row.get("subscription_status") != "active":
+            continue
+        if trial_is_active(
+            coerce_datetime(row.get("trial_started_at")),
+            row.get("timezone", "Europe/Istanbul"),
+        ):
+            repo.update_subscription(old_id, subscription_status="trial")
+        else:
+            repo.update_subscription(old_id, subscription_status="expired")
+        log.info("RevenueCat TRANSFER: %s erişimi devredildi", old_id)
+
+    for new_id in transferred_to:
+        if not new_id or is_anonymous_app_user_id(new_id):
+            continue
+        repo.update_subscription(new_id, subscription_status="active")
+        log.info("RevenueCat TRANSFER: %s erişimi devraldı", new_id)
+
+
 def sync_expired_trials(repo: Repository, user_id: str) -> SubscriptionInfo:
     row = repo.get_subscription_row(user_id)
     if row["subscription_status"] != "trial":
@@ -227,7 +282,15 @@ async def sync_from_revenuecat(repo: Repository, user_id: str) -> SubscriptionIn
     sync_expired_trials(repo, user_id)
     try:
         payload = await revenuecat_client.fetch_subscriber(user_id)
-    except revenuecat_client.RevenueCatUnavailable:
+    except revenuecat_client.RevenueCatUnavailable as exc:
+        # SESSİZ KALMA: bu yol satın alma sonrası tek yedek. Çalışmıyorsa
+        # kullanıcı ödedi ama erişemiyor demektir — Sentry/Railway görmeli.
+        log.error(
+            "RevenueCat senkronu yapılamadı (user=%s): %s — "
+            "webhook gelmezse bu kullanıcı ödeme sonrası kilitli kalır.",
+            user_id,
+            exc,
+        )
         return get_subscription(repo, user_id)
 
     active, expires_at = revenuecat_client.entitlement_is_active(payload)

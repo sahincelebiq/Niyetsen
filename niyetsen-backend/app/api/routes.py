@@ -744,7 +744,7 @@ async def upload_proof(
     image_bytes = await photo.read(settings.PROOF_MAX_BYTES + 1)
     mime_type = photo.content_type or ""
     try:
-        proof_service.validate_upload(image_bytes, mime_type)
+        image_bytes = proof_service.prepare_upload(image_bytes, mime_type)
     except proof_service.ProofRejected as e:
         # Geçersiz dosya (yanlış tip/boyut) bir "deneme hakkı" yakmaz.
         raise HTTPException(status_code=400, detail=str(e))
@@ -999,10 +999,9 @@ def my_recap(
     period: str = "14d",
     user_id: str = Depends(get_current_user),
 ) -> RecapResponse:
-    """Niyetsen Raporu (FAZ 8.8 'Wrapped'): story kartları — 14 günlük/aylık özet.
-    Kural bazlı, Gemini çağrılmaz (hız/kota); kutlama tonu, kaçırılanlar sayılmaz.
-    PRO (trial/active/dev) — ücretsiz kullanıcı 402."""
-    _require_pro_modules(user_id)
+    """Niyetsen Raporu: panel (ayna + KPI) herkese açık — kapı içeride.
+    Story kartları yalnız trial/active/dev. Kural bazlı, Gemini yok.
+    Kaçırılan görev / ceza dönmez."""
     if period not in recap_service.PERIOD_DAYS:
         period = "14d"
     profile = repo.get_profile(user_id)
@@ -1018,13 +1017,17 @@ def my_recap(
                 all_plans.append(full)
     except Exception:  # noqa: BLE001 — plan listesi düşerse aktif planla devam
         log.warning("recap: plan listesi okunamadı, aktif planla devam", exc_info=True)
-    return recap_service.build_recap(
+    recap = recap_service.build_recap(
         state=repo.get_state(user_id),
         plan=repo.get_plan(user_id),
         plans=all_plans or None,
         user_name=profile.name or "",
         period=period,
     )
+    info = subscription_service.get_subscription(repo, user_id)
+    if info.status not in ("trial", "active"):
+        recap = recap.model_copy(update={"cards": []})
+    return recap
 
 
 @router.get("/me/profile", response_model=UserProfile)
@@ -1077,20 +1080,54 @@ async def revenuecat_webhook(
     if not authorization or not secrets.compare_digest(authorization, expected):
         raise HTTPException(status_code=401, detail="Geçersiz webhook sırrı.")
     event = payload.event or {}
-    app_user_id = event.get("app_user_id")
+    app_user_id = event.get("app_user_id") or ""
     event_type = event.get("type", "")
-    if not app_user_id:
-        raise HTTPException(status_code=422, detail="app_user_id gerekli.")
     expiration_ms = event.get("expiration_at_ms")
     expiration_at = (
         datetime.fromtimestamp(expiration_ms / 1000, tz=timezone.utc)
         if expiration_ms else None
     )
-    log.info(
-        "RevenueCat webhook: type=%s user=%s",
-        event_type,
-        app_user_id,
-    )
+    log.info("RevenueCat webhook: type=%s user=%s", event_type, app_user_id)
+
+    # TRANSFER olayında app_user_id YOKTUR; taraflar transferred_from/to'dadır.
+    # Eskiden 422 dönüyorduk → RevenueCat sonsuza dek yeniden deniyordu.
+    if event_type == "TRANSFER":
+        subscription_service.apply_revenuecat_transfer(
+            repo,
+            transferred_from=[str(x) for x in (event.get("transferred_from") or [])],
+            transferred_to=[str(x) for x in (event.get("transferred_to") or [])],
+        )
+        target = next(
+            (
+                str(x) for x in (event.get("transferred_to") or [])
+                if x and not subscription_service.is_anonymous_app_user_id(str(x))
+            ),
+            "",
+        )
+        if target:
+            return subscription_service.get_subscription(repo, target)
+        return SubscriptionInfo(
+            status="free", trial_started_at=None, trial_days_remaining=0,
+            has_premium_access=False, show_paywall=False,
+        )
+
+    if not app_user_id:
+        raise HTTPException(status_code=422, detail="app_user_id gerekli.")
+
+    # Girişsiz satın alma: RC anonim kimlik gönderir. DB'ye yazmak hayalet satır
+    # üretir. 200 döneriz ki RevenueCat yeniden denemesin; kullanıcı giriş
+    # yapınca Purchases.logIn + /me/subscription/sync durumu kurtarır.
+    if subscription_service.is_anonymous_app_user_id(app_user_id):
+        log.warning(
+            "RevenueCat webhook: anonim kimlik yok sayıldı (type=%s) — "
+            "kullanıcı giriş yapınca sync ile hizalanacak.",
+            event_type,
+        )
+        return SubscriptionInfo(
+            status="free", trial_started_at=None, trial_days_remaining=0,
+            has_premium_access=False, show_paywall=False,
+        )
+
     return subscription_service.apply_revenuecat_event(
         repo,
         app_user_id=app_user_id,
@@ -1225,7 +1262,7 @@ async def fortune_photo(
         image_bytes = await upload.read(settings.PROOF_MAX_BYTES + 1)
         mime_type = upload.content_type or ""
         try:
-            proof_service.validate_upload(image_bytes, mime_type)
+            image_bytes = proof_service.prepare_upload(image_bytes, mime_type)
         except proof_service.ProofRejected as exc:
             raise HTTPException(status_code=400, detail=str(exc))
         images.append((image_bytes, mime_type))
