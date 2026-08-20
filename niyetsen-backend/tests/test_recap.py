@@ -77,11 +77,15 @@ def test_recap_endpoint_invalid_period_falls_back():
     assert response.json()["period"] == "14d"
 
 
-def test_recap_endpoint_free_user_gets_paywall():
+def test_recap_endpoint_free_user_gets_dashboard_not_story():
+    """Kapı içeride: panel + ayna ücretsiz; hikâye kartları PRO."""
     repo.update_subscription("recap-free", subscription_status="free")
     response = client.get("/me/recap", headers={"X-User-Id": "recap-free"})
-    assert response.status_code == 402
-    assert response.json()["detail"]["code"] == "paywall_required"
+    assert response.status_code == 200
+    body = response.json()
+    assert body["cards"] == []
+    assert body["dashboard"] is not None
+    assert "mirror_line" in body["dashboard"]
 
 
 def test_mirror_line_is_honest_not_shaming():

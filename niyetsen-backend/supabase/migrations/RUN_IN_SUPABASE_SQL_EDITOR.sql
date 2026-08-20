@@ -172,4 +172,4 @@ where relnamespace = 'public'::regnamespace and relname = 'league_members';
 -- from information_schema.role_table_grants
 -- where table_schema = 'public'
 --   and grantee in ('anon', 'authenticated');
--- BEKLENEN leftover_grants: 0  (şu an canlıda 252 — I çalışınca 0)
+-- BEKLENEN leftover_grants: 0  (2026-08-20 uygulandı)

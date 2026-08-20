@@ -19,7 +19,7 @@ TaskStatus = Literal["pending", "done", "missed_silent", "missed_excused"]
 class ChatMessage(BaseModel):
     id: Optional[str] = None
     role: Literal["user", "assistant"]
-    content: str
+    content: str = Field(min_length=1, max_length=4000)
 
 
 class CollectedIntent(BaseModel):
@@ -36,7 +36,7 @@ class CollectedIntent(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    messages: list[ChatMessage]
+    messages: list[ChatMessage] = Field(max_length=40)
     collected: CollectedIntent = Field(default_factory=CollectedIntent)
 
 
@@ -504,7 +504,7 @@ class LeagueResponse(BaseModel):
 
 # faz8.13/2b — mistik rehber sohbeti
 class FortuneChatRequest(BaseModel):
-    messages: list[ChatMessage] = Field(default_factory=list)
+    messages: list[ChatMessage] = Field(default_factory=list, max_length=40)
 
 
 class FortuneChatResponse(BaseModel):

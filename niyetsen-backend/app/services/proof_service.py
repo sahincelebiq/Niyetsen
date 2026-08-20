@@ -28,6 +28,44 @@ class ProofRejected(ValueError):
     """Dosya kurallara uymuyor (boyut/tip) — 400 döner."""
 
 
+def _strip_jpeg_exif(image_bytes: bytes) -> bytes:
+    """JPEG APP1 (EXIF/GPS) ve yorum segmentlerini at. Parse bozulursa orijinali koru."""
+    if len(image_bytes) < 4 or image_bytes[:2] != b"\xff\xd8":
+        return image_bytes
+    out = bytearray(b"\xff\xd8")
+    i = 2
+    try:
+        while i + 1 < len(image_bytes):
+            if image_bytes[i] != 0xFF:
+                out.extend(image_bytes[i:])
+                break
+            marker = image_bytes[i + 1]
+            if marker == 0xDA:  # SOS — görüntü verisi başlar
+                out.extend(image_bytes[i:])
+                break
+            if marker in (0xD8, 0xD9) or (0xD0 <= marker <= 0xD7):
+                i += 2
+                continue
+            if i + 3 >= len(image_bytes):
+                out.extend(image_bytes[i:])
+                break
+            length = int.from_bytes(image_bytes[i + 2 : i + 4], "big")
+            segment_end = i + 2 + length
+            if segment_end > len(image_bytes) or length < 2:
+                out.extend(image_bytes[i:])
+                break
+            # APP1 EXIF, APP13 IPTC, COM — konum/cihaz sızmasın
+            if marker in (0xE1, 0xED, 0xFE):
+                i = segment_end
+                continue
+            out.extend(image_bytes[i:segment_end])
+            i = segment_end
+        stripped = bytes(out)
+        return stripped if len(stripped) >= 100 else image_bytes
+    except Exception:  # noqa: BLE001 — strip başarısızsa yüklemeyi düşürme
+        return image_bytes
+
+
 def validate_upload(image_bytes: bytes, mime_type: str) -> None:
     if mime_type not in ALLOWED_MIME:
         raise ProofRejected("Sadece JPEG veya PNG kabul edilir.")
@@ -37,6 +75,14 @@ def validate_upload(image_bytes: bytes, mime_type: str) -> None:
         raise ProofRejected("Fotoğraf okunamadı.")
     if not any(image_bytes.startswith(signature) for signature in FILE_SIGNATURES[mime_type]):
         raise ProofRejected("Dosya içeriği bildirilen JPEG/PNG türüyle eşleşmiyor.")
+
+
+def prepare_upload(image_bytes: bytes, mime_type: str) -> bytes:
+    """Tip/boyut doğrula, JPEG EXIF/GPS'i düş, Vision ve Storage'a temiz bayt ver."""
+    validate_upload(image_bytes, mime_type)
+    if mime_type == "image/jpeg":
+        return _strip_jpeg_exif(image_bytes)
+    return image_bytes
 
 
 async def evaluate_proof(
@@ -53,7 +99,7 @@ async def evaluate_proof(
     day_theme: str = "",
     task_context: str = "",
 ) -> ProofResult:
-    validate_upload(image_bytes, mime_type)
+    image_bytes = prepare_upload(image_bytes, mime_type)
 
     # 3. deneme: beyanla kabul — Vision'a hiç gitmeden onayla, maliyet de tasarruf.
     if attempt_no >= settings.PROOF_MAX_ATTEMPTS:
