@@ -308,3 +308,74 @@ def test_rights_endpoint_free_user():
     assert body["rights"]["tarot"]["limit"] == 1
     assert body["rights"]["kahve"]["limit"] in (1, 3)
     assert body["rights"]["burc"]["limit"] == -1
+
+
+# ---------------- Mistik derinlik: foto falı RAG bağı (faz8.14) ----------------
+def test_photo_fortune_prompt_carries_symbol_knowledge(monkeypatch):
+    """Kahve/el falı eskiden RAG'siz çalışıyordu — yorumlar sözlüksüzdü.
+
+    Sembol sözlüğünün (knowledge/kahve_fali.md) gerçekten prompt'a girdiğini
+    doğrular. Girmezse yorumlar yine yüzeyselleşir ve kimse fark etmez.
+    """
+    captured: dict[str, str] = {}
+
+    async def capturing(prompt, images, **kwargs):
+        captured["prompt"] = prompt
+        return {
+            "is_valid_photo": True,
+            "symbols": ["kuş"],
+            "interpretation": "Telvede bir kuş; bugün küçük bir adım at.",
+        }
+
+    monkeypatch.setattr(fortune_service, "generate_json_with_images", capturing)
+
+    user = "kahve_rag_user"
+    grant_all_consents(user)
+    resp = client.post(
+        "/fortune/photo/kahve",
+        headers={"X-User-Id": user},
+        files={"photo": ("f.jpg", JPEG_BYTES, "image/jpeg")},
+    )
+    assert resp.status_code == 200
+    prompt = captured["prompt"]
+    assert "BİLGİ TABANI" in prompt
+    assert "kahve_fali" in prompt
+
+
+def test_palm_fortune_prompt_uses_palm_knowledge_not_coffee(monkeypatch):
+    """El falı kahve sözlüğünü çekmemeli — kaynak ayrımı doğru olmalı."""
+    captured: dict[str, str] = {}
+
+    async def capturing(prompt, images, **kwargs):
+        captured["prompt"] = prompt
+        return {
+            "is_valid_photo": True,
+            "symbols": ["yaşam çizgisi"],
+            "interpretation": "Çizgiler bugünkü niyetine ayna tutuyor.",
+        }
+
+    monkeypatch.setattr(fortune_service, "generate_json_with_images", capturing)
+
+    user = "el_rag_user"
+    grant_all_consents(user)
+    resp = client.post(
+        "/fortune/photo/el",
+        headers={"X-User-Id": user},
+        files={"photo": ("f.jpg", JPEG_BYTES, "image/jpeg")},
+    )
+    assert resp.status_code == 200
+    prompt = captured["prompt"]
+    assert "el_fali" in prompt
+    assert "kahve_fali" not in prompt
+
+
+def test_palm_knowledge_refuses_lifespan_reading():
+    """'Yaşam çizgisi kısa' korkusu bilgi tabanında açıkça yasaklanmış olmalı."""
+    from app.services import rag_service
+
+    chunks = rag_service.retrieve(
+        "yaşam çizgim kısa ne kadar yaşayacağım", sources=["el_fali"]
+    )
+    joined = " ".join(chunks).lower()
+    assert "ömür" in joined
+    assert "okunmaz" in joined or "i̇lgi̇si̇z" in joined or "ilgisiz" in joined
