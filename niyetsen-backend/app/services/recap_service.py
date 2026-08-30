@@ -14,14 +14,19 @@ Tasarım kararları:
 from __future__ import annotations
 
 from datetime import date, timedelta
+from zoneinfo import ZoneInfo
 
 from app.config import CATEGORIES
 from app.models.schemas import (
-    GameState, Plan, RecapCard, RecapDashboard, RecapResponse,
+    GameState, Plan, PointLogRecord, RecapCard, RecapDashboard, RecapResponse,
 )
 from app.services.scoring_service import overall_rank, rank_for
 
 PERIOD_DAYS = {"7d": 7, "14d": 14, "30d": 30}
+
+_WEEKDAY_NAMES = (
+    "Pazartesi", "Salı", "Çarşamba", "Perşembe", "Cuma", "Cumartesi", "Pazar",
+)
 
 
 def _done_tasks_in_period(plans: list[Plan], start: date, end: date) -> list:
@@ -100,9 +105,92 @@ def _mirror_line(
     return f"{trait}. {habit}".strip()
 
 
+def _hour_done_from_log(
+    point_log: list[PointLogRecord] | None, tz_name: str
+) -> list[int]:
+    """+50 görev tamamlamalarının kullanıcı saat dilimindeki saat dağılımı."""
+    if not point_log:
+        return []
+    try:
+        tz = ZoneInfo(tz_name or "Europe/Istanbul")
+    except Exception:  # noqa: BLE001 — bozuk TZ raporu düşürmesin
+        tz = ZoneInfo("Europe/Istanbul")
+    hours = [0] * 24
+    hit = False
+    for record in point_log:
+        if record.delta <= 0 or not record.reason.startswith("görev tamamlandı"):
+            continue
+        created = record.created_at
+        if created.tzinfo is None:
+            from datetime import timezone as _tz
+
+            created = created.replace(tzinfo=_tz.utc)
+        hours[created.astimezone(tz).hour] += 1
+        hit = True
+    return hours if hit else []
+
+
+def _build_insights(
+    *,
+    weekday_done: list[int],
+    weekday_missed: list[int],
+    hour_done: list[int],
+    bonus_offered: int,
+    bonus_completed: int,
+    state: GameState,
+) -> list[str]:
+    """Dürüst, utandırmayan içgörü cümleleri (T8) — panel aynası, story değil.
+
+    Öncelik sırası bilinçli: kaçan gün → üretken/sessiz saat → bonus →
+    zayıf kategori → güçlü gün. En fazla 5 satır (panel şişmesin).
+    """
+    insights: list[str] = []
+
+    if weekday_missed and max(weekday_missed) > 0:
+        worst = weekday_missed.index(max(weekday_missed))
+        insights.append(
+            f"{_WEEKDAY_NAMES[worst]} günleri görev daha sık kaçıyor — "
+            "o güne 2 dakikalık mini görev koy, zincir kopmasın."
+        )
+    if hour_done and sum(hour_done) >= 3:
+        peak = hour_done.index(max(hour_done))
+        insights.append(
+            f"En üretken saatin {peak:02d}:00 civarı — kritik görevi o aralığa al."
+        )
+        awake = [(h, c) for h, c in enumerate(hour_done) if 8 <= h <= 22]
+        if awake:
+            quiet = min(awake, key=lambda hc: hc[1])
+            if quiet[1] < max(hour_done):
+                insights.append(
+                    f"{quiet[0]:02d}:00 civarı genelde sessiz geçiyor — "
+                    "oraya görev koyma ya da en küçük halkayı dene."
+                )
+    if bonus_offered:
+        insights.append(
+            f"{bonus_offered} bonus görev aldın, {bonus_completed} tanesini tamamladın."
+        )
+    ranked = sorted(CATEGORIES, key=lambda c: state.points.get(c, 0))
+    weak, strong = ranked[0], ranked[-1]
+    if state.points.get(strong, 0) > state.points.get(weak, 0):
+        insights.append(
+            f"{strong} yükselirken {weak} geride kalmış — "
+            f"bu hafta bir {weak} görevini öne al."
+        )
+    if weekday_done and max(weekday_done) > 0:
+        best = weekday_done.index(max(weekday_done))
+        insights.append(
+            f"En güçlü günün {_WEEKDAY_NAMES[best]} — zor görevleri oraya taşı."
+        )
+    return insights[:5]
+
+
 def _build_dashboard(
     all_plans: list[Plan], state: GameState, days_in: int, end: date,
     start: date | None = None,
+    *,
+    point_log: list[PointLogRecord] | None = None,
+    timezone_name: str = "",
+    bonus_counts: tuple[int, int] | None = None,
 ) -> RecapDashboard:
     """faz8.13/3: ilk günden bugüne gerçek KPI'lar — kural bazlı, Gemini yok."""
     all_tasks = [
@@ -129,6 +217,19 @@ def _build_dashboard(
         weekly.append(
             sum(1 for t in done if t.date and w_start <= t.date <= w_end)
         )
+    # T8 örüntüleri: hafta günü dağılımı (Pzt..Paz) — yapılan + kaçırılan.
+    weekday_done = [0] * 7
+    weekday_missed = [0] * 7
+    for task in all_tasks:
+        if not task.date:
+            continue
+        idx = task.date.weekday()
+        if task.status == "done":
+            weekday_done[idx] += 1
+        elif task.status in ("missed_silent", "missed_excused"):
+            weekday_missed[idx] += 1
+    hour_done = _hour_done_from_log(point_log, timezone_name)
+    bonus_offered, bonus_completed = bonus_counts or (0, 0)
     return RecapDashboard(
         total_tasks=total,
         completed_tasks=len(done),
@@ -143,6 +244,19 @@ def _build_dashboard(
         plans_count=len(all_plans),
         weekly_completed=weekly,
         mirror_line=_mirror_line(all_plans, state, start or (end - timedelta(days=6)), end),
+        weekday_done=weekday_done,
+        weekday_missed=weekday_missed,
+        hour_done=hour_done,
+        bonus_offered=bonus_offered,
+        bonus_completed=bonus_completed,
+        insights=_build_insights(
+            weekday_done=weekday_done,
+            weekday_missed=weekday_missed,
+            hour_done=hour_done,
+            bonus_offered=bonus_offered,
+            bonus_completed=bonus_completed,
+            state=state,
+        ),
     )
 
 
@@ -154,6 +268,9 @@ def build_recap(
     user_name: str = "",
     period: str = "14d",
     today: date | None = None,
+    point_log: list[PointLogRecord] | None = None,
+    timezone_name: str = "",
+    bonus_counts: tuple[int, int] | None = None,
 ) -> RecapResponse:
     """Story kartlarını üret. Saf fonksiyon — test edilebilir, yan etkisiz.
 
@@ -265,7 +382,12 @@ def build_recap(
         total_points=total_points,
         top_category=top_cat,
         cards=cards,
-        dashboard=_build_dashboard(all_plans, state, days_in, end, start=start),
+        dashboard=_build_dashboard(
+            all_plans, state, days_in, end, start=start,
+            point_log=point_log,
+            timezone_name=timezone_name,
+            bonus_counts=bonus_counts,
+        ),
     )
 
 

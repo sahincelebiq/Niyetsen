@@ -1,5 +1,6 @@
 from datetime import date, datetime, timezone
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
@@ -11,6 +12,11 @@ from app.services import intent_service
 from app.storage.repository import InMemoryRepository, repo
 
 client = TestClient(app)
+
+
+@pytest.fixture(autouse=True)
+def _skip_bonus_wait(monkeypatch):
+    monkeypatch.setattr(bonus_service, "BONUS_MIN_COMPLETE_SECONDS", 0)
 
 
 def test_bonus_completion_awards_ten_points_once():
@@ -41,7 +47,7 @@ def test_bonus_completion_awards_ten_points_once():
     ]) == 1
 
 
-def test_chat_yaptim_completes_active_bonus_without_model(monkeypatch):
+def test_chat_yaptim_does_not_complete_bonus(monkeypatch):
     user_id = "bonus-chat-user"
     client.post(
         "/me/consent",
@@ -56,10 +62,16 @@ def test_chat_yaptim_completes_active_bonus_without_model(monkeypatch):
         "/bonus/offer", headers={"X-User-Id": user_id}
     ).json()
 
-    async def should_not_run(*args, **kwargs):
-        raise AssertionError("Bonus onayı modele gitmemeli")
+    async def fake_chat(*args, **kwargs):
+        from app.models.schemas import ChatResponse, CollectedIntent
 
-    monkeypatch.setattr(intent_service, "generate_json", should_not_run)
+        return ChatResponse(
+            reply="Bonus onayı sohbetten değil, Bonus ekranından yapılır.",
+            ready_for_plan=False,
+            collected=CollectedIntent(),
+        )
+
+    monkeypatch.setattr(intent_service, "handle_chat", fake_chat)
     response = client.post(
         "/chat",
         headers={"X-User-Id": user_id},
@@ -70,8 +82,22 @@ def test_chat_yaptim_completes_active_bonus_without_model(monkeypatch):
         },
     )
     assert response.status_code == 200
-    assert "+10 puan" in response.json()["reply"]
-    assert repo.get_state(user_id).points[offer["category"]] == 10
+    assert "+10 puan" not in response.json()["reply"]
+    assert repo.get_state(user_id).points[offer["category"]] == 0
+
+
+def test_bonus_complete_rejected_when_too_soon(monkeypatch):
+    monkeypatch.setattr(bonus_service, "BONUS_MIN_COMPLETE_SECONDS", 45)
+    user_id = "bonus-too-soon"
+    offer = client.post("/bonus/offer", headers={"X-User-Id": user_id})
+    assert offer.status_code == 200
+    body = offer.json()
+    resp = client.post(
+        f"/bonus/{body['id']}/complete",
+        json={"completion_id": "too-soon-id-xx"},
+        headers={"X-User-Id": user_id},
+    )
+    assert resp.status_code == 425
 
 
 def test_notification_cron_is_timezone_and_token_idempotent(monkeypatch):

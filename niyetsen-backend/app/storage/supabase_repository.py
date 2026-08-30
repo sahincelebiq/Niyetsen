@@ -1070,6 +1070,14 @@ class SupabaseRepository(Repository):
         }).execute().data
         return bool(result)
 
+    def count_bonus_offers(self, user_id: str) -> tuple[int, int]:
+        rows = (
+            self._db.table("bonus_offers").select("status")
+            .eq("user_id", user_id).execute().data
+        ) or []
+        completed = sum(1 for row in rows if row.get("status") == "completed")
+        return len(rows), completed
+
     def get_subscription_row(self, user_id: str) -> dict:
         self._ensure_user(user_id)
         row = self._db.table("users").select(
@@ -1239,6 +1247,19 @@ class SupabaseRepository(Repository):
             .execute().data
         )
         return [dict(row) for row in rows]
+
+    def league_rank(self, user_id: str) -> Optional[int]:
+        member = self.league_get_member(user_id)
+        if not member:
+            return None
+        result = (
+            self._db.table("league_members")
+            .select("user_id", count="exact")
+            .gt("score", int(member.get("score") or 0))
+            .execute()
+        )
+        higher = result.count if result.count is not None else len(result.data or [])
+        return int(higher) + 1
 
     def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
         rows = (

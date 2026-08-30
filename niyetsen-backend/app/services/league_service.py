@@ -91,6 +91,13 @@ def get_board(repository: Repository, user_id: str) -> LeagueResponse:
             rank=index,
             is_me=is_me,
         ))
+    if member is not None and my_rank is None:
+        # İlk 50 dışında da gerçek sıranı gör (release QA T9). Degrade: hata
+        # panoyu düşürmez, yalnız sıra boş kalır.
+        try:
+            my_rank = repository.league_rank(user_id)
+        except Exception:  # noqa: BLE001
+            my_rank = None
     return LeagueResponse(
         opted_in=member is not None,
         alias=member["alias"] if member else None,

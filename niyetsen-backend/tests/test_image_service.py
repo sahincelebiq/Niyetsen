@@ -112,8 +112,30 @@ def test_should_use_gemini_for_specific_task_types(monkeypatch):
     assert image_service.should_use_gemini_image(
         title="Kadıköy sahil yürüyüşü",
         keyword="istanbul seaside walk",
+        task_type="kişisel_gelişim",
+    )
+    assert not image_service.should_use_gemini_image(
+        title="İstanbul Üniversitesinde ders",
+        keyword="istanbul university campus",
         task_type="yer",
     )
+
+
+def test_gemini_prompt_varies_and_avoids_lifestyle_clone():
+    first = image_service.build_gemini_visual_prompt(
+        title="İstanbul Üniversitesinde kütüphane çalışması",
+        keyword="istanbul university library",
+        city="İstanbul",
+    )
+    second = image_service.build_gemini_visual_prompt(
+        title="Kadıköy sahilde yürüyüş",
+        keyword="kadikoy seaside walk",
+        city="İstanbul",
+    )
+    assert "warm natural light" not in first.lower()
+    assert "lifestyle photograph" not in first.lower()
+    assert "istanbul" in first.lower() or "kütüphane" in first.lower()
+    assert first != second
 
 
 def test_should_use_gemini_by_ratio(monkeypatch):

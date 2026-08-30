@@ -164,6 +164,73 @@ def test_build_recap_aggregates_all_plans_and_period_trait():
     intro = next(c for c in recap.cards if c.kind == "intro")
     assert "2 niyeti" in intro.subtitle
 
+def test_dashboard_patterns_hours_and_bonus_insights():
+    """Release QA T8: gün/saat örüntüsü + bonus sayıları + dürüst içgörüler.
+    Story kartlarında kaçırılan yine GÖSTERİLMEZ (Wrapped kilidi)."""
+    from datetime import datetime, timezone
+
+    from app.models.schemas import PointLogRecord
+
+    today = date(2026, 8, 26)  # Çarşamba
+    monday = today - timedelta(days=2)
+    plan = Plan(
+        id="p-pattern", duration_days=7, batch_generated_until=7,
+        start_date=monday, days=[
+            PlanDay(day=1, tasks=[Task(
+                id="pd1", day=1, title="Pazartesi görevi",
+                categories=["Disiplin"], status="done", date=monday,
+            )]),
+            PlanDay(day=2, tasks=[Task(
+                id="pm1", day=2, title="Salı görevi",
+                categories=["İrade"], status="missed_silent",
+                date=monday + timedelta(days=1),
+            )]),
+        ],
+    )
+    state = GameState(user_id="u")
+    state.points["Disiplin"] = 150
+    # 18:30 UTC = 21:30 İstanbul → saat kovası 21. Üç kayıt: içgörü eşiği ≥3.
+    log_entries = [
+        PointLogRecord(
+            user_id="u", category="Disiplin", delta=50,
+            reason="görev tamamlandı",
+            created_at=datetime(2026, 8, 20 + i, 18, 30, tzinfo=timezone.utc),
+        )
+        for i in range(3)
+    ]
+    recap = recap_service.build_recap(
+        state=state, plan=plan, period="7d", today=today,
+        point_log=log_entries,
+        timezone_name="Europe/Istanbul",
+        bonus_counts=(4, 2),
+    )
+    dash = recap.dashboard
+    assert dash is not None
+    assert dash.weekday_done[0] == 1          # Pazartesi tamamlanan
+    assert dash.weekday_missed[1] == 1        # Salı sessiz kaçırma
+    assert dash.hour_done[21] == 3            # İstanbul saatiyle 21:00
+    assert dash.bonus_offered == 4 and dash.bonus_completed == 2
+    assert any("bonus" in line for line in dash.insights)
+    assert any("üretken saat" in line for line in dash.insights)
+    # Utandırma yasak + Wrapped kilidi: story kartlarında kaçırılan geçmez.
+    assert all("yine yapmadın" not in line for line in dash.insights)
+    for card in recap.cards:
+        assert "kaçır" not in card.subtitle.lower()
+        assert "ceza" not in card.subtitle.lower()
+
+
+def test_dashboard_patterns_degrade_without_log():
+    """Log/bonus verisi yoksa alanlar boş kalır — rapor düşmez."""
+    recap = recap_service.build_recap(
+        state=GameState(user_id="u"), plan=_plan_with_done_tasks(2),
+    )
+    dash = recap.dashboard
+    assert dash is not None
+    assert dash.hour_done == []
+    assert dash.bonus_offered == 0
+    assert len(dash.weekday_done) == 7
+
+
 def test_dashboard_kpis_all_time():
     """faz8.13/3: dashboard ilk günden bugüne gerçek KPI'ları taşır."""
     state = GameState(user_id="u", streak_len=2, best_streak=5)

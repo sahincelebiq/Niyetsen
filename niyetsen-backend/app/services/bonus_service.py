@@ -2,12 +2,19 @@
 from __future__ import annotations
 
 import uuid
-from datetime import date
+from datetime import date, datetime, timezone
 
 from app.config import BONUS_POINTS
 from app.models.schemas import BonusOffer, BonusOfferResponse
 from app.services.bonus_pool import pick_bonus
 from app.storage.base import Repository
+
+# Şahin: Yaptım anında +10 değil; kısa süre görevle kal.
+BONUS_MIN_COMPLETE_SECONDS = 45
+
+
+class BonusTooSoonError(Exception):
+    """Teklifin üzerinden min süre geçmeden tamamlama."""
 
 
 def _response(offer: BonusOffer) -> BonusOfferResponse:
@@ -19,6 +26,7 @@ def _response(offer: BonusOffer) -> BonusOfferResponse:
         day=offer.day,
         status=offer.status,
         points=BONUS_POINTS,
+        offered_at=offer.offered_at,
     )
 
 
@@ -52,6 +60,16 @@ def complete(
     offer_id: str,
     completion_id: str,
 ) -> bool:
+    offer = repository.get_active_bonus(user_id)
+    if offer is not None and offer.id == offer_id:
+        offered_at = offer.offered_at
+        if offered_at.tzinfo is None:
+            offered_at = offered_at.replace(tzinfo=timezone.utc)
+        elapsed = (datetime.now(timezone.utc) - offered_at).total_seconds()
+        if elapsed < BONUS_MIN_COMPLETE_SECONDS:
+            raise BonusTooSoonError(
+                "Bonus görevi henüz yeni. Metni oku, hareketi yap, sonra onayla."
+            )
     return repository.claim_bonus_completion(
         user_id, offer_id, completion_id
     )

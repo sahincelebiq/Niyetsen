@@ -142,10 +142,20 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
             log.warning("Araç tespiti başarısız; sohbet devam ediyor.", exc_info=True)
             return []
 
+    # Release QA T3: kişi bazlı RAG — burç + zayıf kategoriler sorguya ipucu
+    # olarak eklenir; aynı soru farklı kullanıcıda farklı bilgi getirir.
+    weak_categories = (
+        [c for c, _ in sorted(state.points.items(), key=lambda kv: kv[1])[:2]]
+        if state is not None else []
+    )
+    profile_hint = " ".join(filter(None, [zodiac, *weak_categories]))
+
     async def _retrieve_rag() -> list[str]:
         try:
             return await asyncio.to_thread(
-                rag_service.retrieve_for_chat, last_user_msg
+                rag_service.retrieve_for_chat,
+                last_user_msg,
+                profile_hint=profile_hint,
             )
         except Exception:  # noqa: BLE001
             log.warning("RAG bağlamı atlandı", exc_info=True)

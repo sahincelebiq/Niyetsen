@@ -23,6 +23,9 @@ Niyetsen uses two Railway services from the same repository and backend root.
 - **Önerilen (direct mod):** API ile aynı Supabase env'leri + `CRON_EXECUTION_MODE=direct`
   - `ENV=prod`, `USE_SUPABASE_DB=true`, `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`
   - `CRON_SECRET` (API ile aynı değer — doğrulama scriptleri için)
+  - **`CRON_SKIP_PUSH=false` (prod cron):** `true` ise günlük görev push’u hiç gitmez.
+    Lokal/örnek varsayılan `true` (spam yok). Expo Go uzak push taşımaz; lisans
+    testi EAS/Play derlemesi + token (onboarding veya Profil) ister.
 - **Yedek (http mod):** `API_BASE_URL` + `CRON_SECRET` (yavaş / timeout riski)
 - Senkron: `python -m scripts.sync_cron_railway_env`
 - Railway runs this service every five minutes in UTC. The API determines each

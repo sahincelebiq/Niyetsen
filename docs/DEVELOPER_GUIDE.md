@@ -152,6 +152,21 @@ Full instructions, required prod variables, and cron pause/resume:
 
 Mobile is built & submitted via **EAS** (`mobile/eas.json`).
 
+### RAG bilgi tabanı güncelleme (T6 — içerik tazeliği)
+
+- Kaynak: `niyetsen-backend/knowledge/*.md`. Yeni dosya eklemek/yeniyi yazmak
+  yeterlidir — `rag_service` başlıkları otomatik chunk'lar, dosya adı `source`
+  olur. Deploy'da klasör Railway imajına COPY'lenir; **tazelik = redeploy**.
+- Embedding disk önbelleği içerik hash'iyle anahtarlanır: metin değişince
+  ilgili chunk otomatik yeniden embed edilir, elle temizlik gerekmez.
+- Sohbette varsayılan kaynaklar `rag_service._CHAT_DEFAULT_SOURCES`; konu
+  tetikleyicileri `_TOPIC_TRIGGERS`. Yeni dosyayı sohbete sokmak için buraya
+  ekle (ör. `kategoriler`, `burc_gelisim` — 2026-08-30).
+- Kişi bazlı RAG: `/chat` sorgusuna burç + zayıf kategori ipucu eklenir
+  (`retrieve_for_chat(profile_hint=…)`); kaynak seçimi yalnız mesaja bakar.
+- Periyodik/web tabanlı otomatik içerik çekme v1'de YOK (araç listesi kilitli);
+  güncel bilgi ihtiyacı içerik dosyasını güncelleyip deploy ederek karşılanır.
+
 ---
 
 ## 6. Working conventions (from `CLAUDE.md`)

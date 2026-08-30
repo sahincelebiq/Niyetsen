@@ -57,6 +57,8 @@ Logda `boot: env=...` satırını ara (main.py'nin ilk işi — 2026-07-29'da ek
 
 - [ ] Cron servisi Config-as-code = `/railway.cron.toml` (A.1 — tek seferlik).
 - [ ] Web + cron Variables eşit: Supabase üçlüsü + `ENV=prod` + `CRON_SECRET`.
+- [ ] Prod cron: `CRON_SKIP_PUSH=false` — aksi halde günlük görev bildirimi
+      kod doğru olsa da gitmez (örnek/lokal varsayılan `true`).
 - [ ] Sentry alarmı: "Deploy Crashed" yerine gerçek hata izi için SENTRY_DSN set.
 - [ ] `GEMINI_MODEL=gemini-3.1-pro-preview` geçişi sonrası logda "fallback"
       taraması yap — sık görünüyorsa preview kota/erişim sorunu var demektir.

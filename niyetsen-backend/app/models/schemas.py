@@ -228,6 +228,7 @@ class StateResponse(BaseModel):
     freeze_tokens: int
     excuse_count: int
     silent_miss_streak: int
+    yesterday_silent_misses: int = 0
 
 
 # ---------- Niyetsen Raporu / "Wrapped" (FAZ 8.8) ----------
@@ -257,6 +258,14 @@ class RecapDashboard(BaseModel):
     # 2026-08-16 Şahin: panel açılışında 1 cümle ayna (yön + erteleme örüntüsü).
     # Kaçırılan görev listesi / ceza sayısı YOK.
     mirror_line: Optional[str] = None
+    # 2026-08-30 Şahin (release QA): derin davranış örüntüleri — PANELDE dürüst
+    # ayna; story kartlarında kaçırılan yine GÖSTERİLMEZ (Wrapped kilidi).
+    weekday_done: list[int] = Field(default_factory=list)    # Pzt..Paz (7 öğe)
+    weekday_missed: list[int] = Field(default_factory=list)  # Pzt..Paz (7 öğe)
+    hour_done: list[int] = Field(default_factory=list)       # 0-23, kullanıcı TZ
+    bonus_offered: int = 0
+    bonus_completed: int = 0
+    insights: list[str] = Field(default_factory=list)        # dürüst içgörü cümleleri
 
 
 class RecapResponse(BaseModel):
@@ -423,6 +432,7 @@ class BonusOfferResponse(BaseModel):
     day: dt_date
     status: BonusStatus
     points: int
+    offered_at: Optional[datetime] = None
 
 
 # ---------- V2: Fal modülü (FAZ 7) ----------

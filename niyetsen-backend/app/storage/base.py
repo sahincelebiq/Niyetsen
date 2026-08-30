@@ -236,6 +236,11 @@ class Repository(ABC):
         self, user_id: str, offer_id: str, completion_id: str
     ) -> bool: ...
 
+    def count_bonus_offers(self, user_id: str) -> tuple[int, int]:
+        """(verilen, tamamlanan) bonus sayıları — rapor örüntüleri (T8).
+        Varsayılan (0, 0): rapor bonus satırını sessizce atlar."""
+        return (0, 0)
+
     @abstractmethod
     def get_subscription_row(self, user_id: str) -> dict: ...
 
@@ -287,6 +292,11 @@ class Repository(ABC):
     @abstractmethod
     def league_top(self, limit: int = 50) -> list[dict]:
         """Puana göre ilk N üye: [{user_id, alias, score, streak}]."""
+
+    def league_rank(self, user_id: str) -> Optional[int]:
+        """Üyenin panodaki gerçek sırası (ilk 50 dışındayken de).
+        Üye değilse None. Varsayılan None: istemci 'ilk 50 dışında' der."""
+        return None
 
     # --- İdol Modu persona deposu (Dalga 4.3) ---
     def list_idol_personas(self) -> list[dict]:

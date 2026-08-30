@@ -109,3 +109,23 @@ def test_board_refreshes_own_score_snapshot():
     board = client.get("/league", headers={"X-User-Id": user}).json()
     me = next(m for m in board["members"] if m["is_me"])
     assert me["score"] >= 150  # anlık görüntü tazelendi
+
+
+def test_my_rank_visible_beyond_top_50():
+    """Release QA T9: ilk 50 dışındaki üye de gerçek sırasını görür."""
+    for i in range(51):
+        uid = f"lig_kalabalik_{i}"
+        _give_points(uid, "Disiplin", 1000 - i)
+        client.post(
+            "/league/join", headers={"X-User-Id": uid},
+            json={"alias": f"Uye {i}"},
+        )
+    tail = "lig_sondaki"
+    client.post(
+        "/league/join", headers={"X-User-Id": tail}, json={"alias": "Sondaki"}
+    )
+    board = client.get("/league", headers={"X-User-Id": tail}).json()
+    assert board["opted_in"] is True
+    assert len(board["members"]) == 50          # pano ilk 50 ile sınırlı
+    assert all(not m["is_me"] for m in board["members"])
+    assert board["my_rank"] == 52               # yine de gerçek sıra döner

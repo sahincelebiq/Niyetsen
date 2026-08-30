@@ -58,8 +58,51 @@ def _normalize(text: str) -> str:
     return "".join(c for c in text if not unicodedata.combining(c))
 
 
+_STOPWORDS = {
+    "ama", "bir", "bu", "cok", "da", "de", "daha", "gibi", "icin", "ile",
+    "kadar", "mi", "mu", "ne", "ve", "ben", "sen", "biz", "siz", "var",
+    "yok", "ise", "yani", "the", "and", "for", "you", "that", "how",
+}
+
+# Ürün dilindeki eşanlamlar — keyword RAG'i konuya kilitler (embedding kapalıyken).
+_SYNONYMS: dict[str, tuple[str, ...]] = {
+    "zincir": ("streak", "kesintisiz", "halka", "koruma"),
+    "mazeret": ("ertele", "erteleme", "bahane", "erteledim"),
+    "motivasyon": ("isteksiz", "vazgec", "istemiyorum", "enerji", "heves"),
+    "disiplin": ("irade", "istikrar", "rutin", "duzen"),
+    "aliskanlik": ("tiny", "kucuk", "atomik", "dakika"),
+    "kanit": ("foto", "fotograf", "cek", "kamer"),
+    "plan": ("gorev", "niyet", "vizyon"),
+    "burc": ("astro", "horoskop", "yukselen", "koc", "boga"),
+    "tarot": ("destesi", "yayilim", "arkana"),
+    "kahve": ("telve", "fincan"),
+    "avuc": ("elcizgi", "palmistry"),
+    # Release QA T4: 6 kategori kavramları — Türkçe ekli hâller prefix ile yakalanır.
+    "ozguven": ("cesaret", "guven"),
+    "ozsaygi": ("bakim", "deger", "sefkat"),
+    "sosyallik": ("sosyal", "arkadas", "iliski"),
+    "istikrar": ("ritim", "sureklilik"),
+    "irade": ("baslama", "direnc"),
+}
+
+
 def _tokenize(text: str) -> set[str]:
     return {t for t in re.split(r"[^a-z0-9çğıöşü]+", _normalize(text)) if len(t) > 2}
+
+
+def _query_tokens(query: str) -> set[str]:
+    raw = {t for t in _tokenize(query) if t not in _STOPWORDS}
+    expanded = set(raw)
+    for token in raw:
+        for key, syns in _SYNONYMS.items():
+            if token == key or token in syns:
+                expanded.add(key)
+                expanded.update(syns)
+            elif len(key) >= 4 and token.startswith(key):
+                # Türkçe ek yutma: "disiplinimi" → "disiplin", "özgüvenim" → "ozguven".
+                expanded.add(key)
+                expanded.update(syns)
+    return expanded
 
 
 def _split_markdown(source: str, body: str) -> list[_Chunk]:
@@ -191,15 +234,60 @@ def _cosine(a: list[float], b: list[float]) -> float:
 
 
 def _keyword_scores(query: str, chunks: list[_Chunk]) -> list[tuple[float, _Chunk]]:
-    query_tokens = _tokenize(query)
+    query_tokens = _query_tokens(query)
     scored: list[tuple[float, _Chunk]] = []
+    if not query_tokens:
+        return scored
+    norm_query = _normalize(query)
     for chunk in chunks:
-        if not query_tokens:
-            break
-        overlap = len(query_tokens & chunk.tokens)
-        if overlap:
-            scored.append((overlap / len(query_tokens), chunk))
+        heading_tokens = _tokenize(chunk.heading)
+        heading_hit = len(query_tokens & heading_tokens)
+        body_hit = len(query_tokens & chunk.tokens)
+        if heading_hit == 0 and body_hit == 0:
+            continue
+        score = (2.2 * heading_hit + body_hit) / max(len(query_tokens), 1)
+        if any(len(token) > 4 and token in _normalize(chunk.heading) for token in query_tokens):
+            score += 0.12
+        if any(len(token) > 5 and token in norm_query and token in _normalize(chunk.text) for token in query_tokens):
+            score += 0.06
+        scored.append((score, chunk))
     return scored
+
+
+_MIN_KEYWORD_SCORE = 0.12
+_MAX_PER_SOURCE = 2
+
+
+def _format_chunk(chunk: _Chunk) -> str:
+    return f"[{chunk.source} · {chunk.heading}]\n{chunk.text}"
+
+
+def _pick_diverse(
+    scored: list[tuple[float, _Chunk]],
+    top_k: int,
+) -> list[str]:
+    """Zayıf eşleşmeyi at. Birden fazla kaynak varken her kaynaktan en fazla 2."""
+    scored.sort(key=lambda item: -item[0])
+    unique_sources = {chunk.source for _, chunk in scored}
+    max_per = top_k if len(unique_sources) <= 1 else _MAX_PER_SOURCE
+    picked: list[str] = []
+    per_source: dict[str, int] = {}
+    for score, chunk in scored:
+        if score < _MIN_KEYWORD_SCORE:
+            continue
+        if per_source.get(chunk.source, 0) >= max_per:
+            continue
+        picked.append(_format_chunk(chunk))
+        per_source[chunk.source] = per_source.get(chunk.source, 0) + 1
+        if len(picked) >= top_k:
+            return picked
+    if picked:
+        return picked
+    return [
+        _format_chunk(chunk)
+        for score, chunk in scored[:top_k]
+        if score > 0
+    ]
 
 
 def retrieve(
@@ -239,49 +327,96 @@ def retrieve(
     else:
         scored = _keyword_scores(query, chunks)
 
-    scored.sort(key=lambda item: -item[0])
-    return [
-        f"[{c.source} · {c.heading}]\n{c.text}"
-        for score, c in scored[:top_k]
-        if score > 0
-    ]
+    return _pick_diverse(scored, top_k)
 
 
 # Sohbet için kaynak seçimi: rehber varsayılan olarak felsefe + motivasyon +
-# kişisel gelişim (atomik alışkanlıklar) bilgisiyle konuşur; kullanıcı mistik
-# konu açarsa ilgili kaynaklar da eklenir.
-_CHAT_DEFAULT_SOURCES = ["felsefe", "motivasyon", "atomik_aliskanliklar", "senaryolar"]
-_MYSTIC_TRIGGERS = {
-    "tarot": ["tarot"],
-    "burclar": ["burç", "burc", "astro", "yükselen", "yukselen", "horoskop"],
-    # İdol Modu (Dalga 4): kullanıcı bir idol/felsefe yolu açarsa yol paketleri
-    # bağlama girer — rehber kişi adını felsefe yoluna çevirir.
-    "idoller": [
-        "gibi ol", "idol", "felsefe", "yolu", "greenlights", "kaizen",
+# kişisel gelişim bilgisiyle konuşur; konu açılırsa yalnız o kaynak eklenir.
+_CHAT_DEFAULT_SOURCES = [
+    "felsefe", "motivasyon", "atomik_aliskanliklar", "senaryolar", "kategoriler",
+]
+_TOPIC_TRIGGERS: dict[str, tuple[str, ...]] = {
+    "tarot": ("tarot", "kart cek", "kart çek"),
+    "burclar": (
+        "burç", "burc", "astro", "yükselen", "yukselen", "horoskop",
+    ),
+    # Release QA T5: burç × kategori sentezi — burç konuşulunca gelişim
+    # sentez dosyası da devreye girer.
+    "burc_gelisim": (
+        "burç", "burc", "astro", "yükselen", "yukselen", "horoskop",
+    ),
+    # Release QA T4: 6 kategori + kişisel gelişim bilgi tabanı.
+    "kategoriler": (
+        "irade", "disiplin", "özgüven", "ozguven", "özsaygı", "ozsaygi",
+        "sosyallik", "istikrar", "kişisel gelişim", "kisisel gelisim",
+    ),
+    "kahve_fali": ("kahve fal", "telve", "fincan"),
+    "el_fali": ("el fal", "avuç", "avuc ici", "avuc içi"),
+    "idoller": (
+        "gibi ol", "idol", "felsefe yolu", "greenlights", "kaizen",
         "stoac", "stoik", "ustalik", "ustalık", "safak yolu", "şafak yolu",
-        "mcconaughey", "rutini", "disiplini gibi",
-    ],
+        "mcconaughey", "disiplini gibi",
+    ),
+    "senaryolar": (
+        "ertele", "mazeret", "zincir kir", "zinciri kır", "beceriksiz",
+        "istemiyorum",
+    ),
+    "atomik_aliskanliklar": (
+        "alışkanlık", "aliskanlik", "tiny", "2 dakika", "iki dakika",
+    ),
 }
 
 
-def retrieve_for_chat(message: str, *, k: int | None = None) -> list[str]:
+def _sources_for_chat(message: str) -> tuple[list[str], list[str]]:
+    sources = list(_CHAT_DEFAULT_SOURCES)
+    extras: list[str] = []
+    normalized = _normalize(message)
+    for source, triggers in _TOPIC_TRIGGERS.items():
+        if any(_normalize(trigger) in normalized for trigger in triggers):
+            if source not in extras:
+                extras.append(source)
+            if source not in sources:
+                sources.append(source)
+    return sources, extras
+
+
+def retrieve_for_chat(
+    message: str, *, k: int | None = None, profile_hint: str = ""
+) -> list[str]:
     """Ana /chat akışı için bağlama göre bilgi tabanı parçaları.
 
     FAZ 8 hız kararı: varsayılan KEYWORD modu (RAG_CHAT_EMBEDDINGS=false) —
     her sohbet mesajında sorgu embedding'i üretmek fazladan bir Gemini ağ
     çağrısıydı ve gecikmeyi büyütüyordu. Keyword eşleşmesi süreç içidir (~0ms).
+
+    profile_hint (release QA T3): kullanıcının burcu + zayıf kategorileri gibi
+    KİŞİ BAZLI sinyaller sorguya eklenir — aynı mesaj farklı kullanıcılarda
+    farklı bilgi parçaları getirir. Kaynak SEÇİMİ yalnız mesaja bakar (ipuç
+    kelimeleri tarot/fal kaynaklarını yanlışlıkla tetiklemesin diye).
     """
-    sources = list(_CHAT_DEFAULT_SOURCES)
-    normalized = _normalize(message)
-    for source, triggers in _MYSTIC_TRIGGERS.items():
-        if any(_normalize(t) in normalized for t in triggers):
-            sources.append(source)
-    return retrieve(
-        message,
-        k=k or settings.RAG_TOP_K,
+    top_k = k or settings.RAG_TOP_K
+    sources, extras = _sources_for_chat(message)
+    query = f"{message}\n{profile_hint}".strip() if profile_hint else message
+    chunks = retrieve(
+        query,
+        k=top_k,
         sources=sources,
         use_embeddings=settings.RAG_CHAT_EMBEDDINGS,
     )
+    missing = [
+        source for source in extras
+        if not any(f"[{source}" in chunk for chunk in chunks)
+    ]
+    if not missing:
+        return chunks
+    forced = retrieve(
+        query,
+        k=max(1, len(missing)),
+        sources=missing,
+        use_embeddings=settings.RAG_CHAT_EMBEDDINGS,
+    )
+    merged = forced + [chunk for chunk in chunks if chunk not in forced]
+    return merged[:top_k]
 
 
 def reset_cache() -> None:

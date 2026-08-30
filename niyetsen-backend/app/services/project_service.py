@@ -5,7 +5,7 @@ from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from app.models.schemas import CollectedIntent, DailyTaskItem, DailyTasksResponse, PlanSummary
-from app.services import subscription_service
+from app.services import plan_service, subscription_service
 from app.storage.base import Repository
 
 
@@ -89,10 +89,10 @@ def get_daily_tasks_response(
     if plan is None or not plan.days:
         return DailyTasksResponse(items=items, has_active_plan=False)
     plan_day = (current - plan.start_date).days + 1
-    needs = (
-        plan_day > plan.batch_generated_until
-        and plan.batch_generated_until < plan.duration_days
-        and plan_day >= 1
+    needs = plan_service.needs_plan_extension(
+        duration_days=plan.duration_days,
+        batch_generated_until=plan.batch_generated_until,
+        plan_day=plan_day,
     )
     return DailyTasksResponse(
         items=items,

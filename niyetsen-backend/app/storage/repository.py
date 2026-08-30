@@ -645,6 +645,11 @@ class InMemoryRepository(Repository):
         self._bonus_offers[offer.id] = offer.model_copy(deep=True)
         return offer.model_copy(deep=True)
 
+    def count_bonus_offers(self, user_id: str) -> tuple[int, int]:
+        offers = [o for o in self._bonus_offers.values() if o.user_id == user_id]
+        completed = sum(1 for o in offers if o.status == "completed")
+        return len(offers), completed
+
     def claim_bonus_completion(
         self, user_id: str, offer_id: str, completion_id: str
     ) -> bool:
@@ -762,6 +767,16 @@ class InMemoryRepository(Repository):
         ]
         rows.sort(key=lambda r: (-r["score"], -r["streak"], r["alias"]))
         return rows[:limit]
+
+    def league_rank(self, user_id: str) -> Optional[int]:
+        member = self._league.get(user_id)
+        if not member:
+            return None
+        higher = sum(
+            1 for other in self._league.values()
+            if other["score"] > member["score"]
+        )
+        return higher + 1
 
     def get_subscription_row(self, user_id: str) -> dict:
         profile = self._profiles.get(user_id, UserProfile())

@@ -90,10 +90,18 @@ def compose_image_query(
             parts.append(token)
             break
 
+    title_part = normalize_image_query(title)
+    if title_part:
+        for token in title_part.split():
+            if len(token) >= 4 and token not in " ".join(parts):
+                parts.append(token)
+                if len(parts) >= 8:
+                    break
+
     query = " ".join(parts).strip()
     if not query:
         return category_fallback_query(categories)
-    return " ".join(query.split()[:6])
+    return " ".join(query.split()[:8])
 
 
 def should_use_gemini_image(
@@ -107,9 +115,11 @@ def should_use_gemini_image(
     if not settings.GEMINI_API_KEY or not settings.IMAGE_GEMINI_ENABLED:
         return False
 
+    if task_type == "yer":
+        return False
     normalized = normalize_image_query(keyword)
     specific_visual = (
-        task_type in ("yer", "kişisel_gelişim")
+        task_type == "kişisel_gelişim"
         or len(normalized.split()) >= 4
         or len((title or "").split()) >= 5
     )
@@ -139,15 +149,24 @@ def build_gemini_visual_prompt(
     category_hint = ", ".join(categories or []) or "personal growth"
     interest_hint = ", ".join((interests or [])[:2]) or "wellness"
     city_hint = city or "modern city"
+    seed = int(hashlib.sha256(f"{title}|{query}".encode()).hexdigest(), 16) % 10_000
+    moods = (
+        "overcast daylight, cool stone and glass",
+        "late afternoon side light, deep greens and ochre",
+        "clear noon, high contrast shadows",
+        "blue hour, practical indoor lamps",
+        "harsh fluorescent library light, paper and wood",
+    )
+    mood = moods[seed % len(moods)]
     return (
-        "Create a single inspiring lifestyle photograph for a daily habit task card. "
-        "Photorealistic, warm natural light, 4:3 landscape composition, no text, "
-        "no logos, no watermarks, no collage.\n"
-        f"Task title: {title}\n"
+        "Single documentary photograph of THIS exact task — not a generic lifestyle ad. "
+        f"Photorealistic, 4:3 landscape, {mood}. No text, no logos, no collage, "
+        "no repeated cream/beige color grade, no stock-smile wellness look.\n"
+        f"Must show concrete nouns from the title (campus, lecture hall, library, "
+        f"kitchen, street) if present: {title}\n"
         f"Visual focus: {query}\n"
-        f"Category mood: {category_hint}\n"
-        f"City context: {city_hint}\n"
-        f"User interests: {interest_hint}"
+        f"Category: {category_hint}. City: {city_hint}. Interests: {interest_hint}\n"
+        f"Variation seed {seed} — different framing and palette from other cards."
     )
 
 
@@ -178,8 +197,10 @@ async def enrich_image_keywords_batch(
     prompt = (
         f"Kullanıcı şehri: {city or 'belirtilmedi'}\n"
         f"İlgi alanları: {interest_text}\n\n"
-        "Her görev için Unsplash araması veya AI görsel üretimi için İngilizce "
-        "2-4 kelimelik, somut, küçük harf görsel terimi üret. Şehir ve ilgi alanına uygun olsun.\n\n"
+        "Her görev için Unsplash/AI görseli için İngilizce 3-6 kelimelik somut "
+        "terim üret. Başlıktaki kurum/yer (üniversite, kampüs, kütüphane, semt) "
+        "aynen geçsin. 'warm lifestyle', 'cozy beige', genel masa/kahve YASAK. "
+        "Şehir + o görevin eylemi; her satır birbirinden farklı olsun.\n\n"
         f"Görevler:\n{task_lines}\n\n"
         f'JSON: {{"queries": ["terim1", ...]}} — tam {len(items)} öğe, aynı sıra.'
     )
@@ -366,8 +387,9 @@ async def get_image_async(
     interests: list[str] | None = None,
     task_type: str = "",
 ) -> ImageResult:
-    """Hibrit görsel: Nano Banana (koşullu) → Unsplash → placeholder."""
-    if should_use_gemini_image(
+    """Hibrit görsel: yer=Unsplash önce; diğerleri Nano Banana (koşullu) → Unsplash."""
+    unsplash_first = task_type == "yer"
+    if not unsplash_first and should_use_gemini_image(
         title=title,
         keyword=keyword,
         task_type=task_type,
@@ -395,6 +417,21 @@ async def get_image_async(
     )
     if unsplash_image is not None:
         return unsplash_image
+
+    if (
+        unsplash_first
+        and settings.GEMINI_API_KEY
+        and settings.IMAGE_GEMINI_ENABLED
+    ):
+        gemini_image = await _get_gemini_image(
+            title=title,
+            keyword=keyword,
+            city=city,
+            interests=interests,
+            categories=categories,
+        )
+        if gemini_image is not None:
+            return gemini_image
 
     query = compose_image_query(
         keyword,

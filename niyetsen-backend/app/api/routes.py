@@ -9,7 +9,7 @@ import hashlib
 import logging
 import secrets
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
@@ -46,7 +46,6 @@ from app.services import (
     scoring_service,
     subscription_service, task_lifecycle_service, tool_service,
 )
-from app.services.bonus_pool import is_completion_message
 from app.storage.repository import repo
 
 log = logging.getLogger("niyetsen.api")
@@ -252,55 +251,28 @@ async def chat(
     summaries = repo.list_plan_summaries(user_id)
     active_summary = next((item for item in summaries if item.is_active), None)
     plan_has_content = bool(active_summary and active_summary.has_content)
-    last_user = next(
-        (message for message in reversed(req.messages) if message.role == "user"),
-        None,
-    )
-    active_bonus = repo.get_active_bonus(user_id)
-    if (
-        last_user is not None
-        and active_bonus is not None
-        and is_completion_message(last_user.content)
-    ):
-        completion_id = last_user.id or _legacy_message_id(
-            user_id, len(req.messages) - 1, "user", last_user.content
+    try:
+        preferred_language = (
+            (x_app_locale or "").strip()
+            or (profile.preferred_language or "").strip()
         )
-        awarded = bonus_service.complete(
-            repo, user_id, active_bonus.id, completion_id
+        response = await intent_service.handle_chat(
+            req,
+            state=state,
+            user_name=profile.name or "",
+            birth_date=profile.birth_date.isoformat() if profile.birth_date else "",
+            zodiac=profile.zodiac_sign or "",
+            gender=profile.gender or "",
+            active_intent=active_intent,
+            today_status=today_status,
+            recent_tasks=recent_tasks,
+            mood_notes=_recent_mood(req.messages),
+            preferred_language=preferred_language,
+            has_active_plan=repo.get_plan(user_id) is not None,
+            plan_has_content=plan_has_content,
         )
-        response = ChatResponse(
-            reply=(
-                f"Bonus halkayı tamamladın; {active_bonus.category} yönüne "
-                f"+{BONUS_POINTS} puan eklendi."
-                if awarded else
-                "Bu bonus halka daha önce tamamlanmış; puanın ikinci kez değişmedi."
-            ),
-            ready_for_plan=req.collected.is_ready(),
-            collected=req.collected,
-        )
-    else:
-        try:
-            preferred_language = (
-                (x_app_locale or "").strip()
-                or (profile.preferred_language or "").strip()
-            )
-            response = await intent_service.handle_chat(
-                req,
-                state=state,
-                user_name=profile.name or "",
-                birth_date=profile.birth_date.isoformat() if profile.birth_date else "",
-                zodiac=profile.zodiac_sign or "",
-                gender=profile.gender or "",
-                active_intent=active_intent,
-                today_status=today_status,
-                recent_tasks=recent_tasks,
-                mood_notes=_recent_mood(req.messages),
-                preferred_language=preferred_language,
-                has_active_plan=repo.get_plan(user_id) is not None,
-                plan_has_content=plan_has_content,
-            )
-        except GeminiUnavailable:
-            raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+    except GeminiUnavailable:
+        raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
 
     response.tool_calls, tool_messages = tool_service.dispatch(
         repo, user_id, response.tool_calls
@@ -572,76 +544,93 @@ def _intent_for_plan_extension(
     return CollectedIntent()
 
 
+def _merge_generated_batch(user_id: str, current: Plan, batch: Plan) -> Plan:
+    """Üretilen partiyi plana yarışa dayanıklı ekler (release QA T2).
+
+    Bugün ve Planım açılışta aynı anda ensure-today çağırabilir; iki istek de
+    aynı günleri üretirse ikincisi kopya gün yaratmasın diye kayıtlı son hâl
+    yeniden okunur ve var olan gün numaraları atlanır.
+    """
+    target = current
+    try:
+        latest = repo.get_plan(user_id)
+        if latest is not None and latest.id == current.id:
+            target = latest
+    except Exception:  # noqa: BLE001 — tazeleme düşerse eldeki kopyayla devam
+        target = current
+    existing_days = {day.day for day in target.days}
+    target.days.extend(d for d in batch.days if d.day not in existing_days)
+    target.days.sort(key=lambda d: d.day)
+    target.batch_generated_until = max(
+        target.batch_generated_until, batch.batch_generated_until
+    )
+    repo.save_plan(user_id, target)
+    return target
+
+
 @router.post("/plan/next", response_model=Plan)
 async def next_batch(
     req: PlanGenerateRequest = Body(default_factory=PlanGenerateRequest),
     user_id: str = Depends(get_current_user),
 ) -> Plan:
-    """Partili üretim: mevcut planın kaldığı günden sonraki bölümü ekler."""
-    _require_premium(user_id)
+    """Var olan 1 planın sonraki partisi — geçmiş gün uydurulmaz (ücretsiz devam)."""
     current = repo.get_plan(user_id)
     if not current:
         raise HTTPException(status_code=404, detail="Önce /plan/generate ile plan oluştur.")
-    if current.batch_generated_until >= current.duration_days:
+    profile = repo.get_profile(user_id)
+    today = _user_today(profile.timezone)
+    plan_day = (today - current.start_date).days + 1
+    start_day = plan_service.next_generation_start_day(
+        duration_days=current.duration_days,
+        batch_generated_until=current.batch_generated_until,
+        plan_day=max(plan_day, 1),
+    )
+    if start_day is None:
         return current
     collected = _intent_for_plan_extension(user_id, req)
     try:
         batch = await plan_service.generate_batch(
             collected,
             duration_days=current.duration_days,
-            start_day=current.batch_generated_until + 1,
-            start_date=current.start_date,  # aynı çapa: günler doğru takvim tarihine düşsün
+            start_day=start_day,
+            start_date=current.start_date,
         )
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
-    current.days.extend(batch.days)
-    current.batch_generated_until = batch.batch_generated_until
-    repo.save_plan(user_id, current)
-    return current
+    return _merge_generated_batch(user_id, current, batch)
 
 
 @router.post("/plan/ensure-today", response_model=Plan)
 async def ensure_today_batch(user_id: str = Depends(get_current_user)) -> Plan:
-    """Bugünün gün numarası üretilmemişse bir sonraki partiyi üretir (Gemini — kullanıcı isteğiyle).
+    """Bugünün günü yoksa bugünden bir parti üretir; geçmişi doldurmaz.
 
-    Açılışta otomatik ÇAĞRILMAZ; mobil yalnız Bugün boş + needs_extension iken tetikler.
-    Tek istekte en fazla 2 parti (timeout/maliyet tavanı).
+    Mobil Bugün/Planım açılışında needs_extension iken çağrılır. Tek istekte
+    bir parti (timeout/maliyet). 2. plan / ilk generate hâlâ premium.
     """
-    _require_premium(user_id)
     current = repo.get_plan(user_id)
     if not current:
         raise HTTPException(status_code=404, detail="Önce /plan/generate ile plan oluştur.")
     profile = repo.get_profile(user_id)
-    try:
-        tz = ZoneInfo(profile.timezone)
-    except ZoneInfoNotFoundError:
-        tz = ZoneInfo("Europe/Istanbul")
-    today = datetime.now(timezone.utc).astimezone(tz).date()
+    today = _user_today(profile.timezone)
     plan_day = (today - current.start_date).days + 1
-    if plan_day < 1:
+    start_day = plan_service.next_generation_start_day(
+        duration_days=current.duration_days,
+        batch_generated_until=current.batch_generated_until,
+        plan_day=plan_day,
+    )
+    if start_day is None:
         return current
     collected = _intent_for_plan_extension(user_id)
-    batches = 0
-    while (
-        current.batch_generated_until < plan_day
-        and current.batch_generated_until < current.duration_days
-        and batches < 2
-    ):
-        try:
-            batch = await plan_service.generate_batch(
-                collected,
-                duration_days=current.duration_days,
-                start_day=current.batch_generated_until + 1,
-                start_date=current.start_date,
-            )
-        except GeminiUnavailable:
-            raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
-        current.days.extend(batch.days)
-        current.batch_generated_until = batch.batch_generated_until
-        batches += 1
-    if batches:
-        repo.save_plan(user_id, current)
-    return current
+    try:
+        batch = await plan_service.generate_batch(
+            collected,
+            duration_days=current.duration_days,
+            start_day=start_day,
+            start_date=current.start_date,
+        )
+    except GeminiUnavailable:
+        raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+    return _merge_generated_batch(user_id, current, batch)
 
 
 @router.patch("/plan/tasks/{task_id}", response_model=Task)
@@ -968,9 +957,13 @@ def complete_bonus(
     user_id: str = Depends(get_current_user),
 ) -> dict:
     _require_premium(user_id)
-    if not bonus_service.complete(
-        repo, user_id, offer_id, completion.completion_id
-    ):
+    try:
+        awarded = bonus_service.complete(
+            repo, user_id, offer_id, completion.completion_id
+        )
+    except bonus_service.BonusTooSoonError as exc:
+        raise HTTPException(status_code=425, detail=str(exc)) from exc
+    if not awarded:
         raise HTTPException(
             status_code=409,
             detail="Bonus görev bulunamadı veya daha önce tamamlandı.",
@@ -982,6 +975,13 @@ def complete_bonus(
 def my_state(user_id: str = Depends(get_current_user)) -> StateResponse:
     """Rank ekranının tek çağrısı: puanlar + kademeler + zincir."""
     s = repo.get_state(user_id)
+    profile = repo.get_profile(user_id)
+    yesterday = _user_today(profile.timezone) - timedelta(days=1)
+    yesterday_silent_misses = sum(
+        1
+        for task in repo.list_tasks_for_date(user_id, yesterday)
+        if task.status == "missed_silent"
+    )
     return StateResponse(
         points=s.points,
         ranks={c: scoring_service.rank_for(s.points[c]) for c in CATEGORIES},
@@ -991,6 +991,7 @@ def my_state(user_id: str = Depends(get_current_user)) -> StateResponse:
         freeze_tokens=s.freeze_tokens,
         excuse_count=s.excuse_count,
         silent_miss_streak=s.silent_miss_streak,
+        yesterday_silent_misses=yesterday_silent_misses,
     )
 
 
@@ -1017,12 +1018,24 @@ def my_recap(
                 all_plans.append(full)
     except Exception:  # noqa: BLE001 — plan listesi düşerse aktif planla devam
         log.warning("recap: plan listesi okunamadı, aktif planla devam", exc_info=True)
+    # T8 örüntü verileri — her biri degrade: hata raporu düşürmez.
+    try:
+        point_log = repo.get_point_log(user_id)
+    except Exception:  # noqa: BLE001
+        point_log = []
+    try:
+        bonus_counts = repo.count_bonus_offers(user_id)
+    except Exception:  # noqa: BLE001
+        bonus_counts = (0, 0)
     recap = recap_service.build_recap(
         state=repo.get_state(user_id),
         plan=repo.get_plan(user_id),
         plans=all_plans or None,
         user_name=profile.name or "",
         period=period,
+        point_log=point_log,
+        timezone_name=profile.timezone,
+        bonus_counts=bonus_counts,
     )
     info = subscription_service.get_subscription(repo, user_id)
     if info.status not in ("trial", "active"):

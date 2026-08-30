@@ -77,6 +77,42 @@ def _sanitize_categories(raw: list) -> list[str]:
     return clean or ["İstikrar"]  # etiketsiz görev kalmasın
 
 
+def next_generation_start_day(
+    *,
+    duration_days: int,
+    batch_generated_until: int,
+    plan_day: int,
+) -> int | None:
+    """Sonraki partinin start_day'si. Geçmiş günleri doldurmaz.
+
+    - plan_day > üretilen son gün: bugünden atla (8–39 uydurma).
+    - plan_day son iki günde: sonraki gelecek partiyi prefetch et.
+    - Aksi / ufuk doldu: None.
+    """
+    if plan_day < 1 or batch_generated_until >= duration_days:
+        return None
+    if plan_day > batch_generated_until:
+        return min(plan_day, duration_days)
+    if plan_day >= batch_generated_until - 1:
+        nxt = batch_generated_until + 1
+        if nxt <= duration_days:
+            return nxt
+    return None
+
+
+def needs_plan_extension(
+    *,
+    duration_days: int,
+    batch_generated_until: int,
+    plan_day: int,
+) -> bool:
+    return next_generation_start_day(
+        duration_days=duration_days,
+        batch_generated_until=batch_generated_until,
+        plan_day=plan_day,
+    ) is not None
+
+
 async def generate_batch(
     collected: CollectedIntent,
     duration_days: int = 365,
