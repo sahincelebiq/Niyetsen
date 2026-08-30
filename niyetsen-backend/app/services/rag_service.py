@@ -356,6 +356,12 @@ _TOPIC_TRIGGERS: dict[str, tuple[str, ...]] = {
         "gibi ol", "idol", "felsefe yolu", "greenlights", "kaizen",
         "stoac", "stoik", "ustalik", "ustalık", "safak yolu", "şafak yolu",
         "mcconaughey", "disiplini gibi",
+        # Release QA: tüm yollar tetikler — "X Yolu ile ilerlemek istiyorum"
+        # kalıbı da genel olarak yakalanır (yollar ekranının hazır mesajı).
+        "yolu ile", "yoluyla ilerle", "ikigai", "akış yolu", "akis yolu",
+        "dayanıklılık yolu", "dayaniklilik", "minimalizm", "cesaret yolu",
+        "wabi", "antifragil", "ubuntu",
+        "amor fati", "sisu", "wu wei", "wu-wei",
     ),
     "senaryolar": (
         "ertele", "mazeret", "zincir kir", "zinciri kır", "beceriksiz",

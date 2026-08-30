@@ -1,0 +1,55 @@
+{
+  "slug": "ubuntu-yolu",
+  "path_name": "Ubuntu Yolu",
+  "tagline": "ben, biz olduğumuz için varım",
+  "category": "toplum",
+  "inspired_by": "Güney Afrika ubuntu felsefesi",
+  "source_note": "Bu yol Güney Afrika'nın ubuntu ('bir insan, diğer insanlar aracılığıyla insandır') felsefesinin kamuya açık geleneğinden ilham alır; belirli bir kişiyle bağlantılı değildir.",
+  "tags": [
+    "topluluk",
+    "bağ",
+    "sosyallik",
+    "yardım",
+    "aidiyet"
+  ],
+  "dossier": {
+    "why_important": "Ubuntu, kişinin ancak başkalarıyla bağ içinde tam insan olduğunu söyler: 'ben, biz olduğumuz için varım'. Niyetsen'de amacı: gelişimi yalnız bir proje olmaktan çıkarmak. Zincir tek başına kurulur ama bağ içinde korunur — görünür olduğun, hesap verdiğin ve katkı sunduğun yerde bırakmak zorlaşır.",
+    "core_beliefs": [
+      "İnsan, insanlar aracılığıyla insandır; başarı da paylaşıldıkça gerçekleşir.",
+      "Küçük bir katkı, büyük bir niyetten daha çok bağ kurar.",
+      "Hesap verdiğin bir göz, iradenin en ucuz takviyesidir.",
+      "Başkasını yükseltmek kendi zeminini yükseltir."
+    ],
+    "mindset": "Hedefine bir 'biz' ekle: kim bundan haberdar, kim benimle yürüyor, bugünkü emeğim kime dokunuyor? Zorlandığında yardım istemek zayıflık değil, bağın kendisidir — yardım istemek karşındakine de verme fırsatı açar.",
+    "habits": [
+      "Günde 1 gerçek temas: mesajdan öte, bir kişiye içten tek soru",
+      "Haftalık hesap ortağı: ilerlemeyi tek kişiye 5 dakikada anlatmak",
+      "Haftada 1 mikro katkı: bilgi paylaş, kapı tut, tanıştır, teşekkür et",
+      "Ayda 1 topluluk işi: gönüllülük, mahalle, ekip — küçük ama düzenli",
+      "Başarıyı paylaşırken emeği olanları isimle anmak"
+    ],
+    "daily_routine": "Sabah: bugünkü görevlerimden hangisi birine dokunuyor? Akşam: bugün kimin günündeydim, kim benimkindeydi — bir satır minnet.",
+    "sports_or_physical_practice": "Eşlikli hareket: yürüyüş arkadaşı, takım sporu veya grup dersi — ritmi bağ taşır.",
+    "reading_profile": "Topluluk, aidiyet ve dayanışma üzerine kamuya açık metinler.",
+    "books_read_or_recommended": [
+      "Ubuntu felsefesi üzerine kamuya açık ansiklopedi maddeleri ve denemeler",
+      "No Future Without Forgiveness — Desmond Tutu (kamuya açık eser)"
+    ],
+    "decision_style": "Karar verirken üç halka: bana etkisi, yakın çevreme etkisi, topluluğa etkisi. İki halkada zarar veren 'kazanç' ertelenir.",
+    "failure_and_recovery": "Düştüğünde saklanma — ubuntu düşeni ayağa kaldıran eldir. Hesap ortağına tek cümle yaz: 'bugün olmadı, yarın şu saatte küçük halkayı koyuyorum'. Söz görünür olunca toparlanma hızlanır.",
+    "public_quotes": [
+      "Umuntu ngumuntu ngabantu — bir insan, diğer insanlar aracılığıyla insandır. (Nguni atasözü)"
+    ],
+    "lessons_for_users": [
+      "Bugün bir kişiye içten tek soru sor ve cevabı gerçekten dinle.",
+      "Bir hesap ortağı seç; bu haftaki niyetini 5 dakikada anlat.",
+      "Bugün 2 dakikalık bir mikro katkı yap: teşekkür, tanıştırma, bilgi.",
+      "Zorlandığın konuda bir kişiden açıkça yardım iste.",
+      "Bu ay küçük bir topluluk işine 1 saat ayır."
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/Ubuntu_philosophy",
+      "https://www.britannica.com/topic/ubuntu"
+    ]
+  }
+}

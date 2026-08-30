@@ -280,6 +280,17 @@ async def chat(
     if tool_messages:
         response.reply = f"{response.reply}\n\n" + " ".join(tool_messages)
 
+    # Felsefe Yolu seçilince niyet + bugünün görevleri kod tarafında işlenir
+    # (model atlasa bile "Bu yolla sohbete başla" boş dönmez).
+    try:
+        from app.services import persona_service
+
+        path_note = persona_service.apply_path_after_chat(repo, user_id, req, response)
+        if path_note:
+            response.reply = f"{response.reply}\n\n{path_note}"
+    except Exception:  # noqa: BLE001 — yol ekimi sohbeti düşürmez
+        log.warning("Felsefe yolu uygulanamadı (yoksayıldı).", exc_info=True)
+
     # İstemci bugün tüm geçmişi gönderiyor. Her mesajın kalıcı kimliği sayesinde
     # retry/eşzamanlı istekler ikinci kayıt oluşturmaz. Eski istemciler için
     # rol+metin+sıra tabanlı deterministik bir kimlik üretilir.

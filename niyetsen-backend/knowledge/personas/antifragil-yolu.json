@@ -1,0 +1,55 @@
+{
+  "slug": "antifragil-yolu",
+  "path_name": "Antifragil Yolu",
+  "tagline": "kaostan güçlenmek",
+  "category": "bilim",
+  "inspired_by": "Nassim Nicholas Taleb",
+  "source_note": "Bu yol Nassim Nicholas Taleb'in 'Antifragile' kitabındaki kamuya açık fikirlerden ilham alır; kendisiyle bağlantılı değildir.",
+  "tags": [
+    "belirsizlik",
+    "stres",
+    "risk",
+    "deneme",
+    "esneklik"
+  ],
+  "dossier": {
+    "why_important": "Kırılgan olan stresten zarar görür, dayanıklı olan direnir; antifragil olan stresten GÜÇLENİR. Kas gibi: doğru dozda yük büyütür. Niyetsen'de amacı: belirsizliği ve küçük sarsıntıları düşman değil antrenman saymak — plan bozulduğunda kullanıcının sistemi çökmesin, akıllansın.",
+    "core_beliefs": [
+      "Doğru dozda stres zayıflatmaz, büyütür.",
+      "Küçük ve ucuz hatalar, büyük ve pahalı hatanın sigortasıdır.",
+      "Seçeneklilik plandan değerlidir: kaybı sınırlı, kazancı açık denemeler biriktir.",
+      "Konfor uzadıkça kırılganlık sessizce büyür."
+    ],
+    "mindset": "Her aksaklıkta iki soru: 'Bu beni ne konuda uyardı?' ve 'Bunu sistemime nasıl işlerim?'. Plan bozulunca hedef planı korumak değil, planı bozulmadan öğrenen hâle getirmektir. Küçük dozda zorluğu gönüllü al — hayat büyük dozu sormadan verir.",
+    "habits": [
+      "Haftada 1 gönüllü zorluk dozu (soğuk duş, yokuş, zor konuşma — KÜÇÜK)",
+      "Kaybı sınırlı küçük denemeler: yeni yöntemi önce 15 dakikalık sürümle test et",
+      "Aksaklık günlüğü: ne bozuldu → sisteme hangi yama yapıldı",
+      "Aşırı optimizasyondan kaçınma: programda %20 boşluk bırak",
+      "Ayda bir 'kırılganlık taraması': tek bir şeye fazla bağımlı mıyım?"
+    ],
+    "daily_routine": "Sabah esnek çekirdek kur: günün TEK vazgeçilmez görevi + yer değiştirebilir 2 görev. Akşam: bugün ne ters gitti ve hangi küçük yamayı yaptım?",
+    "sports_or_physical_practice": "Aşamalı yüklenme ilkesi: her hafta bir tık zor (1 tekrar, 1 dakika, 1 sokak fazla) — konfor eşiğini bilinçli it.",
+    "reading_profile": "Olasılık, risk ve karar verme üzerine kamuya açık denemeler.",
+    "books_read_or_recommended": [
+      "Antifragile (Antikırılgan) — Nassim Nicholas Taleb",
+      "Siyah Kuğu — Nassim Nicholas Taleb"
+    ],
+    "decision_style": "Asimetri ara: 'en kötü ihtimalle ne kaybederim, en iyi ihtimalle ne kazanırım?' Kaybı küçük ve sınırlı, kazancı açık uçlu olan denemeye evet; tersine hayır.",
+    "failure_and_recovery": "Hata maliyetliyse küçült, öğreticiyse tekrarla. Kaçırılan gün bir stres testidir: sistemin hangi vidası gevşekti (saat mi, ortam mı, görev boyu mu) — vidayı sık, günü dert etme.",
+    "public_quotes": [
+      "Rüzgâr mumu söndürür ama ateşi canlandırır. (Antifragile — mealen)"
+    ],
+    "lessons_for_users": [
+      "Bugün kaybı sınırlı küçük bir deneme yap: yeni bir yöntemi 15 dakika test et.",
+      "Bu hafta 1 gönüllü zorluk dozu al — küçük ama gerçek.",
+      "Aksaklık günlüğüne tek satır: ne bozuldu, hangi yamayı yaptım.",
+      "Programına %20 boşluk bırak; doluluk kırılganlıktır.",
+      "Tek bir alışkanlığın tek bir koşula bağımlılığını kır (ör. spor = yalnız salon değil)."
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/Antifragile_(book)",
+      "https://www.penguinrandomhouse.com/books/176227/antifragile-by-nassim-nicholas-taleb/"
+    ]
+  }
+}

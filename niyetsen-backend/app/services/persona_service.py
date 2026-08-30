@@ -16,10 +16,16 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
+from datetime import date
 from pathlib import Path
 from threading import Lock
+from typing import TYPE_CHECKING
 
 from app.config import settings
+
+if TYPE_CHECKING:
+    from app.models.schemas import ChatRequest, ChatResponse, Task
+    from app.storage.base import Repository
 
 log = logging.getLogger("niyetsen.persona")
 
@@ -127,12 +133,17 @@ def _load_from_db() -> list[Persona]:
 
 
 def list_personas(force_reload: bool = False) -> list[Persona]:
-    """DB öncelikli, dosya yedekli persona listesi (süreç içi önbellekli)."""
+    """DB + dosya birleşimi (slug tekil). Yeni JSON, eski DB satırında kaybolmaz."""
     global _cache
     with _lock:
         if _cache is not None and not force_reload:
             return _cache
-    personas = _load_from_db() or _load_from_files()
+    by_slug: dict[str, Persona] = {
+        persona.slug: persona for persona in _load_from_files()
+    }
+    for persona in _load_from_db():
+        by_slug[persona.slug] = persona
+    personas = sorted(by_slug.values(), key=lambda item: item.path_name.casefold())
     with _lock:
         _cache = personas
     return personas
@@ -215,3 +226,110 @@ def reset_cache() -> None:
     global _cache
     with _lock:
         _cache = None
+
+
+_PATH_CATEGORIES: dict[str, list[str]] = {
+    "anlam": ["Özsaygı"],
+    "irade": ["İrade"],
+    "sanat": ["Özgüven"],
+    "spor": ["İrade"],
+    "düşünce": ["Disiplin"],
+    "genel": ["İstikrar"],
+}
+
+
+def seed_today_lessons(
+    repo: "Repository",
+    user_id: str,
+    persona: Persona,
+    *,
+    today: date | None = None,
+    max_lessons: int = 2,
+) -> list["Task"]:
+    """Yolun derslerini bugünün planına ekler (aynı başlık varsa atlar)."""
+    from app.services import plan_edit_service
+
+    today = today or date.today()
+    lessons = [
+        str(item).strip()
+        for item in (persona.dossier.get("lessons_for_users") or [])
+        if str(item).strip()
+    ]
+    categories = _PATH_CATEGORIES.get(persona.category, ["İstikrar"])
+    existing = {task.title.casefold() for task in repo.list_tasks_for_date(user_id, today)}
+    if any(lesson.casefold() in existing for lesson in lessons):
+        return []
+    added: list[Task] = []
+    for lesson in lessons:
+        if len(added) >= max_lessons:
+            break
+        if lesson.casefold() in existing:
+            continue
+        try:
+            task = plan_edit_service.add_task(
+                repo,
+                user_id,
+                today,
+                title=lesson[:120],
+                categories=categories,  # type: ignore[arg-type]
+                tiny_version=lesson[:80],
+                duration_min=10,
+                today=today,
+            )
+        except plan_edit_service.PlanEditError:
+            break
+        added.append(task)
+        existing.add(task.title.casefold())
+    return added
+
+
+def apply_path_after_chat(
+    repo: "Repository",
+    user_id: str,
+    req: "ChatRequest",
+    response: "ChatResponse",
+    *,
+    today: date | None = None,
+) -> str | None:
+    """'Bu yolla sohbete başla' sonrası: niyet + bugünün görevleri + plan CTA."""
+    if getattr(response, "crisis", False):
+        return None
+    last = next(
+        (message.content for message in reversed(req.messages) if message.role == "user"),
+        "",
+    )
+    persona = match_persona(last)
+    if persona is None:
+        return None
+    if persona.path_name not in response.collected.interests:
+        response.collected.interests.append(persona.path_name)
+
+    profile = repo.get_profile(user_id)
+    if today is None:
+        from app.services.project_service import _user_local_today
+
+        today = _user_local_today(getattr(profile, "timezone", None) or "Europe/Istanbul")
+
+    if repo.get_plan(user_id) is None:
+        from app.services.intent_service import _fill_intent_defaults
+
+        response.collected = _fill_intent_defaults(response.collected)
+        if not response.collected.duration_days:
+            response.collected.duration_days = 365
+        response.ready_for_plan = True
+        return (
+            f"{persona.path_name} niyetine işlendi. "
+            "Planı oluşturunca görevler bu yoldan türeyecek; hatırlatman saatinde gelecek."
+        )
+
+    added = seed_today_lessons(repo, user_id, persona, today=today)
+    if added:
+        titles = ", ".join(task.title for task in added)
+        return (
+            f"{persona.path_name} bugünün planına işlendi: {titles}. "
+            "Hatırlatman saatinde bu görevler için bildirim gelir."
+        )
+    return (
+        f"{persona.path_name} niyetinde duruyor. "
+        "Bugünün görevleri zaten bu yoldan; hatırlatman saatinde gelir."
+    )

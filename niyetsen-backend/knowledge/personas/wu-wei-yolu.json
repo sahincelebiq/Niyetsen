@@ -1,0 +1,53 @@
+{
+  "slug": "wu-wei-yolu",
+  "path_name": "Wu Wei Yolu",
+  "tagline": "zorlamadan doğru zamanda hareket",
+  "category": "anlam",
+  "inspired_by": "Taoist wu wei (zorlamasız eylem) geleneği",
+  "source_note": "Bu yol Taoist 'wu wei' (zorlamasız eylem) kamuya açık geleneğinden ilham alır; belirli bir kişiyle bağlantılı değildir.",
+  "tags": [
+    "akış",
+    "tao",
+    "zorlamama",
+    "zamanlama",
+    "sükûnet"
+  ],
+  "dossier": {
+    "why_important": "Wu wei tembellik değil; nehri yumruklamak yerine akışa kürek atmaktır. Niyetsen'de 'daha çok zorla' bazen zinciri kırar. Doğru halka, doğru saatte, sürtünmesi düşük olandır. İrade tasarrufu: kapıyı tekmelemek yerine menteşeyi yağlamak.",
+    "core_beliefs": [
+      "Zorlamak güç değildir; doğru zamanda küçük hareket güçtür.",
+      "Direnç yüksekse görev yanlış değil, zamanlama veya boyut yanlıştır.",
+      "Boşluk tembellik değil, bir sonraki hareketin odasıdır.",
+      "Suyun gücü yumuşaklığındadır: ısrar eder, kırmaz."
+    ],
+    "mindset": "Görevi küçült, saati sabitle, sürtünmeyi düşür. 'Şimdi olmaz' diyorsan 2 dakikalık su gibi sürümü dene; olmazsa saati kaydır, kendini hırpalama. Akşam zorla tamamlanan iş övülmez; sakin biten iş övülür.",
+    "habits": [
+      "Görevi başlamadan 1 sürtünme kaldırmak (ortam, kıyafet, açık sekme)",
+      "Zor bloğu en kolay saate taşımak",
+      "Günde 5 dakika hiçbir şey üretmeme (boşluk)",
+      "Haftada 1 'bu işi daha az kuvvetle nasıl yaparım' sorusu"
+    ],
+    "daily_routine": "Sabah: tek net iş, hazırlık 2 dakika (ortamı kur). Öğlen kısa boşluk. Akşam: zorla bitirdiğin işi yarına böl — wu wei yarın başlar.",
+    "sports_or_physical_practice": "Yavaş yürüyüş, nefes veya esneme — tempo dayatmadan 8–12 dakika.",
+    "reading_profile": "Tao, wu wei ve zorlamasız eylem üzerine kısa kamuya açık metinler.",
+    "books_read_or_recommended": [
+      "Tao Te Ching — kamuya açık çeviriler",
+      "Wu wei kavramı — ansiklopedik özetler"
+    ],
+    "decision_style": "İki seçenek varsa sürtünmesi düşük, geri dönüşü olanı seç. Kapalı kapıyı yumruklama; başka kapı ara veya bekle.",
+    "failure_and_recovery": "Zorlayıp bırakmak wu wei değildir. Görevi yarıya indir, saati kaydır, ortamı sadeleştir. Ertesi gün aynı büyüklükte tekrar zorlama.",
+    "public_quotes": [
+      "Wu wei, hiçbir şey yapmamak değil; zorlamadan doğru işi yapmaktır. (Taoist gelenek — mealen)"
+    ],
+    "lessons_for_users": [
+      "Bugünkü görevin önündeki tek sürtünmeyi kaldır (telefonu başka oda, masayı aç).",
+      "Zor işi 2 dakikalık su gibi sürüme indir ve sadece başla.",
+      "5 dakika üretmeden otur veya yürü — boşluk planlıdır.",
+      "Aynı işi daha az kuvvetle yapmak için bir adım değiştir (saat, yer, araç)."
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/Wu_wei",
+      "https://plato.stanford.edu/entries/daoism/"
+    ]
+  }
+}

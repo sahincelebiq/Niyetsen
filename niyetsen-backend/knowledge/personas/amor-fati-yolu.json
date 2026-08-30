@@ -1,0 +1,53 @@
+{
+  "slug": "amor-fati-yolu",
+  "path_name": "Amor Fati Yolu",
+  "tagline": "olanı düşman değil yakıt saymak",
+  "category": "anlam",
+  "inspired_by": "Amor fati (kaderi sevmek) stoacı–Nietzscheci kamuya açık gelenek",
+  "source_note": "Bu yol 'amor fati' (olanı sevmek) stoacı ve Nietzscheci kamuya açık gelenekten ilham alır; belirli bir kişiyle bağlantılı değildir.",
+  "tags": [
+    "kabul",
+    "kader",
+    "direnç",
+    "anlam",
+    "yüzleşme"
+  ],
+  "dossier": {
+    "why_important": "Amor fati, başına geleni 'keşke olmasaydı' diye silmek yerine aynı malzemeyi karakterine katmaktır. Niyetsen'de kaçırılan gün, bozulan plan ve zor sabah birer düşman değil; yolun kendisidir. Zinciri korumak geçmişi silmek değil, olanı üstlenip bir sonraki halkayı atmaktır.",
+    "core_beliefs": [
+      "Olan oldu — enerji, olmayanı dilemeye değil, olanla ne yapacağına gider.",
+      "Reddettiğin gün seni iki kez yorar: bir kez kaçırarak, bir kez inkâr ederek.",
+      "Sevmek, hoşlanmak değildir; üstlenmek ve kullanmaktır.",
+      "Aynı olay iki hikâye taşır: kurban ve usta. İkincisini seçmek eğitimdir."
+    ],
+    "mindset": "Güne 'bugün olan her şey planın parçasıdır' diye başla. Engel geldiğinde 'neden ben' yerine 'bunu nasıl yakıta çeviririm' sor. Kaçırdıysan utanma cilası yasak: olanı kaydet, en küçük halkayı bugüne koy, devam et.",
+    "habits": [
+      "Akşam 1 satır: 'Bugün olan + bunu nasıl kullanırım'",
+      "Haftada 1 'istenmeyen ama olan' olayı 3 cümleyle yeniden yazmak",
+      "Plan bozulunca 2 dakikalık yedek halkayı hemen atmak",
+      "Ayda 1 eski 'keşke'yi alıp ondan çıkan bir dersi yazmak"
+    ],
+    "daily_routine": "Sabah: bugünün kontrolünde olan tek işi seç. Akşam: olanı silmeden bir cümleyle sahiplen. Gece pişmanlık döngüsüne girme — yarının ilk halkasını yaz.",
+    "sports_or_physical_practice": "Kısa tempolu yürüyüş veya nefes sayımı — rahatsız duyguyu durdurmadan yanında durmak (kaçmadan 3 dakika).",
+    "reading_profile": "Stoa, amor fati ve kaderi üstlenme üzerine kısa kamuya açık metinler.",
+    "books_read_or_recommended": [
+      "Meditations — Marcus Aurelius (kamuya açık çeviriler)",
+      "Amor fati kavramı üzerine stoacı özetler"
+    ],
+    "decision_style": "Geri alınamayanı tartma; eldeki malzemeyle bir sonraki somut adımı seç. 'Keşke' karar değildir.",
+    "failure_and_recovery": "Kaçırılan gün silinmez, üstlenilir: 'oldu' de, cezayı utanca çevirme, aynı gün 2 dakikalık halkayı at. İkinci gün üst üste kaçırma asıl kırılmadır — orada extra küçük başla.",
+    "public_quotes": [
+      "Olan her şeyi istemek değil, olanı kendi hikâyene katmaktır. (amor fati geleneği — mealen)"
+    ],
+    "lessons_for_users": [
+      "Bugün bozulan bir şeyi 3 cümleyle 'nasıl yakıt olur' diye yeniden yaz.",
+      "Kaçırdığın bir görevi silme; 2 dakikalık hâlini şimdi yap.",
+      "Akşam bir satır: bugün olan + bunu nasıl kullanırım.",
+      "Kontrolünde olmayan bir kaygıyı yaz ve yanına 'benim işim değil' koy."
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/Amor_fati",
+      "https://plato.stanford.edu/entries/nietzsche/"
+    ]
+  }
+}

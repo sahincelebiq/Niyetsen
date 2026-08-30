@@ -19,7 +19,10 @@ def _no_embeddings(monkeypatch):
 def test_idol_source_loads_five_paths():
     chunks = rag_service.retrieve("felsefe yolu", sources=["idoller"], k=20)
     text = "\n".join(chunks)
-    for path in ("Greenlights", "Kaizen", "Stoacı", "Ustalık", "Şafak"):
+    for path in (
+        "Greenlights", "Kaizen", "Stoacı", "Ustalık", "Şafak",
+        "Amor Fati", "Sisu", "Wu Wei",
+    ):
         assert path in text, f"{path} Yolu bilgi tabanında bulunamadı"
 
 
@@ -69,6 +72,9 @@ def test_paths_endpoint_lists_five_paths():
     names = [p["name"] for p in body]
     assert len(body) >= 5
     assert "Greenlights Yolu" in names
+    assert "Amor Fati Yolu" in names
+    assert "Sisu Yolu" in names
+    assert "Wu Wei Yolu" in names
     for p in body:
         assert p["tagline"]
         assert p["philosophy"]

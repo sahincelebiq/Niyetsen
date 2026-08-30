@@ -1,0 +1,53 @@
+{
+  "slug": "sisu-yolu",
+  "path_name": "Sisu Yolu",
+  "tagline": "bitince bir adım daha",
+  "category": "irade",
+  "inspired_by": "Fin sisu geleneği",
+  "source_note": "Bu yol Finlandiya'nın kamuya açık 'sisu' (içten gelen inatçı cesaret) geleneğinden ilham alır; belirli bir kişiyle bağlantılı değildir.",
+  "tags": [
+    "inat",
+    "dayanıklılık",
+    "soğuk",
+    "irade",
+    "devam"
+  ],
+  "dossier": {
+    "why_important": "Sisu, motivasyon bittiğinde kalan kısa, inatçı adımdır — kahramanlık değil, donmuş yolda bir adım daha. Niyetsen'de 'canım istemiyor' anı yolun başı sayılır. Zincir coşkuyla değil, bitmiş hisseden günde atılan mikro halkayla uzar.",
+    "core_beliefs": [
+      "İrade tükenince karakter başlar: bir adım daha.",
+      "Sisu bağırmaz; sessizce devam eder.",
+      "Zorluk küçültülmez, süre kısaltılır — 2 dakika yeter.",
+      "Isınmayı beklemek sisu değildir; üşürken yürümektir."
+    ],
+    "mindset": "Görevi 'istediğimde' değil 'bitince bir adım daha' diye kur. İsteksizlik bir dur işareti değil, sisu kapısıdır. Büyük hedefi soğukta bırak; bugünün tek adımını ısıt.",
+    "habits": [
+      "İstemediğin anda 2 dakikalık 'bir adım daha' kuralı",
+      "Haftada 1 kısa soğuk/zor doz (soğuk su, tempolu yokuş, sessiz sabah)",
+      "Bitirdiğin işe +1 mikro ek (bir sayfa, bir tekrar, bir mesaj)",
+      "Ayda 1 'yarıda bırakılan işe dönüş' seansı"
+    ],
+    "daily_routine": "Sabah ilk iş en küçük zor halka (istemeden). Öğlen mola hakkı meşru. Akşam: bugün 'bir adım daha' nerede atıldı — bir cümle.",
+    "sports_or_physical_practice": "Kısa tempolu yürüyüş, merdiven veya soğuk yüz yıkama — konfor değil, dozlu rahatsızlık.",
+    "reading_profile": "Sisu, grit ve soğukta devam etme üzerine kısa kamuya açık yazılar.",
+    "books_read_or_recommended": [
+      "Sisu: The Finnish Art of Courage — Emilia Lahti (kamuya açık tanıtım/söyleşiler)",
+      "Sisu kavramı — Finlandiya kültür özetleri"
+    ],
+    "decision_style": "Kararı ısınmayı bekleyerek erteleme. 2 dakikalık denemeyi seç, sonra yeniden değerlendir.",
+    "failure_and_recovery": "Yarıda bırakmak sisu'yu iptal etmez. Aynı gün, aynı işin 2 dakikalık kopyasını at. Utanma; soğukta bir adım daha at.",
+    "public_quotes": [
+      "Sisu, bitmiş sandığın yerde durmayan kısa cesarettir. (Fin geleneği — mealen)"
+    ],
+    "lessons_for_users": [
+      "Canın istemediği bir işe şimdi 2 dakika başla, sonra bırakabilirsin.",
+      "Yüzünü soğuk suyla yıka veya 10 kat merdiven çık — dozlu rahatsızlık.",
+      "Bitirdiğin göreve tek bir mikro ek yap (bir tekrar, bir satır).",
+      "Yarıda bıraktığın bir işe bugün 5 dakika dön."
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/Sisu",
+      "https://finland.fi/life-society/sisu-the-finnish-art-of-inner-strength/"
+    ]
+  }
+}

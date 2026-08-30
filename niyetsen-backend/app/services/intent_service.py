@@ -207,6 +207,25 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
 
     merged = _merge_collected(req.collected, data.get("collected", {}))
 
+    # İdol Modu güvencesi (release QA, 2026-08-30): mesajda bir Felsefe Yolu
+    # adı AÇIKÇA geçiyorsa yol, model modundan (intent/guide) bağımsız kod
+    # tarafında niyete işlenir — "Bu yolla sohbete başla" akışı modele emanet
+    # edilmez. Plan üretimi/uzatması bu interests üzerinden yolun bağlamını alır.
+    try:
+        from app.services import persona_service
+
+        for persona in persona_service.list_personas():
+            path_name = persona.path_name.strip()
+            if not path_name:
+                continue
+            if (
+                path_name.casefold() in normalized_message
+                and path_name not in merged.interests
+            ):
+                merged.interests.append(path_name)
+    except Exception:  # noqa: BLE001 — yol eşleme sohbeti asla düşürmez
+        log.warning("Felsefe yolu yakalama atlandı", exc_info=True)
+
     # FAZ 8: kullanıcı planı AÇIKÇA istediyse eksikler varsayılanla dolar ve
     # ready sinyali kesin verilir (model soru döngüsüne giremez).
     force_plan = any(marker in normalized_message for marker in FORCE_PLAN_MARKERS)

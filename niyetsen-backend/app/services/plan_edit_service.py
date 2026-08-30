@@ -159,6 +159,8 @@ def add_task(
         raise PlanEditError("Bu gün için görev sınırına ulaşıldı.")
 
     plan_day = _ensure_plan_day(plan, day_no)
+    if day_no > plan.batch_generated_until:
+        plan.batch_generated_until = day_no
     task = Task(
         id=str(uuid.uuid4()),
         day=day_no,

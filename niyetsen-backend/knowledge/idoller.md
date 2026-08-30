@@ -103,3 +103,74 @@ Brené Brown'ın kamuya açık utanç/cesaret araştırmalarından ilham alır;
 kendisiyle bağlantılı değildir.
 PRATİK: Günlük cesur mikro eylem; sınır cümlesi; teşekkür ifadesi; güvenli
 paylaşım.
+
+## Wabi-Sabi Yolu — kusurda güzellik
+FELSEFE: Hiçbir şey bitmiş, kalıcı ve kusursuz değildir; güzellik tam da
+burada saklıdır. Mükemmeliyetçilik zinciri kırar; wabi-sabi onarır: %80
+tamamlanan gün başarısız değil, yaşanmış bir gündür. Kırık gün kintsugi
+çatlağı gibi altınla çizilir — "buradan devam ettim". Bu yol Japon wabi-sabi
+estetiğinin kamuya açık geleneğinden ilham alır; belirli bir kişiyle
+bağlantılı değildir.
+Rehber tonu: "eksik ama yeterli" sürümü meşrulaştır; kusuru gizletme,
+işlet; kıyas yerine mevcudiyet.
+PRATİK: Akşam iki satır (bugünün kusuru + bugünün güzelliği); haftada 1 şeyi
+atmak yerine onarmak; bir görevi bilerek %80'de bırakıp tamamlanmış saymak;
+bitmemiş işi bir yakınına gösterme; masadan 3 fazlalığı kaldırma.
+
+## Antifragil Yolu — kaostan güçlenmek
+FELSEFE: Kırılgan stresten zarar görür, dayanıklı direnir, antifragil olan
+stresten GÜÇLENİR — kas gibi, doğru dozda yük büyütür. Plan bozulunca hedef
+planı korumak değil, sistemi bozulmadan öğrenen hâle getirmektir. Bu yol
+Nassim Nicholas Taleb'in "Antifragile" kitabındaki kamuya açık fikirlerden
+ilham alır; kendisiyle bağlantılı değildir.
+Rehber tonu: aksaklıkta "bu seni ne konuda uyardı?" sorusu; küçük gönüllü
+zorluk dozları; kaybı sınırlı denemeleri övmek.
+PRATİK: Haftada 1 gönüllü zorluk dozu (küçük); 15 dakikalık ucuz deneme;
+aksaklık günlüğü (ne bozuldu → hangi yama); programda %20 boşluk; ayda bir
+kırılganlık taraması (tek şeye fazla bağımlılık).
+
+## Ubuntu Yolu — ben, biz olduğumuz için varım
+FELSEFE: İnsan, insanlar aracılığıyla insandır. Zincir tek başına kurulur ama
+bağ içinde korunur: görünür olduğun, hesap verdiğin ve katkı sunduğun yerde
+bırakmak zorlaşır. Yardım istemek zayıflık değil bağın kendisidir. Bu yol
+Güney Afrika'nın ubuntu felsefesinin kamuya açık geleneğinden ilham alır;
+belirli bir kişiyle bağlantılı değildir.
+Rehber tonu: hedefe "biz" ekletmek (kim haberdar, kim yürüyor); düşene
+"saklanma, tek cümle yaz" daveti; katkıyı puanla değil bağla ölçmek.
+PRATİK: Günde 1 gerçek temas (içten tek soru); haftalık hesap ortağına
+5 dakikalık ilerleme anlatımı; haftada 1 mikro katkı (teşekkür, tanıştırma,
+bilgi); ayda 1 saatlik topluluk işi; başarıda emeği olanı isimle anmak.
+
+## Amor Fati Yolu — olanı düşman değil yakıt saymak
+FELSEFE: Başına geleni 'keşke olmasaydı' diye silmek yerine aynı malzemeyi
+karakterine katmaktır. Kaçırılan gün, bozulan plan ve zor sabah düşman değil
+yolun kendisidir. Zinciri korumak geçmişi silmek değil, olanı üstlenip bir
+sonraki halkayı atmaktır. Bu yol 'amor fati' (olanı sevmek) stoacı ve
+Nietzscheci kamuya açık gelenekten ilham alır; belirli bir kişiyle bağlantılı
+değildir.
+Rehber tonu: engel geldiğinde "bunu nasıl yakıta çeviririm"; kaçırınca utanç
+cilası yasak — olanı kaydet, en küçük halkayı bugüne koy.
+PRATİK: Akşam 1 satır (bugün olan + bunu nasıl kullanırım); bozulanı 3 cümleyle
+yeniden yazmak; plan bozulunca 2 dakikalık yedek halka; kontrolünde olmayan
+kaygının yanına "benim işim değil".
+
+## Sisu Yolu — bitince bir adım daha
+FELSEFE: Sisu, motivasyon bittiğinde kalan kısa, inatçı adımdır — kahramanlık
+değil, donmuş yolda bir adım daha. 'Canım istemiyor' anı yolun başı sayılır.
+Zincir coşkuyla değil, bitmiş hisseden günde atılan mikro halkayla uzar. Bu yol
+Finlandiya'nın kamuya açık 'sisu' (içten gelen inatçı cesaret) geleneğinden
+ilham alır; belirli bir kişiyle bağlantılı değildir.
+Rehber tonu: isteksizliği dur işareti değil kapı say; büyük hedefi soğukta
+bırak, bugünün tek adımını ısıt.
+PRATİK: İstemediğin anda 2 dakika başla; dozlu soğuk/zor (yüz yıkama, merdiven);
+bitirdiğine +1 mikro ek; yarıda bırakılan işe 5 dakika dönüş.
+
+## Wu Wei Yolu — zorlamadan doğru zamanda hareket
+FELSEFE: Wu wei tembellik değil; nehri yumruklamak yerine akışa kürek atmaktır.
+'Haha daha çok zorla' bazen zinciri kırar. Doğru halka, doğru saatte, sürtünmesi
+düşük olandır. Bu yol Taoist 'wu wei' (zorlamasız eylem) kamuya açık geleneğinden
+ilham alır; belirli bir kişiyle bağlantılı değildir.
+Rehber tonu: görevi küçült, saati sabitle, sürtünmeyi düşür; zorla biteni övme,
+sakin biteni öv.
+PRATİK: Başlamadan 1 sürtünme kaldır; zor işi 2 dakikalık su gibi sürüme indir;
+5 dakika üretmeme (boşluk); aynı işi daha az kuvvetle bir adım değiştir.

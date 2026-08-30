@@ -1,0 +1,55 @@
+{
+  "slug": "wabi-sabi-yolu",
+  "path_name": "Wabi-Sabi Yolu",
+  "tagline": "kusurda güzellik",
+  "category": "anlam",
+  "inspired_by": "Japon wabi-sabi estetiği geleneği",
+  "source_note": "Bu yol Japon wabi-sabi (kusurlu, geçici ve eksik olanın güzelliği) estetiğinin kamuya açık geleneğinden ilham alır; belirli bir kişiyle bağlantılı değildir.",
+  "tags": [
+    "kusur",
+    "kabul",
+    "mükemmeliyetçilik",
+    "sadelik",
+    "öz şefkat"
+  ],
+  "dossier": {
+    "why_important": "Wabi-sabi, kusurlu ve tamamlanmamış olanın güzelliğini görme sanatıdır. Niyetsen'de amacı: mükemmeliyetçiliğin kırdığı zinciri onarmak. %80 tamamlanan gün başarısız değil, yaşanmış bir gündür; çatlak, kırıkların altınla onarıldığı kintsugi gibi, hikâyenin parçasıdır.",
+    "core_beliefs": [
+      "Hiçbir şey bitmiş, hiçbir şey kalıcı, hiçbir şey kusursuz değildir.",
+      "Kusur, karakterin imzasıdır — silinmez, işlenir.",
+      "Eksik gün zinciri kirletmez; inkâr edilen gün kirletir.",
+      "Sadelik, dikkatin lüksüdür."
+    ],
+    "mindset": "Güne 'bugün mükemmel olmayacak ve bu plan dahilinde' diyerek başla. Görev %100 olmadıysa çöpe atma; yapılan kısmı gör, kalanı yarının ilk halkası yap. Kırık günleri gizleme — kintsugi gibi altınla çiz: 'burada zorlandım ve devam ettim'.",
+    "habits": [
+      "Akşam 'bugünün kusuru + bugünün güzelliği' diye iki satır yazmak",
+      "Haftada bir eskiyen/kırık bir şeyi atmak yerine onarmak",
+      "Görevin 2 dakikalık 'eksik ama yeterli' sürümünü meşru saymak",
+      "Ayda bir 'mükemmel olmayan paylaşım' (bitmemiş işi birine gösterme)",
+      "Tek nesneli masa: çalışırken görüş alanında tek anlamlı obje"
+    ],
+    "daily_routine": "Sabah niyeti kusursuzluk değil mevcudiyet üzerine kur: 'bugün var olacağım, kusurlarımla'. Akşam iki satır: neyi eksik bıraktım, neyi yine de yaptım.",
+    "sports_or_physical_practice": "Yavaş yürüyüş veya esneme — hız değil fark etme; yürürken eskimiş, yıpranmış ama güzel bir şey bulma oyunu.",
+    "reading_profile": "Japon estetiği, sadelik ve öz şefkat üzerine kısa metinler.",
+    "books_read_or_recommended": [
+      "Wabi-Sabi: Sanatçılar, Tasarımcılar, Şairler ve Filozoflar İçin — Leonard Koren",
+      "Kintsugi kavramı üzerine kamuya açık makaleler"
+    ],
+    "decision_style": "Karar verirken 'kusursuz seçenek' aramayı bırak; %70 doğru hissettiren ve geri dönüşü olan adımı at, kalanını yolda onar.",
+    "failure_and_recovery": "Kaçırılan gün kintsugi çatlağıdır: sakla ama altınla çiz — ertesi gün en küçük halkayı koy ve çatlağın üstüne yaz: 'buradan devam ettim'. Suçluluk cilası yasak; onarım işçiliği makbul.",
+    "public_quotes": [
+      "Wabi-sabi, kusurlu, geçici ve eksik olan şeylerin güzelliğidir. (Leonard Koren'in kamuya açık tanımı — mealen)"
+    ],
+    "lessons_for_users": [
+      "Bugün bir görevi bilerek %80'de bırak ve tamamlanmış say — dünya yıkılmıyor.",
+      "Akşam 2 satır: bugünün kusuru + bugünün güzelliği.",
+      "Kırık/eski bir eşyayı 10 dakikada onar veya temizle.",
+      "Bitmemiş bir işini bir yakınına göster — bitmeden.",
+      "Masandan 3 fazlalığı kaldır; tek anlamlı obje bırak."
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/Wabi-sabi",
+      "https://www.bbc.com/culture/article/20181021-japans-unusual-way-to-view-the-world"
+    ]
+  }
+}
