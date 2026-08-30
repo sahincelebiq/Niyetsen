@@ -224,3 +224,52 @@ def test_apply_path_chat_seeds_today_and_sets_ready_without_plan(
     ]
     assert "Nefes al" in today_titles
     assert len(today_titles) >= 2
+
+
+def test_activate_path_writes_intent_and_path_bonus(isolated_in_memory_repo):
+    from datetime import date
+
+    from fastapi.testclient import TestClient
+
+    from app.main import app
+    from app.models.schemas import Plan, PlanDay, Task
+    from app.services import persona_service
+
+    user_id = "path-activate-user"
+    isolated_in_memory_repo.update_subscription(user_id, subscription_status="active")
+    today = date.today()
+    isolated_in_memory_repo.save_plan(
+        user_id,
+        Plan(
+            id="path-activate-plan",
+            duration_days=30,
+            batch_generated_until=7,
+            start_date=today,
+            days=[PlanDay(day=1, theme="Başlangıç", tasks=[
+                Task(id="keep", day=1, date=today, title="Su iç", categories=["İstikrar"]),
+            ])],
+        ),
+    )
+    client = TestClient(app)
+    response = client.post(
+        "/paths/sisu-yolu/activate",
+        headers={"X-User-Id": user_id},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["activated"] is True
+    assert body["path"]["name"] == "Sisu Yolu"
+    persona = persona_service.get_persona("sisu-yolu")
+    assert persona is not None
+    lessons = [str(item).strip()[:80] for item in persona.dossier["lessons_for_users"]]
+    assert body["bonus"]["title"] in lessons
+    assert body["bonus"]["status"] == "offered"
+    intent = isolated_in_memory_repo.get_active_intent(user_id)
+    assert intent is not None
+    assert "Sisu Yolu" in intent[0].interests
+    today_bonus = client.get("/bonus/today", headers={"X-User-Id": user_id})
+    assert today_bonus.status_code == 200
+    assert today_bonus.json()["id"] == body["bonus"]["id"]
+    again = client.post("/paths/sisu-yolu/activate", headers={"X-User-Id": user_id})
+    assert again.status_code == 200
+    assert again.json()["bonus"]["id"] == body["bonus"]["id"]

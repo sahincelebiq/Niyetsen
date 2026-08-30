@@ -31,12 +31,19 @@ def _response(offer: BonusOffer) -> BonusOfferResponse:
 
 
 def offer_for_day(
-    repository: Repository, user_id: str, day: date
+    repository: Repository,
+    user_id: str,
+    day: date,
+    path_name: str = "",
 ) -> BonusOfferResponse:
     existing = repository.get_bonus_for_day(user_id, day)
     if existing:
         return _response(existing)
-    definition = pick_bonus(user_id, day)
+    if not path_name:
+        from app.services import persona_service
+
+        path_name = persona_service.active_path_name(repository, user_id)
+    definition = pick_bonus(user_id, day, path_name=path_name)
     offer = repository.save_bonus_offer(BonusOffer(
         id=str(uuid.uuid4()),
         user_id=user_id,
@@ -51,6 +58,13 @@ def offer_for_day(
 
 def active_offer(repository: Repository, user_id: str) -> BonusOfferResponse | None:
     offer = repository.get_active_bonus(user_id)
+    return _response(offer) if offer else None
+
+
+def today_offer(
+    repository: Repository, user_id: str, day: date
+) -> BonusOfferResponse | None:
+    offer = repository.get_bonus_for_day(user_id, day)
     return _response(offer) if offer else None
 
 

@@ -94,7 +94,10 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
                 recent_tasks: str = "", mood_notes: str = "",
                 preferred_language: str = "",
                 has_active_plan: bool = False,
-                plan_has_content: bool = False) -> ChatResponse:
+                plan_has_content: bool = False,
+                plan_day: int | None = None,
+                duration_days: int | None = None,
+                philosophy_paths: list[str] | None = None) -> ChatResponse:
     """/chat'in beyni. Kriz kontrolü ÖNCE — motivasyon her şeyden sonra gelir."""
     last_user_msg = next(
         (m.content for m in reversed(req.messages) if m.role == "user"), ""
@@ -178,6 +181,9 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
         recent_tasks=recent_tasks,
         mood_notes=mood_notes,
         preferred_language=preferred_language,
+        plan_day=plan_day,
+        duration_days=duration_days,
+        philosophy_paths=philosophy_paths,
     )
     history = [m.model_dump() for m in req.messages[-CHAT_HISTORY_LIMIT:]]
 

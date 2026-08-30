@@ -32,6 +32,23 @@ def test_memory_block_includes_onboarding_identity():
     assert "Bugün durumu: 1 done, 1 pending" in memory
     assert "Son görevler: Yürüyüş (done)" in memory
     assert "Son ruh hali notları: Bugün enerjik hissediyorum" in memory
+    assert "Zincir:" in memory
+    assert "plan günü DEĞİL" in memory
+
+
+def test_memory_block_separates_plan_day_from_streak():
+    memory = build_memory_block(
+        GameState(user_id="memory-plan-day", streak_len=40, best_streak=40),
+        plan_day=7,
+        duration_days=365,
+        philosophy_paths=["Sisu Yolu"],
+    )
+    assert "Plan günü: 7/365" in memory
+    assert "zincir değil" in memory
+    assert "Zincir: 40 gün" in memory
+    assert "plan günü DEĞİL" in memory
+    assert "Aktif felsefe yolu: Sisu Yolu" in memory
+    assert memory.index("Plan günü") < memory.index("Zincir:")
 
 
 def test_profile_can_be_saved_before_consent_without_implied_rejection():

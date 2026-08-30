@@ -256,6 +256,19 @@ async def chat(
             (x_app_locale or "").strip()
             or (profile.preferred_language or "").strip()
         )
+        from app.services import persona_service
+
+        interest_pool = list(req.collected.interests)
+        if active:
+            interest_pool = list(active[0].interests) + interest_pool
+        philosophy_paths = persona_service.paths_in_interests(interest_pool)
+        plan = repo.get_plan(user_id)
+        plan_day = None
+        duration_days = None
+        if plan is not None:
+            today = _user_today(profile.timezone)
+            plan_day = (today - plan.start_date).days + 1
+            duration_days = plan.duration_days
         response = await intent_service.handle_chat(
             req,
             state=state,
@@ -268,8 +281,11 @@ async def chat(
             recent_tasks=recent_tasks,
             mood_notes=_recent_mood(req.messages),
             preferred_language=preferred_language,
-            has_active_plan=repo.get_plan(user_id) is not None,
+            has_active_plan=plan is not None,
             plan_has_content=plan_has_content,
+            plan_day=plan_day,
+            duration_days=duration_days,
+            philosophy_paths=philosophy_paths,
         )
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
@@ -961,6 +977,16 @@ def get_active_bonus(
     return bonus_service.active_offer(repo, user_id)
 
 
+@router.get("/bonus/today", response_model=BonusOfferResponse | None)
+def get_today_bonus(
+    user_id: str = Depends(get_current_user),
+) -> BonusOfferResponse | None:
+    """Bugünün bonus kaydı — tamamlanmış olsa da aynı satır döner (yenileme sıfırlamaz)."""
+    _require_premium(user_id)
+    profile = repo.get_profile(user_id)
+    return bonus_service.today_offer(repo, user_id, _user_today(profile.timezone))
+
+
 @router.post("/bonus/{offer_id}/complete")
 def complete_bonus(
     offer_id: str,
@@ -1202,6 +1228,22 @@ def get_philosophy_path_detail(
     if persona is None:
         raise HTTPException(status_code=404, detail="Felsefe yolu bulunamadı.")
     return persona.detail_dict()
+
+
+@router.post("/paths/{slug}/activate")
+def activate_philosophy_path(
+    slug: str, user_id: str = Depends(get_current_user)
+) -> dict:
+    """Yolu niyete işler, bugünün derslerini eker, o günün bonusunu yol tadında sunar."""
+    from app.services import persona_service
+
+    _require_pro_modules(user_id)
+    if persona_service.get_persona(slug) is None:
+        raise HTTPException(status_code=404, detail="Felsefe yolu bulunamadı.")
+    profile = repo.get_profile(user_id)
+    return persona_service.activate_path(
+        repo, user_id, slug, today=_user_today(profile.timezone)
+    )
 
 
 @router.get("/paths")

@@ -42,7 +42,30 @@ BONUS_POOL = (
 )
 
 
-def pick_bonus(user_id: str, day: date) -> BonusDefinition:
+def pick_bonus(user_id: str, day: date, path_name: str = "") -> BonusDefinition:
+    if path_name:
+        from app.services.persona_service import _PATH_CATEGORIES, get_persona
+
+        persona = get_persona(path_name)
+        lessons = [
+            str(item).strip()
+            for item in ((persona.dossier.get("lessons_for_users") if persona else None) or [])
+            if str(item).strip()
+        ]
+        if lessons:
+            digest = hashlib.sha256(
+                f"{user_id}:{day.isoformat()}:path:{path_name}".encode()
+            ).digest()
+            lesson = lessons[int.from_bytes(digest[:4], "big") % len(lessons)]
+            category = "İstikrar"
+            if persona:
+                category = _PATH_CATEGORIES.get(persona.category, ["İstikrar"])[0]
+            return BonusDefinition(
+                key=f"path:{persona.slug if persona else 'yol'}",
+                title=lesson[:80],
+                category=category,
+                tiny_instruction="Bu yolun bugünkü küçük adımı. Fotoğraf gerekmez.",
+            )
     digest = hashlib.sha256(f"{user_id}:{day.isoformat()}".encode()).digest()
     return BONUS_POOL[int.from_bytes(digest[:4], "big") % len(BONUS_POOL)]
 

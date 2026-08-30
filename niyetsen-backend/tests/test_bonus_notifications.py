@@ -47,6 +47,30 @@ def test_bonus_completion_awards_ten_points_once():
     ]) == 1
 
 
+def test_bonus_today_stays_completed_and_offer_does_not_reset():
+    user_id = "bonus-today-user"
+    offered = client.post("/bonus/offer", headers={"X-User-Id": user_id})
+    assert offered.status_code == 200
+    body = offered.json()
+    done = client.post(
+        f"/bonus/{body['id']}/complete",
+        json={"completion_id": "today-complete-1"},
+        headers={"X-User-Id": user_id},
+    )
+    assert done.status_code == 200
+    today = client.get("/bonus/today", headers={"X-User-Id": user_id})
+    assert today.status_code == 200
+    assert today.json()["id"] == body["id"]
+    assert today.json()["status"] == "completed"
+    again = client.post("/bonus/offer", headers={"X-User-Id": user_id})
+    assert again.status_code == 200
+    assert again.json()["id"] == body["id"]
+    assert again.json()["status"] == "completed"
+    active = client.get("/bonus/active", headers={"X-User-Id": user_id})
+    assert active.status_code == 200
+    assert active.json() is None
+
+
 def test_chat_yaptim_does_not_complete_bonus(monkeypatch):
     user_id = "bonus-chat-user"
     client.post(

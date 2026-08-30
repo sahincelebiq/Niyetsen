@@ -35,6 +35,9 @@ def build_memory_block(
     recent_tasks: str = "",
     mood_notes: str = "",
     preferred_language: str = "",
+    plan_day: int | None = None,
+    duration_days: int | None = None,
+    philosophy_paths: list[str] | None = None,
 ) -> str:
     """
     README'deki şablonla birebir. Alan boşsa satır atlanır — modele gürültü verme.
@@ -59,8 +62,21 @@ def build_memory_block(
         )
     if active_intent:
         lines.append(f"Aktif niyet: \"{active_intent}\"")
+    if philosophy_paths:
+        lines.append("Aktif felsefe yolu: " + ", ".join(philosophy_paths))
+    if plan_day is not None and plan_day >= 1:
+        if duration_days:
+            lines.append(
+                f"Plan günü: {plan_day}/{duration_days} "
+                "(planın takvim günü — zincir değil)"
+            )
+        else:
+            lines.append(f"Plan günü: {plan_day} (planın takvim günü — zincir değil)")
     if state is not None:
-        lines.append(f"Zincir: {state.streak_len} gün kesintisiz (rekor: {state.best_streak})")
+        lines.append(
+            f"Zincir: {state.streak_len} gün kesintisiz "
+            f"(rekor: {state.best_streak}) — bu plan günü DEĞİL"
+        )
         lines.append(f"Genel rütbe: {scoring_service.overall_rank(state.points)}")
         top = sorted(state.points.items(), key=lambda kv: -kv[1])[:2]
         lines.append("Güçlü kategoriler: " + ", ".join(f"{k} ({v})" for k, v in top))

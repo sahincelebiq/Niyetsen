@@ -333,3 +333,65 @@ def apply_path_after_chat(
         f"{persona.path_name} niyetinde duruyor. "
         "Bugünün görevleri zaten bu yoldan; hatırlatman saatinde gelir."
     )
+
+
+def paths_in_interests(interests: list[str]) -> list[str]:
+    names: list[str] = []
+    for item in interests:
+        if not item:
+            continue
+        persona = get_persona(item)
+        if persona and persona.path_name not in names:
+            names.append(persona.path_name)
+    return names
+
+
+def active_path_name(repo: "Repository", user_id: str) -> str:
+    active = repo.get_active_intent(user_id)
+    if not active:
+        return ""
+    names = paths_in_interests(active[0].interests)
+    return names[0] if names else ""
+
+
+def activate_path(
+    repo: "Repository",
+    user_id: str,
+    slug: str,
+    *,
+    today: date | None = None,
+) -> dict:
+    """Yolu niyete yazar, varsa bugünün derslerini eker, o günün bonusunu yol tadında sunar."""
+    from app.models.schemas import CollectedIntent
+    from app.services import bonus_service
+
+    persona = get_persona(slug)
+    if persona is None:
+        raise KeyError(slug)
+
+    today = today or date.today()
+    active = repo.get_active_intent(user_id)
+    if active:
+        collected, ready = active
+    else:
+        collected = CollectedIntent()
+        ready = False
+    if persona.path_name not in collected.interests:
+        collected.interests.append(persona.path_name)
+    duration = collected.duration_days or 365
+    repo.save_intent(user_id, collected, duration, ready_for_plan=ready)
+
+    tasks_seeded: list[str] = []
+    if repo.get_plan(user_id) is not None:
+        added = seed_today_lessons(repo, user_id, persona, today=today)
+        tasks_seeded = [task.title for task in added]
+
+    bonus = bonus_service.offer_for_day(
+        repo, user_id, today, path_name=persona.path_name
+    )
+    return {
+        "path": persona.public_dict(),
+        "activated": True,
+        "tasks_seeded": tasks_seeded,
+        "bonus": bonus.model_dump(),
+    }
