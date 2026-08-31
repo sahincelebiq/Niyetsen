@@ -68,3 +68,14 @@ def test_normal_user_flow_unchanged(isolated_in_memory_repo):
 def test_dev_email_matching_is_case_insensitive():
     dev_accounts.register_if_dev("dev-user-2", "KutluAdalarr7@Gmail.com")
     assert dev_accounts.is_dev("dev-user-2") is True
+
+
+def test_closed_test_email_gets_premium_without_purchase(isolated_in_memory_repo):
+    dev_accounts.register_if_dev("closed-tester", "busra@grefins.com")
+    assert dev_accounts.is_dev("closed-tester") is True
+    info = subscription_service.get_subscription(
+        isolated_in_memory_repo, "closed-tester"
+    )
+    assert info.has_premium_access is True
+    assert info.show_paywall is False
+    assert info.status == "active"

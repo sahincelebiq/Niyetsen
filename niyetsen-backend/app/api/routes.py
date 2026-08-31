@@ -205,9 +205,14 @@ def get_current_user(
     user_id = payload.get("sub")
     if not user_id:
         raise AUTH_ERROR
-    # Geliştirici hesabı: doğrulanmış e-posta allowlist'teyse işaretle
+    # Geliştirici / kapalı test: doğrulanmış e-posta allowlist'teyse işaretle
     # (abonelik kısa devresi — normal kullanıcılar etkilenmez).
-    dev_accounts.register_if_dev(user_id, payload.get("email"))
+    email = payload.get("email")
+    if not email:
+        meta = payload.get("user_metadata")
+        if isinstance(meta, dict):
+            email = meta.get("email")
+    dev_accounts.register_if_dev(user_id, email if isinstance(email, str) else None)
     return user_id
 
 

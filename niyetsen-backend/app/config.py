@@ -149,6 +149,15 @@ class Settings:
     DEV_ACCOUNT_EMAILS: list[str] = _csv("DEV_ACCOUNT_EMAILS") or [
         "kutluadalarr7@gmail.com"
     ]
+    # Kapalı test e-postaları: Play listesindeki tester'lar IAP olmadan
+    # plan/kanıt/yol deneyebilir. Lansman sonrası env'i boşalt.
+    CLOSED_TEST_EMAILS: list[str] = _csv("CLOSED_TEST_EMAILS") or [
+        "admbrtelfflz.1980@gmail.com",
+        "busra.pehlivan@fauna-studio.com",
+        "busra@grefins.com",
+        "semanurerkek3@gmail.com",
+        "yilmazbelinay864@gmail.com",
+    ]
 
 
 settings = Settings()

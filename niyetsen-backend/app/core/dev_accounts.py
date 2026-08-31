@@ -1,10 +1,11 @@
 """
 Geliştirici hesabı ayrımı (FAZ 7.5).
 =====================================
-Şahin'in geliştirici hesabı (DEV_ACCOUNT_EMAILS) mağaza satın alması olmadan
-tam erişim alır; NORMAL KULLANICILAR ETKİLENMEZ — onlar standart deneme →
-paywall akışında kalır. Eşleşme JWT'deki doğrulanmış e-posta claim'iyle yapılır
-(kullanıcı kendi e-postasını taklit edemez; Supabase imzalı token).
+Şahin'in geliştirici hesabı (DEV_ACCOUNT_EMAILS) ve kapalı test e-postaları
+(CLOSED_TEST_EMAILS) mağaza satın alması olmadan tam erişim alır; diğer
+kullanıcılar standart deneme → paywall akışında kalır. Eşleşme JWT'deki
+doğrulanmış e-posta claim'iyle yapılır (kullanıcı kendi e-postasını taklit
+edemez; Supabase imzalı token).
 
 Not: Store incelemesine dev hesabı bilgisi sızmaz — bu yalnız backend'de
 bir abonelik kısa devresi; arayüzde hiçbir "geliştirici" izi yoktur.
@@ -20,7 +21,8 @@ _lock = Lock()
 
 
 def _normalized_allowlist() -> set[str]:
-    return {email.strip().lower() for email in settings.DEV_ACCOUNT_EMAILS if email.strip()}
+    emails = list(settings.DEV_ACCOUNT_EMAILS) + list(settings.CLOSED_TEST_EMAILS)
+    return {email.strip().lower() for email in emails if email.strip()}
 
 
 def register_if_dev(user_id: str, email: str | None) -> None:
