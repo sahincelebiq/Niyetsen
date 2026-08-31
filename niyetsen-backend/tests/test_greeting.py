@@ -37,6 +37,27 @@ def test_greeting_with_streak_and_pending_tasks():
     assert "Sabah Rutini" in text
 
 
+def test_greeting_completed_today_celebrates():
+    text = build_chat_greeting(
+        name="Ayşe",
+        timezone_name="Europe/Istanbul",
+        pending_tasks_today=0,
+        completed_tasks_today=2,
+        has_plan=True,
+    )
+    assert "tamamladın" in text
+
+
+def test_greeting_needs_extension_points_to_today_tab():
+    text = build_chat_greeting(
+        name="Ayşe",
+        timezone_name="Europe/Istanbul",
+        has_plan=True,
+        needs_extension=True,
+    )
+    assert "Bugün sekmesine" in text
+
+
 def test_invalid_timezone_falls_back():
     text = build_chat_greeting(name="Ali", timezone_name="Invalid/Zone")
     assert "Ali" in text

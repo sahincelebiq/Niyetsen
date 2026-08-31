@@ -399,13 +399,16 @@ def chat_greeting(user_id: str = Depends(get_current_user)) -> ChatGreetingRespo
     summaries = repo.list_plan_summaries(user_id)
     active_summary = next((item for item in summaries if item.is_active), None)
     has_plan = bool(active_summary and active_summary.has_content)
-    today_items = project_service.get_today_tasks(repo, user_id)
-    pending_today = sum(1 for item in today_items if item.task.status == "pending")
+    today = project_service.get_daily_tasks_response(repo, user_id)
+    pending_today = sum(1 for item in today.items if item.task.status == "pending")
+    completed_today = sum(1 for item in today.items if item.task.status == "done")
     message = greeting_service.build_chat_greeting(
         name=profile.name,
         timezone_name=profile.timezone,
         streak_len=state.streak_len if state else 0,
         pending_tasks_today=pending_today,
+        completed_tasks_today=completed_today,
+        needs_extension=today.needs_extension,
         active_plan_name=active_summary.name if active_summary else "",
         has_plan=has_plan,
     )

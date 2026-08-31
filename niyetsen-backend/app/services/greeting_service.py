@@ -31,6 +31,8 @@ def build_chat_greeting(
     timezone_name: str,
     streak_len: int = 0,
     pending_tasks_today: int = 0,
+    completed_tasks_today: int = 0,
+    needs_extension: bool = False,
     active_plan_name: str = "",
     has_plan: bool = False,
 ) -> str:
@@ -39,12 +41,30 @@ def build_chat_greeting(
     salutation = _salutation_for_hour(local_now.hour)
     opener = f"{salutation}{_name_clause(name)}!"
 
-    if has_plan and streak_len > 0 and pending_tasks_today > 0:
+    if has_plan and pending_tasks_today > 0:
         plan_hint = f" ({active_plan_name})" if active_plan_name.strip() else ""
+        if streak_len > 0:
+            return (
+                f"{opener} 🌙 {streak_len} günlük zincirin devam ediyor — "
+                f"bugün{plan_hint} {pending_tasks_today} görev seni bekliyor. "
+                "Hazırsan küçük bir adımla başlayalım; takıldığın yerde buradayım."
+            )
         return (
-            f"{opener} 🌙 {streak_len} günlük zincirin devam ediyor — "
-            f"bugün{plan_hint} {pending_tasks_today} görev seni bekliyor. "
-            "Hazırsan küçük bir adımla başlayalım; takıldığın yerde buradayım."
+            f"{opener} 🌙 Bugün{plan_hint} {pending_tasks_today} görev hazır. "
+            "İlk küçük halkayı birlikte seçebiliriz — nasıl hissediyorsun?"
+        )
+
+    if has_plan and completed_tasks_today > 0:
+        return (
+            f"{opener} 🌙 Bugünün halkalarını tamamladın. "
+            "İstersen sohbet edelim veya yarının adımını birlikte seçelim."
+        )
+
+    if has_plan and needs_extension:
+        return (
+            f"{opener} 🌙 Planın duruyor; bugünün halkası henüz açılmamış. "
+            "Bugün sekmesine geç — görevler orada belirecek. "
+            "İstersen burada da yeni bir adım konuşabiliriz."
         )
 
     if has_plan and streak_len > 0:
@@ -52,13 +72,6 @@ def build_chat_greeting(
             f"{opener} 🌙 {streak_len} günlük zincirin hâlâ yanında. "
             "Bugün için bekleyen görev görünmüyor — istersen sohbet edelim veya "
             "yeni bir adım planlayalım."
-        )
-
-    if has_plan and pending_tasks_today > 0:
-        plan_hint = f" ({active_plan_name})" if active_plan_name.strip() else ""
-        return (
-            f"{opener} 🌙 Bugün{plan_hint} {pending_tasks_today} görev hazır. "
-            "İlk küçük halkayı birlikte seçebiliriz — nasıl hissediyorsun?"
         )
 
     if has_plan:
