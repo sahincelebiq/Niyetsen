@@ -99,42 +99,7 @@ def _legacy_message_id(user_id: str, index: int, role: str, content: str) -> str
 
 
 def _task_memory(user_id: str, timezone_name: str) -> tuple[str, str]:
-    plan = repo.get_plan(user_id)
-    if plan is None:
-        return "Aktif plan yok", ""
-    try:
-        user_timezone = ZoneInfo(timezone_name)
-    except ZoneInfoNotFoundError:
-        user_timezone = ZoneInfo("Europe/Istanbul")
-    today = datetime.now(timezone.utc).astimezone(user_timezone).date()
-    tasks = [task for day in plan.days for task in day.tasks]
-    todays_tasks = [task for task in tasks if task.date == today]
-    if todays_tasks:
-        status_counts: dict[str, int] = {}
-        for task in todays_tasks:
-            status_counts[task.status] = status_counts.get(task.status, 0) + 1
-        counts = ", ".join(
-            f"{count} {status}" for status, count in sorted(status_counts.items())
-        )
-        # Bellek: sayılar yetmez — rehber bugünün görev başlıklarını da görsün.
-        titles = "; ".join(
-            f"{task.title} [{task.status}]" for task in todays_tasks[:6]
-        )
-        plan_bit = f"Plan «{plan.name}». " if getattr(plan, "name", None) else ""
-        today_status = f"{plan_bit}{counts}. Görevler: {titles}"
-    else:
-        plan_bit = f"Plan «{plan.name}». " if getattr(plan, "name", None) else ""
-        today_status = f"{plan_bit}Bugüne atanmış görev yok"
-    recent = sorted(
-        (task for task in tasks if task.date and task.date <= today),
-        key=lambda task: (task.date, task.day),
-        reverse=True,
-    )[:5]
-    recent_tasks = "; ".join(
-        f"{task.title} ({task.date.isoformat()}, {task.status})"
-        for task in recent
-    )
-    return today_status, recent_tasks
+    return project_service.describe_today_for_memory(repo, user_id)
 
 
 def _recent_mood(messages: list[ChatMessage]) -> str:

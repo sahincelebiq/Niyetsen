@@ -102,3 +102,59 @@ def get_daily_tasks_response(
         active_plan_name=plan.name or "Planım",
         has_active_plan=True,
     )
+
+
+_TASK_STATUS_TR = {
+    "pending": "bekliyor",
+    "done": "tamamlandı",
+    "missed_silent": "sessiz kaçırma",
+    "missed_excused": "mazeret",
+}
+
+
+def _status_tr(status: str) -> str:
+    return _TASK_STATUS_TR.get(status, status)
+
+
+def describe_today_for_memory(repo: Repository, user_id: str) -> tuple[str, str]:
+    """KULLANICI BELLEĞİ — bugünün nabzı (Türkçe durum, uzatma uyarısı)."""
+    plan = repo.get_plan(user_id)
+    if plan is None:
+        return "Aktif plan yok", ""
+    today = get_daily_tasks_response(repo, user_id)
+    plan_name = today.active_plan_name or plan.name or ""
+    plan_bit = f"Plan «{plan_name}». " if plan_name else ""
+    if today.items:
+        status_counts: dict[str, int] = {}
+        for item in today.items:
+            label = _status_tr(item.task.status)
+            status_counts[label] = status_counts.get(label, 0) + 1
+        counts = ", ".join(
+            f"{count} {label}" for label, count in sorted(status_counts.items())
+        )
+        titles = "; ".join(
+            f"{item.task.title} [{_status_tr(item.task.status)}]"
+            for item in today.items[:6]
+        )
+        today_status = f"{plan_bit}{counts}. Görevler: {titles}"
+    elif today.needs_extension:
+        today_status = (
+            f"{plan_bit}Bugünün halkası henüz açılmamış. "
+            "Kullanıcıyı Bugün sekmesine yönlendir; görev uydurma."
+        )
+    else:
+        today_status = f"{plan_bit}Bugüne atanmış görev yok"
+
+    profile = repo.get_profile(user_id)
+    current = _user_local_today(profile.timezone)
+    tasks = [task for day in plan.days for task in day.tasks]
+    recent = sorted(
+        (task for task in tasks if task.date and task.date <= current),
+        key=lambda task: (task.date, task.day),
+        reverse=True,
+    )[:5]
+    recent_tasks = "; ".join(
+        f"{task.title} ({task.date.isoformat()}, {_status_tr(task.status)})"
+        for task in recent
+    )
+    return today_status, recent_tasks
