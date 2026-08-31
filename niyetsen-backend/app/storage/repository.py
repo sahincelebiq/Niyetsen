@@ -732,6 +732,12 @@ class InMemoryRepository(Repository):
             if r.type == fortune_type and r.day == day
         )
 
+    def count_fortunes(self, user_id: str, fortune_type: str) -> int:
+        return sum(
+            1 for r in self._fortunes.get(user_id, [])
+            if r.type == fortune_type
+        )
+
     def get_fortune_for_day(
         self, user_id: str, fortune_type: str, day: dt_date
     ) -> Optional[FortuneRecord]:

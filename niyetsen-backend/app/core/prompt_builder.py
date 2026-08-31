@@ -23,6 +23,50 @@ _LOCALE_NAMES = {
     "ar": "Arabic",
 }
 
+# "en" / "EN-us" / "en_GB" gibi sızıntılar YANIT DİLİ'nde ham "en" yazmasın.
+_LOCALE_ALIASES = {
+    "en": "en-US",
+    "en-us": "en-US",
+    "eng": "en-US",
+    "english": "en-US",
+    "en-gb": "en-GB",
+    "gb": "en-GB",
+    "uk": "en-GB",
+    "de": "de",
+    "deu": "de",
+    "ger": "de",
+    "german": "de",
+    "fr": "fr",
+    "fra": "fr",
+    "french": "fr",
+    "ar": "ar",
+    "ara": "ar",
+    "arabic": "ar",
+    "tr": "tr",
+    "tur": "tr",
+    "turkish": "tr",
+}
+
+
+def normalize_app_locale(value: str | None) -> str:
+    """UI/header/DB dil kodunu kilitli 6 locale'den birine çevir. Boşsa ''."""
+    if not isinstance(value, str):
+        return ""
+    raw = (value or "").strip().replace("_", "-")
+    if not raw:
+        return ""
+    if raw in _LOCALE_NAMES:
+        return raw
+    lower = raw.lower()
+    if lower in _LOCALE_NAMES:
+        for canonical in _LOCALE_NAMES:
+            if canonical.lower() == lower:
+                return canonical
+    if lower in _LOCALE_ALIASES:
+        return _LOCALE_ALIASES[lower]
+    lang = lower.split("-", 1)[0]
+    return _LOCALE_ALIASES.get(lang, "")
+
 
 def build_memory_block(
     state: Optional[GameState],
@@ -53,13 +97,16 @@ def build_memory_block(
         lines.append(f"Burç: {zodiac}")
     if gender and gender != "belirtmek istemiyorum":
         lines.append(f"Cinsiyet: {gender}")
-    if preferred_language:
-        lang_name = _LOCALE_NAMES.get(preferred_language, preferred_language)
-        lines.append(f"Tercih edilen dil: {preferred_language} ({lang_name})")
-        lines.append(
-            f"YANIT DİLİ: Reply to the user in {lang_name}. "
-            "Keep Niyetsen's honest, non-shaming tone."
-        )
+    canonical = normalize_app_locale(preferred_language) or "tr"
+    lang_name = _LOCALE_NAMES.get(canonical, "Turkish")
+    lines.append(f"Tercih edilen dil: {canonical} ({lang_name})")
+    lines.append(
+        f"YANIT DİLİ (EN YÜKSEK ÖNCELİK — system prompt'taki dil cümlesini geçersiz kılar): "
+        f"Reply entirely in {lang_name}. Do not mix languages. "
+        f"Do not reply in English unless {lang_name} is English. "
+        "suggestions, thread_title, and every user-visible sentence must be in that language. "
+        "Keep Niyetsen's honest, non-shaming tone."
+    )
     if active_intent:
         lines.append(f"Aktif niyet: \"{active_intent}\"")
     if philosophy_paths:

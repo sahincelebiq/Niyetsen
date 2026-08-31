@@ -45,9 +45,13 @@ Fiziksel sahne yoksa tema token'ı dışına çıkma.
 - ✅ `usePremiumAccess` ile ekran açılır; içerik yerine **kilitli önizleme
   kartı** gösterilir: değer vaadi 1-2 cümle + "PRO ile aç" CTA (44pt,
   `tint` dolgu) + `router.push('/paywall')`. Örnek uygulama: `rapor.tsx`.
-- Fal (tarot/kahve/el/burç) İSTİSNA DEĞİL, daha da açık: tamamen ücretsizdir,
-  günlük hak sayaçları sunucuda; premium yalnız EK hak açar. Fal modüllerine
-  paywall kapısı eklemek geçmişte "mistik çalışmıyor" hatası yarattı.
+- Fal (tarot/kahve/el): ekran **açık kalır** (kapı içeride). Ücretsiz ömür
+  boyu 1 kahve + 1 tarot + 1 el + sınırlı mistik sohbet; hak bitince kilit
+  önizleme + "PRO ile aç". Burç sınırsız. Fal modülüne `replace('/paywall')
+  ekleme — geçmişte "mistik çalışmıyor" hatası yarattı.
+- Felsefe Yolları: liste + detay ücretsiz incelenir; "bu yolla başla" PRO.
+- Rapor: 7 günlük özet ücretsiz; 30 günlük hikâye PRO (panel açık kalır).
+- Zincir yoldaşı: yalnız Filiz ücretsiz; diğer avatarlar görünür, seçim PRO.
 - Sunucu her zaman son sözü söyler (402); istemci kapısı yalnız UX içindir.
 
 ## 4. Hareket ve etkileşim

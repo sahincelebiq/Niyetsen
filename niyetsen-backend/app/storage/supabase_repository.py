@@ -1149,6 +1149,14 @@ class SupabaseRepository(Repository):
         )
         return int(response.count or 0)
 
+    def count_fortunes(self, user_id: str, fortune_type: str) -> int:
+        response = (
+            self._db.table("fortune_log").select("id", count="exact")
+            .eq("user_id", user_id).eq("type", fortune_type)
+            .limit(1).execute()
+        )
+        return int(response.count or 0)
+
     def get_fortune_for_day(
         self, user_id: str, fortune_type: str, day: dt_date
     ) -> Optional[FortuneRecord]:

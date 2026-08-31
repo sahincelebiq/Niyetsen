@@ -64,6 +64,17 @@ MULTI_PLAN_PAYWALL = {
     "code": "paywall_required",
     "message": "İkinci plan için abonelik gerekir. Devam etmek için paketi aç.",
 }
+PATH_ACTIVATE_PAYWALL = {
+    "code": "paywall_required",
+    "message": "Felsefe yolunu niyetine işlemek PRO ile açılır. İncelemek ücretsiz.",
+}
+FORTUNE_PAYWALL_DETAIL = {
+    "code": "paywall_required",
+    "message": (
+        "Ücretsiz mistik hakkın doldu. PRO ile fal, tarot, el falı "
+        "ve rehber sohbeti sınırsız açılır."
+    ),
+}
 
 
 def _require_consent(user_id: str, purpose: str) -> None:
@@ -82,13 +93,20 @@ def _require_premium(user_id: str) -> SubscriptionInfo:
     return info
 
 
-def _require_pro_modules(user_id: str) -> SubscriptionInfo:
-    """Mistik / idol / rapor: yalnız trial + active (free'de has_premium_access
-    true olsa bile kilitli — Şahin 2026-08-02). Dev hesabı status=active."""
-    info = _require_premium(user_id)
-    if info.status not in ("trial", "active"):
-        raise HTTPException(status_code=402, detail=PAYWALL_DETAIL)
+def _require_paid_pro(user_id: str) -> SubscriptionInfo:
+    """Satın alma / kapalı test / dev: yalnız status=active.
+    Trial ve free inceleyebilir ama yolu yaşayamaz."""
+    subscription_service.sync_expired_trials(repo, user_id)
+    info = subscription_service.get_subscription(repo, user_id)
+    if info.status != "active":
+        raise HTTPException(status_code=402, detail=PATH_ACTIVATE_PAYWALL)
     return info
+
+
+def _fortune_paywall(exc: fortune_service.FortuneRightsExhausted, is_premium: bool):
+    if is_premium:
+        raise HTTPException(status_code=429, detail=str(exc))
+    raise HTTPException(status_code=402, detail=FORTUNE_PAYWALL_DETAIL)
 
 
 def _legacy_message_id(user_id: str, index: int, role: str, content: str) -> str:
@@ -222,9 +240,12 @@ async def chat(
     active_summary = next((item for item in summaries if item.is_active), None)
     plan_has_content = bool(active_summary and active_summary.has_content)
     try:
+        from app.core.prompt_builder import normalize_app_locale
+
         preferred_language = (
-            (x_app_locale or "").strip()
-            or (profile.preferred_language or "").strip()
+            normalize_app_locale(x_app_locale)
+            or normalize_app_locale(profile.preferred_language)
+            or "tr"
         )
         from app.services import persona_service
 
@@ -328,7 +349,10 @@ def chat_history(user_id: str = Depends(get_current_user)) -> list[ChatMessage]:
 
 
 @router.post("/chat/reset", response_model=ChatGreetingResponse)
-def chat_reset(user_id: str = Depends(get_current_user)) -> ChatGreetingResponse:
+def chat_reset(
+    user_id: str = Depends(get_current_user),
+    x_app_locale: str | None = Header(default=None, alias="X-App-Locale"),
+) -> ChatGreetingResponse:
     """Yeni sohbet başlat (FAZ 7.6): YENİ OTURUM açar — eski sohbet SİLİNMEZ.
 
     Geçmiş oturumlar başlıklarıyla ☰ panelde listelenir ve geri dönülebilir
@@ -337,7 +361,7 @@ def chat_reset(user_id: str = Depends(get_current_user)) -> ChatGreetingResponse
     """
     thread = repo.create_chat_thread(user_id)
     log.info("Yeni sohbet oturumu (user=%s, thread=%s)", user_id, thread.id)
-    return chat_greeting(user_id)
+    return _compose_chat_greeting(user_id, x_app_locale)
 
 
 @router.get("/chat/threads", response_model=list[ChatThread])
@@ -356,9 +380,9 @@ def activate_chat_thread(
     return repo.get_chat_history(user_id)
 
 
-@router.get("/chat/greeting", response_model=ChatGreetingResponse)
-def chat_greeting(user_id: str = Depends(get_current_user)) -> ChatGreetingResponse:
-    """Yeni sohbet veya boş oturumda saat dilimine göre kişiselleştirilmiş karşılama."""
+def _compose_chat_greeting(user_id: str, locale_raw: str | None = None) -> ChatGreetingResponse:
+    from app.core.prompt_builder import normalize_app_locale
+
     profile = repo.get_profile(user_id)
     state = repo.get_state(user_id)
     summaries = repo.list_plan_summaries(user_id)
@@ -367,6 +391,11 @@ def chat_greeting(user_id: str = Depends(get_current_user)) -> ChatGreetingRespo
     today = project_service.get_daily_tasks_response(repo, user_id)
     pending_today = sum(1 for item in today.items if item.task.status == "pending")
     completed_today = sum(1 for item in today.items if item.task.status == "done")
+    locale = (
+        normalize_app_locale(locale_raw)
+        or normalize_app_locale(profile.preferred_language)
+        or "tr"
+    )
     message = greeting_service.build_chat_greeting(
         name=profile.name,
         timezone_name=profile.timezone,
@@ -376,8 +405,18 @@ def chat_greeting(user_id: str = Depends(get_current_user)) -> ChatGreetingRespo
         needs_extension=today.needs_extension,
         active_plan_name=active_summary.name if active_summary else "",
         has_plan=has_plan,
+        locale=locale,
     )
     return ChatGreetingResponse(message=message)
+
+
+@router.get("/chat/greeting", response_model=ChatGreetingResponse)
+def chat_greeting(
+    user_id: str = Depends(get_current_user),
+    x_app_locale: str | None = Header(default=None, alias="X-App-Locale"),
+) -> ChatGreetingResponse:
+    """Yeni sohbet veya boş oturumda saat dilimine göre kişiselleştirilmiş karşılama."""
+    return _compose_chat_greeting(user_id, x_app_locale)
 
 
 @router.get("/chat/session", response_model=ChatSessionResponse)
@@ -1011,7 +1050,8 @@ def my_recap(
     user_id: str = Depends(get_current_user),
 ) -> RecapResponse:
     """Niyetsen Raporu: panel (ayna + KPI) herkese açık — kapı içeride.
-    Story kartları yalnız trial/active/dev. Kural bazlı, Gemini yok.
+    7 günlük hikâye kartları ücretsiz; 14g/30g yalnız ödenmiş PRO
+    (kapalı test/dev status=active). Kural bazlı, Gemini yok.
     Kaçırılan görev / ceza dönmez."""
     if period not in recap_service.PERIOD_DAYS:
         period = "14d"
@@ -1048,7 +1088,8 @@ def my_recap(
         bonus_counts=bonus_counts,
     )
     info = subscription_service.get_subscription(repo, user_id)
-    if info.status not in ("trial", "active"):
+    # 7g özet herkese; detaylı dönem yalnız satın alınmış PRO.
+    if period != "7d" and info.status != "active":
         recap = recap.model_copy(update={"cards": []})
     return recap
 
@@ -1164,39 +1205,50 @@ async def revenuecat_webhook(
 # Hak sayaçları günlük; free katman fal haklarına sahiptir (paywall gate YOK,
 # premium yalnız EK hak açar — algoritma §5).
 # ------------------------------------------------------------------
-def _fortune_context(user_id: str) -> tuple[UserProfile, bool, str]:
+def _request_locale(request: Request | None) -> str:
+    if request is None:
+        return ""
+    return (request.headers.get("x-app-locale") or "").strip()
+
+
+def _fortune_context(
+    user_id: str, request: Request | None = None
+) -> tuple[UserProfile, bool, str]:
     """profil + premium bilgisi + bellek bloğu (yorum kişiselleştirme)."""
-    from app.core import prompt_builder
+    from app.core.prompt_builder import build_memory_block, normalize_app_locale
 
     profile = repo.get_profile(user_id)
     subscription_service.sync_expired_trials(repo, user_id)
     info = subscription_service.get_subscription(repo, user_id)
     state = repo.get_state(user_id)
-    memory = prompt_builder.build_memory_block(
+    preferred = (
+        normalize_app_locale(_request_locale(request))
+        or normalize_app_locale(profile.preferred_language)
+        or "tr"
+    )
+    memory = build_memory_block(
         state=state,
         name=profile.name or "",
         birth_date=profile.birth_date.isoformat() if profile.birth_date else "",
         zodiac=profile.zodiac_sign or "",
         gender=profile.gender or "",
-        preferred_language=profile.preferred_language or "",
+        preferred_language=preferred,
     )
     # faz8.13/2c: mistik hafıza — geçmiş fallar rehber bağlamına girer.
     mystic_memory = fortune_service.build_mystic_memory(repo, user_id)
     if mystic_memory:
         memory = f"{memory}\n\n{mystic_memory}"
-    return profile, info.has_premium_access, memory
+    return profile, info.status == "active", memory
 
 
 @router.get("/paths/{slug}")
 def get_philosophy_path_detail(
     slug: str, user_id: str = Depends(get_current_user)
 ) -> dict:
-    """FAZ 8.9 — İdol/Felsefe Yolu detay ekranı: dossier'den güvenli bölümler
-    (inançlar, alışkanlıklar, rutin, dersler, kitaplar). Premium (İdol kuralı);
-    kişi adı yalnız source_note'ta (yasal kural)."""
+    """FAZ 8.9 — İdol/Felsefe Yolu detay: incelemek ücretsiz (kapı içeride).
+    Yolu niyete işlemek POST /activate ile PRO."""
     from app.services import persona_service
 
-    _require_pro_modules(user_id)
     persona = persona_service.get_persona(slug)
     if persona is None:
         raise HTTPException(status_code=404, detail="Felsefe yolu bulunamadı.")
@@ -1210,7 +1262,7 @@ def activate_philosophy_path(
     """Yolu niyete işler, bugünün derslerini eker, o günün bonusunu yol tadında sunar."""
     from app.services import persona_service
 
-    _require_pro_modules(user_id)
+    _require_paid_pro(user_id)
     if persona_service.get_persona(slug) is None:
         raise HTTPException(status_code=404, detail="Felsefe yolu bulunamadı.")
     profile = repo.get_profile(user_id)
@@ -1221,14 +1273,13 @@ def activate_philosophy_path(
 
 @router.get("/paths")
 def list_philosophy_paths(user_id: str = Depends(get_current_user)) -> list[dict]:
-    """Felsefe Yolları (İdol Modu) — PREMIUM özellik (Şahin'in kararı).
+    """Felsefe Yolları (İdol Modu) — listeyi herkes inceler (kapı içeride).
 
-    Dev hesabı (DEV_ACCOUNT_EMAILS) abonelik kısa devresiyle her zaman erişir.
-    Free kullanıcı 402 alır → istemci paywall'a yönlendirir.
+    Yolu niyetine işlemek POST /paths/{slug}/activate → yalnız PRO
+    (dev + kapalı test allowlist status=active).
     """
     from app.services import path_service
 
-    _require_pro_modules(user_id)
     return [path.model_dump() for path in path_service.list_paths()]
 
 
@@ -1238,7 +1289,7 @@ def fortune_rights(user_id: str = Depends(get_current_user)) -> FortuneRightsRes
     subscription_service.sync_expired_trials(repo, user_id)
     info = subscription_service.get_subscription(repo, user_id)
     return fortune_service.get_rights(
-        repo, user_id, profile.timezone, info.has_premium_access
+        repo, user_id, profile.timezone, info.status == "active"
     )
 
 
@@ -1251,11 +1302,10 @@ async def fortune_tarot(
 ) -> TarotDrawResponse:
     """Günlük tarot. Aynı gün ikinci istekte kayıtlı sonuç döner.
 
-    faz8.13 kök düzeltmesi: fal ÜCRETSİZDİR (kilitli karar — "fal modüllerine
-    paywall ASLA"). Buradaki eski PRO kapısı kaldırıldı; premium yalnız EK
-    günlük hak açar (hak sayaçları sunucuda)."""
+    Ücretsiz: ömür boyu 1 çekim; PRO sınırsız. Ekran kilitlenmez —
+    hak bitince 402 + paywall_required (kapı içeride)."""
     _require_consent(user_id, "chat")
-    profile, is_premium, memory = _fortune_context(user_id)
+    profile, is_premium, memory = _fortune_context(user_id, request)
     try:
         return await fortune_service.draw_tarot(
             repo, user_id,
@@ -1265,7 +1315,7 @@ async def fortune_tarot(
             memory_block=memory,
         )
     except fortune_service.FortuneRightsExhausted as exc:
-        raise HTTPException(status_code=429, detail=str(exc))
+        _fortune_paywall(exc, is_premium)
     except fortune_service.FortuneError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except GeminiUnavailable:
@@ -1306,7 +1356,7 @@ async def fortune_photo(
             raise HTTPException(status_code=400, detail=str(exc))
         images.append((image_bytes, mime_type))
 
-    profile, is_premium, memory = _fortune_context(user_id)
+    profile, is_premium, memory = _fortune_context(user_id, request)
     try:
         return await fortune_service.read_photo_fortune(
             repo, user_id,
@@ -1317,7 +1367,7 @@ async def fortune_photo(
             memory_block=memory,
         )
     except fortune_service.FortuneRightsExhausted as exc:
-        raise HTTPException(status_code=429, detail=str(exc))
+        _fortune_paywall(exc, is_premium)
     except fortune_service.FortuneError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
     except GeminiUnavailable:
@@ -1343,7 +1393,7 @@ async def fortune_horoscope(
 ) -> HoroscopeResponse:
     """Burç yorumu: günlük veya haftalık (period=weekly) — önbellekli. Ücretsiz (faz8.13)."""
     _require_consent(user_id, "chat")
-    profile, _, memory = _fortune_context(user_id)
+    profile, _, memory = _fortune_context(user_id, request)
     sign = profile.zodiac_sign or (
         profile_service.zodiac_for(profile.birth_date) if profile.birth_date else ""
     )
@@ -1401,17 +1451,22 @@ async def fortune_chat(
 ) -> FortuneChatResponse:
     """faz8.13/2b — mistik rehberle serbest sohbet (fal modülünün merkezi).
 
-    /chat'ten AYRI uç: FORTUNE_SYSTEM_PROMPT + mistik hafıza (fortune_log)
-    bağlamıyla konuşur. Ücretsizdir; kriz sinyalinde fal yorumu durur ve
-    yanıt istemcide her zaman disclaimer ile gösterilir (store uyumu)."""
+    /chat'ten AYRI uç. Ücretsiz 5 mesaj, sonra PRO. Kriz sinyalinde fal
+    yorumu durur; yanıt istemcide her zaman disclaimer ile gösterilir."""
     _require_consent(user_id, "chat")
     if not req.messages or not any(m.role == "user" for m in req.messages):
         raise HTTPException(status_code=400, detail="Mesaj gerekli.")
-    profile, _, memory = _fortune_context(user_id)
+    profile, is_premium, memory = _fortune_context(user_id, request)
     try:
         reply = await fortune_service.mystic_chat(
-            repo, user_id, messages=req.messages, memory_block=memory,
+            repo, user_id,
+            messages=req.messages,
+            memory_block=memory,
+            timezone_name=profile.timezone,
+            is_premium=is_premium,
         )
+    except fortune_service.FortuneRightsExhausted as exc:
+        _fortune_paywall(exc, is_premium)
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
     crisis = reply == prompts.CRISIS_RESPONSE

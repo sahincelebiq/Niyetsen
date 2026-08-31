@@ -12,6 +12,23 @@ from app.storage.repository import repo
 client = TestClient(app)
 
 
+def test_greeting_follows_english_locale():
+    text = build_chat_greeting(
+        name="Ayse",
+        timezone_name="Europe/Istanbul",
+        locale="en-US",
+    )
+    assert "Niyetsen" in text
+    assert "Ben Niyetsen" not in text
+    assert "Good morning" in text or "Good afternoon" in text or "Good evening" in text
+
+
+def test_greeting_normalizes_en_leak():
+    text = build_chat_greeting(name=None, timezone_name="Europe/Istanbul", locale="en")
+    assert "I’m Niyetsen" in text or "I'm Niyetsen" in text
+    assert "Ben Niyetsen" not in text
+
+
 def test_morning_greeting_with_name():
     text = build_chat_greeting(name="Ayşe", timezone_name="Europe/Istanbul")
     assert text.startswith("Günaydın Ayşe!") or text.startswith("İyi günler Ayşe!") or text.startswith("İyi akşamlar Ayşe!")
@@ -127,3 +144,51 @@ def test_chat_greeting_endpoint_with_plan_context():
     message = resp.json()["message"]
     assert "3 günlük zincirin" in message
     assert "1 görev" in message
+
+
+def test_chat_greeting_endpoint_follows_en_locale_header():
+    user_id = "greeting_en_header"
+    consent_service.update(repo, user_id, ConsentUpdate(
+        privacy_policy=ConsentChoice(accepted=True),
+        kvkk_explicit_consent=ConsentChoice(accepted=True),
+        ai_chat_processing=ConsentChoice(accepted=True),
+    ))
+    repo.save_profile(
+        user_id,
+        profile_service.build_profile(
+            ProfileUpdate(
+                name="Deniz",
+                birth_date="1990-01-01",
+                timezone="Europe/Istanbul",
+                notif_hour=9,
+            ),
+            UserProfile(),
+        ),
+    )
+    resp = client.get(
+        "/chat/greeting",
+        headers={"X-User-Id": user_id, "X-App-Locale": "en"},
+    )
+    assert resp.status_code == 200
+    message = resp.json()["message"]
+    assert "Ben Niyetsen" not in message
+    assert "Good morning" in message or "Good afternoon" in message or "Good evening" in message
+    assert "I’m Niyetsen" in message or "I'm Niyetsen" in message
+
+
+def test_chat_reset_greeting_follows_de_locale_header():
+    user_id = "greeting_reset_de"
+    consent_service.update(repo, user_id, ConsentUpdate(
+        privacy_policy=ConsentChoice(accepted=True),
+        kvkk_explicit_consent=ConsentChoice(accepted=True),
+        ai_chat_processing=ConsentChoice(accepted=True),
+    ))
+    resp = client.post(
+        "/chat/reset",
+        headers={"X-User-Id": user_id, "X-App-Locale": "de"},
+    )
+    assert resp.status_code == 200
+    message = resp.json()["message"]
+    assert "Ben Niyetsen" not in message
+    assert "Guten Morgen" in message or "Guten Tag" in message or "Guten Abend" in message
+    assert "Ich bin Niyetsen" in message

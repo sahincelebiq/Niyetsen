@@ -3,7 +3,7 @@ from datetime import date, timedelta
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.core.prompt_builder import build_memory_block
+from app.core.prompt_builder import build_memory_block, normalize_app_locale
 from app.models.schemas import GameState
 from app.services.profile_service import zodiac_for
 
@@ -142,3 +142,29 @@ def test_delete_account_clears_in_memory_profile():
     assert deleted.status_code == 204
     fetched = client.get("/me/profile", headers={"X-User-Id": user_id})
     assert fetched.json()["onboarding_complete"] is False
+
+
+def test_normalize_app_locale_maps_en_leak_and_aliases():
+    assert normalize_app_locale("en") == "en-US"
+    assert normalize_app_locale("EN-us") == "en-US"
+    assert normalize_app_locale("en_GB") == "en-GB"
+    assert normalize_app_locale("de") == "de"
+    assert normalize_app_locale("ru") == ""
+    assert normalize_app_locale("") == ""
+    assert normalize_app_locale(None) == ""
+
+
+def test_memory_block_always_injects_reply_language_and_normalizes_en():
+    memory = build_memory_block(
+        GameState(user_id="locale-user"),
+        preferred_language="en",
+    )
+    assert "Tercih edilen dil: en-US (American English)" in memory
+    assert "Reply entirely in American English" in memory
+    assert "EN YÜKSEK ÖNCELİK" in memory
+
+
+def test_memory_block_defaults_to_turkish_when_locale_missing():
+    memory = build_memory_block(GameState(user_id="locale-tr-default"))
+    assert "Tercih edilen dil: tr (Turkish)" in memory
+    assert "Reply entirely in Turkish" in memory

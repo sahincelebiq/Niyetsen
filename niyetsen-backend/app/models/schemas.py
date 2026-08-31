@@ -436,7 +436,7 @@ class BonusOfferResponse(BaseModel):
 
 
 # ---------- V2: Fal modülü (FAZ 7) ----------
-FortuneType = Literal["tarot", "kahve", "el", "burc"]
+FortuneType = Literal["tarot", "kahve", "el", "burc", "chat"]
 
 FORTUNE_DISCLAIMER = (
     "Bu içerik eğlence amaçlıdır; kader tayini, tıbbi, hukuki veya finansal "

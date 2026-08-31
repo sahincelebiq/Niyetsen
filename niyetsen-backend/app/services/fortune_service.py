@@ -7,9 +7,9 @@ prompt + knowledge/ RAG bağlamı + Gemini 2.5 Flash (metin ve vision).
 İlkeler (philosophy.py): fal KADER değil AYNA; korku satılmaz; her yorum
 niyet + en küçük halkaya bağlanır; kriz sinyalinde mistik yorum durur.
 
-Hak sayaçları (docs/niyetsen-03-algoritma.md §5, günlük sıfırlanır):
-  el: ücretsiz 1 / premium 3 · kahve: ücretsiz 1 / premium 3 ·
-  tarot: herkese 1 (EK YOK) · burç: sınırsız (günlük önbellekli).
+Hak sayaçları (Şahin 2026-08-31): ücretsiz ömür boyu 1 kahve + 1 tarot +
+  1 el + 5 mistik sohbet; ödenmiş PRO (status=active) sınırsız.
+  burç herkese sınırsız (günlük önbellekli).
 """
 from __future__ import annotations
 
@@ -45,7 +45,7 @@ class FortuneError(ValueError):
 
 
 class FortuneRightsExhausted(FortuneError):
-    """429/409 — günlük hak bitti."""
+    """Ücretsiz hak bitti (istemci 402) veya günlük tavan (429)."""
 
 
 async def _rag_async(query: str, sources: list[str] | None = None) -> list[str]:
@@ -112,11 +112,30 @@ def _local_today(timezone_name: str) -> date:
     return datetime.now(timezone.utc).astimezone(tz).date()
 
 
-def _daily_limit(fortune_type: str, is_premium: bool) -> int:
+def _right_limit(fortune_type: str, is_premium: bool) -> int:
     rights = FORTUNE_DAILY_RIGHTS.get(fortune_type)
     if rights is None:
         return -1  # burç: sınırsız
     return rights["premium"] if is_premium else rights["free"]
+
+
+def _used_count(
+    repository: Repository,
+    user_id: str,
+    fortune_type: str,
+    day: date,
+    is_premium: bool,
+) -> int:
+    """PRO: bugünün kullanımı (bilgi). Ücretsiz: ömür boyu sayaç."""
+    if is_premium:
+        return repository.count_fortunes_for_day(user_id, fortune_type, day)
+    return repository.count_fortunes(user_id, fortune_type)
+
+
+def _remaining_after(remaining_before: int) -> int:
+    if remaining_before < 0:
+        return -1
+    return max(0, remaining_before - 1)
 
 
 def _check_right(
@@ -124,15 +143,16 @@ def _check_right(
     day: date, is_premium: bool,
 ) -> int:
     """Kalan hakkı döndürür (kullanım öncesi); hak yoksa exception."""
-    limit = _daily_limit(fortune_type, is_premium)
+    limit = _right_limit(fortune_type, is_premium)
     if limit < 0:
         return -1
-    used = repository.count_fortunes_for_day(user_id, fortune_type, day)
+    used = _used_count(repository, user_id, fortune_type, day, is_premium)
     if used >= limit:
         raise FortuneRightsExhausted(
-            "Bugünün hakkı doldu. Yarın yeni bir gün, yeni bir bakış. 🌙"
-            + ("" if is_premium or fortune_type == "tarot"
-               else " Premium ile günlük ek hak açılır.")
+            "Ücretsiz mistik hakkın doldu. PRO ile fal, tarot, el falı "
+            "ve rehber sohbeti sınırsız açılır. 🌙"
+            if not is_premium
+            else "Bugünün hakkı doldu. Yarın yeni bir gün, yeni bir bakış. 🌙"
         )
     return limit - used
 
@@ -142,11 +162,12 @@ def get_rights(
 ) -> FortuneRightsResponse:
     day = _local_today(timezone_name)
     rights: dict[str, FortuneRightsItem] = {}
-    for fortune_type in ("tarot", "kahve", "el"):
-        limit = _daily_limit(fortune_type, is_premium)
-        used = repository.count_fortunes_for_day(user_id, fortune_type, day)
+    for fortune_type in ("tarot", "kahve", "el", "chat"):
+        limit = _right_limit(fortune_type, is_premium)
+        used = _used_count(repository, user_id, fortune_type, day, is_premium)
+        remaining = -1 if limit < 0 else max(0, limit - used)
         rights[fortune_type] = FortuneRightsItem(
-            limit=limit, used=used, remaining=max(0, limit - used),
+            limit=limit, used=used, remaining=remaining,
         )
     rights["burc"] = FortuneRightsItem(limit=-1, used=0, remaining=-1)
     return FortuneRightsResponse(is_premium=is_premium, rights=rights)
@@ -216,6 +237,8 @@ async def mystic_chat(
     *,
     messages: list,                 # ChatMessage listesi
     memory_block: str = "",
+    timezone_name: str = "Europe/Istanbul",
+    is_premium: bool = False,
 ) -> str:
     """Mistik rehberle serbest sohbet. Kriz sinyali fal yorumunu durdurur;
     her yanıt istemcide disclaimer ile gösterilir (store uyumu)."""
@@ -224,6 +247,9 @@ async def mystic_chat(
     )
     if prompts.contains_crisis_signal(last_user) or _crisis_signal(last_user):
         return prompts.CRISIS_RESPONSE
+
+    day = _local_today(timezone_name)
+    _check_right(repository, user_id, "chat", day, is_premium)
 
     mystic_memory = build_mystic_memory(repository, user_id)
     # Kullanıcı sohbette "fincanımda kuş vardı" / "yaşam çizgim kısa mı" diye
@@ -257,6 +283,15 @@ async def mystic_chat(
             "Sezgilerim bu an biraz sessiz kaldı 🌙 Sorunu bir daha, "
             "biraz daha açarak sorar mısın?"
         )
+    repository.save_fortune(
+        user_id,
+        FortuneRecord(
+            id=str(uuid.uuid4()),
+            type="chat",
+            day=day,
+            result={"preview": reply[:160]},
+        ),
+    )
     return reply
 
 
@@ -445,7 +480,7 @@ async def read_photo_fortune(
         kind=kind,  # type: ignore[arg-type]
         symbols=symbols,
         interpretation=interpretation,
-        remaining_today=max(0, remaining_before - 1),
+        remaining_today=_remaining_after(remaining_before),
     )
 
 

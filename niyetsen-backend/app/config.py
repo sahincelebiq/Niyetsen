@@ -187,12 +187,13 @@ RANK_UNRANKED = "Çaylak"      # 1000 altı
 
 FREEZE_TOKENS_PER_MONTH = 1   # Zincir Koruma Jetonu: ayda 1 otomatik
 
-# --- V2 Fal hak sayaçları (docs/niyetsen-03-algoritma.md §5, günlük sıfırlanır) ---
-# el_falı: ücretsiz 1, ücretli +2 · kahve: ücretsiz 1, ücretli +2 ("+ek" = +2
-# yorumlandı, Şahin değiştirebilir) · tarot: herkese 1, EK YOK · burç: sınırsız.
+# --- Fal hakları (Şahin 2026-08-31): ücretsiz ömür boyu 1+1+1 + sınırlı
+# mistik sohbet; ödenmiş PRO (status=active) sınırsız. İsim tarihi —
+# ücretsiz katmanda günlük sıfırlama YOK. burç: herkese sınırsız.
 FORTUNE_DAILY_RIGHTS = {
-    "el":    {"free": 1, "premium": 3},
-    "kahve": {"free": 1, "premium": 3},
-    "tarot": {"free": 1, "premium": 1},
+    "el":    {"free": 1, "premium": -1},
+    "kahve": {"free": 1, "premium": -1},
+    "tarot": {"free": 1, "premium": -1},
+    "chat":  {"free": 5, "premium": -1},
 }
 TAROT_CARDS_PER_DRAW = 3      # geçmiş · şimdi · niyetin yönü

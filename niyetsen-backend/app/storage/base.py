@@ -266,6 +266,11 @@ class Repository(ABC):
     ) -> int: ...
 
     @abstractmethod
+    def count_fortunes(self, user_id: str, fortune_type: str) -> int:
+        """Ömür boyu fal sayısı (ücretsiz hak sayacı)."""
+        ...
+
+    @abstractmethod
     def get_fortune_for_day(
         self, user_id: str, fortune_type: str, day: dt_date
     ) -> Optional[FortuneRecord]: ...

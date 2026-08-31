@@ -77,15 +77,25 @@ def test_recap_endpoint_invalid_period_falls_back():
     assert response.json()["period"] == "14d"
 
 
-def test_recap_endpoint_free_user_gets_dashboard_not_story():
-    """Kapı içeride: panel + ayna ücretsiz; hikâye kartları PRO."""
+def test_recap_endpoint_free_user_gets_7d_story_not_30d():
+    """7 günlük özet ücretsiz; 14g/30g hikâye kartları yalnız PRO."""
     repo.update_subscription("recap-free", subscription_status="free")
-    response = client.get("/me/recap", headers={"X-User-Id": "recap-free"})
-    assert response.status_code == 200
-    body = response.json()
-    assert body["cards"] == []
-    assert body["dashboard"] is not None
-    assert "mirror_line" in body["dashboard"]
+    week = client.get("/me/recap?period=7d", headers={"X-User-Id": "recap-free"})
+    assert week.status_code == 200
+    week_body = week.json()
+    assert week_body["dashboard"] is not None
+    assert "mirror_line" in week_body["dashboard"]
+    assert len(week_body["cards"]) == 6
+
+    month = client.get("/me/recap?period=30d", headers={"X-User-Id": "recap-free"})
+    assert month.status_code == 200
+    month_body = month.json()
+    assert month_body["cards"] == []
+    assert month_body["dashboard"] is not None
+
+    default = client.get("/me/recap", headers={"X-User-Id": "recap-free"})
+    assert default.status_code == 200
+    assert default.json()["cards"] == []
 
 
 def test_mirror_line_is_honest_not_shaming():

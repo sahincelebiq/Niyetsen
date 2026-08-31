@@ -146,7 +146,13 @@ select pg_get_constraintdef(oid) as fortune_type_check
 from pg_constraint
 where conrelid = 'public.fortune_log'::regclass
   and conname = 'fortune_log_type_check';
--- BEKLENEN: tarot | kahve | el | burc  (büyük T 'Tarot' DEĞİL)
+-- BEKLENEN: tarot | kahve | el | burc | chat
+-- (chat yoksa aşağıdaki ALTER'ı bir kez çalıştır)
+
+-- alter table public.fortune_log drop constraint if exists fortune_log_type_check;
+-- alter table public.fortune_log
+--   add constraint fortune_log_type_check
+--   check (type in ('tarot', 'kahve', 'el', 'burc', 'chat'));
 
 -- ============================================================
 -- H) Lig tablosu — yalnız doğrula (CREATE yok; tablo prod'da var)

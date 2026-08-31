@@ -105,20 +105,19 @@ def _upload(user: str, kind: str):
     )
 
 
-def test_coffee_fortune_flow_and_daily_limit():
+def test_coffee_fortune_premium_unlimited():
     user = "kahve_user"
     grant_all_consents(user)
     rights = client.get("/fortune/rights", headers={"X-User-Id": user}).json()
-    limit = rights["rights"]["kahve"]["limit"]  # free=1, deneme/premium=3
+    assert rights["is_premium"] is True
+    assert rights["rights"]["kahve"]["limit"] == -1
+    assert rights["rights"]["kahve"]["remaining"] == -1
 
     first = _upload(user, "kahve")
     assert first.status_code == 200
     assert first.json()["symbols"] == ["kuş", "yol"]
-    assert first.json()["remaining_today"] == limit - 1
-
-    for _ in range(limit - 1):
-        assert _upload(user, "kahve").status_code == 200
-    assert _upload(user, "kahve").status_code == 429  # günlük hak doldu
+    assert first.json()["remaining_today"] == -1
+    assert _upload(user, "kahve").status_code == 200
 
 
 def test_palm_fortune_separate_counter():
@@ -228,16 +227,20 @@ def test_fortune_history_requires_consent():
 
 
 # ---------------- faz8.13 — fal ücretsiz + çoklu foto + mistik sohbet ------
-def test_tarot_free_user_no_paywall():
-    """faz8.13: fal ÜCRETSİZDİR — PRO kapısı yok, hak sayaçları sunucuda."""
+def test_tarot_free_user_one_then_paywall():
+    """Ücretsiz: 1 tarot; ikincisi 402 (kapı içeride, ekran kapanmaz)."""
     user = "tarot_free"
-    grant_chat_consent(user, client)  # abonelik YOK
-    resp = client.post("/fortune/tarot", headers={"X-User-Id": user}, json={})
-    assert resp.status_code == 200
-    assert len(resp.json()["cards"]) == 3
+    grant_chat_consent(user, client)
+    first = client.post("/fortune/tarot", headers={"X-User-Id": user}, json={})
+    assert first.status_code == 200
+    assert len(first.json()["cards"]) == 3
+    # Aynı gün önbellek: hak yakmaz
+    cached = client.post("/fortune/tarot", headers={"X-User-Id": user}, json={})
+    assert cached.status_code == 200
+    assert cached.json()["already_drawn_today"] is True
 
 
-def test_photo_fortune_free_user_no_paywall():
+def test_photo_fortune_free_user_one_then_paywall():
     user = "photo_free"
     grant_chat_consent(user, client)
     client.post(
@@ -245,6 +248,9 @@ def test_photo_fortune_free_user_no_paywall():
         json={"proof_photo_processing": {"accepted": True}},
     )
     assert _upload(user, "kahve").status_code == 200
+    second = _upload(user, "kahve")
+    assert second.status_code == 402
+    assert second.json()["detail"]["code"] == "paywall_required"
 
 
 def test_coffee_multi_photo_capped_at_three():
@@ -276,6 +282,29 @@ def test_mystic_chat_replies_with_disclaimer():
     assert "eğlence" in body["disclaimer"].lower()
 
 
+def test_mystic_chat_prompt_follows_locale_header(monkeypatch):
+    """X-App-Locale sohbet YANIT DİLİ'ni bellek bloğuna yazar; ham 'en' sızmaz."""
+    captured: dict[str, str] = {}
+
+    async def capturing(contents, **kwargs):
+        captured["prompt"] = contents
+        return {"reply": "The cards are a mirror."}
+
+    monkeypatch.setattr(fortune_service, "generate_json", capturing)
+    user = "mystic_locale_de"
+    grant_chat_consent(user, client)
+    resp = client.post(
+        "/fortune/chat",
+        headers={"X-User-Id": user, "X-App-Locale": "de"},
+        json={"messages": [{"role": "user", "content": "was siehst du?"}]},
+    )
+    assert resp.status_code == 200
+    prompt = captured["prompt"]
+    assert "Reply entirely in German" in prompt
+    assert "Tercih edilen dil: de (German)" in prompt
+    assert "Reply entirely in en" not in prompt
+
+
 def test_mystic_chat_crisis_stops_reading():
     user = "mystic_crisis"
     grant_chat_consent(user, client)
@@ -298,6 +327,35 @@ def test_mystic_chat_requires_message():
     assert resp.status_code == 400
 
 
+def test_mystic_chat_free_quota_then_paywall():
+    user = "mystic_quota"
+    grant_chat_consent(user, client)
+    payload = {"messages": [{"role": "user", "content": "ayna ne diyor?"}]}
+    for _ in range(5):
+        resp = client.post(
+            "/fortune/chat", headers={"X-User-Id": user}, json=payload
+        )
+        assert resp.status_code == 200
+    blocked = client.post(
+        "/fortune/chat", headers={"X-User-Id": user}, json=payload
+    )
+    assert blocked.status_code == 402
+    assert blocked.json()["detail"]["code"] == "paywall_required"
+
+
+def test_mystic_chat_crisis_does_not_burn_right():
+    user = "mystic_crisis_right"
+    grant_chat_consent(user, client)
+    crisis = client.post(
+        "/fortune/chat",
+        headers={"X-User-Id": user},
+        json={"messages": [{"role": "user", "content": "yaşamak istemiyorum artık"}]},
+    )
+    assert crisis.status_code == 200
+    rights = client.get("/fortune/rights", headers={"X-User-Id": user}).json()
+    assert rights["rights"]["chat"]["used"] == 0
+
+
 # ---------------- Haklar ----------------
 def test_rights_endpoint_free_user():
     user = "rights_user"
@@ -305,9 +363,23 @@ def test_rights_endpoint_free_user():
     resp = client.get("/fortune/rights", headers={"X-User-Id": user})
     assert resp.status_code == 200
     body = resp.json()
+    assert body["is_premium"] is False
     assert body["rights"]["tarot"]["limit"] == 1
-    assert body["rights"]["kahve"]["limit"] in (1, 3)
+    assert body["rights"]["kahve"]["limit"] == 1
+    assert body["rights"]["el"]["limit"] == 1
+    assert body["rights"]["chat"]["limit"] == 5
     assert body["rights"]["burc"]["limit"] == -1
+
+
+def test_rights_endpoint_paid_unlimited():
+    user = "rights_pro"
+    grant_chat_consent(user, client)
+    grant_pro(user)
+    body = client.get("/fortune/rights", headers={"X-User-Id": user}).json()
+    assert body["is_premium"] is True
+    for kind in ("tarot", "kahve", "el", "chat"):
+        assert body["rights"][kind]["limit"] == -1
+        assert body["rights"][kind]["remaining"] == -1
 
 
 # ---------------- Mistik derinlik: foto falı RAG bağı (faz8.14) ----------------

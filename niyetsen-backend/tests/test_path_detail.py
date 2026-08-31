@@ -16,11 +16,12 @@ def _grant_pro() -> None:
     repo.update_subscription(USER, subscription_status="active")
 
 
-def test_path_detail_requires_premium():
+def test_path_detail_free_user_can_browse():
     repo.update_subscription("path-free", subscription_status="free")
     slug = persona_service.list_personas()[0].slug
     response = client.get(f"/paths/{slug}", headers={"X-User-Id": "path-free"})
-    assert response.status_code == 402
+    assert response.status_code == 200
+    assert response.json()["slug"] == slug
 
 
 def test_path_detail_returns_safe_sections():

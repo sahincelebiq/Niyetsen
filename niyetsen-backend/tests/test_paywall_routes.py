@@ -58,27 +58,36 @@ def test_expired_trial_does_not_block_chat(monkeypatch) -> None:
     assert res.json()["reply"]
 
 
-def test_expired_trial_blocks_idol_paths() -> None:
-    """Felsefe Yolları (İdol Modu) premium'da kalır."""
+def test_expired_trial_blocks_idol_path_activate() -> None:
+    """Felsefe Yolları listesi ücretsiz incelenir; yolu yaşamak PRO."""
     _grant_consents()
     repo.update_subscription(
         USER,
         subscription_status="trial",
         trial_started_at=datetime(2026, 1, 1, tzinfo=timezone.utc),
     )
-    res = client.get("/paths", headers=_auth_headers())
+    listed = client.get("/paths", headers=_auth_headers())
+    assert listed.status_code == 200
+    assert isinstance(listed.json(), list)
+    assert listed.json()
+    res = client.post("/paths/sisu-yolu/activate", headers=_auth_headers())
     assert res.status_code == 402
     assert res.json()["detail"]["code"] == "paywall_required"
 
 
-def test_free_status_blocks_idol_paths() -> None:
-    """Free (deneme başlamamış) idol/mistik PRO kapısında — has_premium_access
-    true olsa bile status=free 402 alır."""
+def test_free_status_can_browse_idol_paths() -> None:
+    """Free kullanıcı yolları listeler ve detay okur; activate 402."""
     _grant_consents()
     repo.update_subscription(USER, subscription_status="free")
     res = client.get("/paths", headers=_auth_headers())
-    assert res.status_code == 402
-    assert res.json()["detail"]["code"] == "paywall_required"
+    assert res.status_code == 200
+    assert res.json()
+    detail = client.get("/paths/sisu-yolu", headers=_auth_headers())
+    assert detail.status_code == 200
+    assert detail.json()["slug"] == "sisu-yolu"
+    blocked = client.post("/paths/sisu-yolu/activate", headers=_auth_headers())
+    assert blocked.status_code == 402
+    assert blocked.json()["detail"]["code"] == "paywall_required"
 
 
 def test_subscription_endpoint_reports_trial() -> None:
