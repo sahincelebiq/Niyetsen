@@ -123,16 +123,42 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
     normalized_message = last_user_msg.casefold()
     wants_tools = any(marker in normalized_message for marker in TOOL_INTENT_MARKERS)
 
+    # 2) Bellek + bağlam — araç tespiti de aynı CONTEXT + geçmişi görür
+    # (yalnız son kullanıcı satırı yetmez: bugünün task_id'si bellekledir).
+    memory = prompt_builder.build_memory_block(
+        state=state,
+        name=user_name,
+        birth_date=birth_date,
+        zodiac=zodiac,
+        gender=gender,
+        active_intent=active_intent,
+        today_status=today_status,
+        recent_tasks=recent_tasks,
+        mood_notes=mood_notes,
+        preferred_language=preferred_language,
+        plan_day=plan_day,
+        duration_days=duration_days,
+        philosophy_paths=philosophy_paths,
+    )
+    history = [m.model_dump() for m in req.messages[-CHAT_HISTORY_LIMIT:]]
+    tool_contents = prompt_builder.build_chat_contents(
+        context=prompt_builder.build_context(memory),
+        history=history,
+    )
+
     async def _detect_tools() -> list[ToolCall]:
         if not wants_tools:
             return []
         try:
             raw_calls = await generate_function_calls(
-                last_user_msg,
+                tool_contents,
                 declarations=tools.TOOL_DECLARATIONS,
                 system_instruction=(
+                    prompts.SYSTEM_PROMPT
+                    + "\n\n"
                     "Yalnız kullanıcı açıkça bir işlem istiyorsa uygun aracı çağır. "
-                    "Gerekli task_id bilinmiyorsa araç çağırma; kısa bir açıklama döndür. "
+                    "Gerekli task_id CONTEXT'teki bugünün görevlerinden seç; "
+                    "bilinmiyorsa araç çağırma; kısa bir açıklama döndür. "
                     "Listede olmayan hiçbir işlemi çağırma."
                 ),
             )
@@ -169,24 +195,7 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
 
     intent_mode = _use_intent_mode(has_active_plan, plan_has_content, last_user_msg)
 
-    # 2) Bellek + bağlam kur (değişmez sıra: SYSTEM ayrı, CONTEXT + USER burada)
-    memory = prompt_builder.build_memory_block(
-        state=state,
-        name=user_name,
-        birth_date=birth_date,
-        zodiac=zodiac,
-        gender=gender,
-        active_intent=active_intent,
-        today_status=today_status,
-        recent_tasks=recent_tasks,
-        mood_notes=mood_notes,
-        preferred_language=preferred_language,
-        plan_day=plan_day,
-        duration_days=duration_days,
-        philosophy_paths=philosophy_paths,
-    )
-    history = [m.model_dump() for m in req.messages[-CHAT_HISTORY_LIMIT:]]
-
+    # Yanıt yolu: SYSTEM ayrıca; burada CONTEXT (bellek + RAG) + USER.
     contents = prompt_builder.build_chat_contents(
         context=prompt_builder.build_context(memory, rag_chunks),
         history=history,
