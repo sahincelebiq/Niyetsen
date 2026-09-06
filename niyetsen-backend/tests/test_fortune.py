@@ -4,6 +4,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
+from app.core import prompt_builder
 from app.main import app
 from app.services import fortune_service
 from app.storage.repository import repo
@@ -180,6 +181,8 @@ def test_horoscope_with_profile_and_daily_cache():
     first = client.get("/fortune/horoscope", headers={"X-User-Id": user})
     assert first.status_code == 200
     assert first.json()["sign"] == "Koç"
+    assert "eğlence" in first.json()["disclaimer"].lower()
+    assert "kader" in first.json()["disclaimer"].lower()
 
     second = client.get("/fortune/horoscope", headers={"X-User-Id": user})
     assert second.status_code == 200
@@ -393,6 +396,7 @@ def test_photo_fortune_prompt_carries_symbol_knowledge(monkeypatch):
 
     async def capturing(prompt, images, **kwargs):
         captured["prompt"] = prompt
+        captured["system"] = kwargs.get("system_instruction")
         return {
             "is_valid_photo": True,
             "symbols": ["kuş"],
@@ -412,6 +416,9 @@ def test_photo_fortune_prompt_carries_symbol_knowledge(monkeypatch):
     prompt = captured["prompt"]
     assert "BİLGİ TABANI" in prompt
     assert "kahve_fali" in prompt
+    assert captured["system"] == fortune_service.prompts.FORTUNE_SYSTEM_PROMPT
+    assert fortune_service.prompts.FORTUNE_SYSTEM_PROMPT not in prompt
+    assert prompt_builder.CONTEXT_OPEN in prompt
 
 
 def test_palm_fortune_prompt_uses_palm_knowledge_not_coffee(monkeypatch):

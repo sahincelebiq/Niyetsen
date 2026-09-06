@@ -10,6 +10,7 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field
 
 from app.config import CATEGORIES
+from app.core.prompts import FORTUNE_DISCLAIMER
 
 Category = Literal["İrade", "İstikrar", "Disiplin", "Özgüven", "Sosyallik", "Özsaygı"]
 TaskStatus = Literal["pending", "done", "missed_silent", "missed_excused"]
@@ -437,12 +438,6 @@ class BonusOfferResponse(BaseModel):
 
 # ---------- V2: Fal modülü (FAZ 7) ----------
 FortuneType = Literal["tarot", "kahve", "el", "burc", "chat"]
-
-FORTUNE_DISCLAIMER = (
-    "Bu içerik eğlence amaçlıdır; kader tayini, tıbbi, hukuki veya finansal "
-    "tavsiye değildir."
-)
-
 
 class TarotCardResult(BaseModel):
     name: str
