@@ -154,10 +154,13 @@ def start_trial_if_needed(repo: Repository, user_id: str) -> None:
 
 
 def require_paid_subscription(repo: Repository, user_id: str) -> SubscriptionInfo:
-    """İkinci+ plan yalnızca ödenmiş abonelikle (trial yetmez)."""
+    """İkinci+ plan yalnızca status=active ile (trial yetmez).
+
+    get_subscription allowlist (dev / kapalı test) için status=active döner;
+    DB satırı free kalsa bile ikinci plan açılır. Ham satıra bakma.
+    """
     info = get_subscription(repo, user_id)
-    row = repo.get_subscription_row(user_id)
-    if row.get("subscription_status") != "active":
+    if info.status != "active":
         raise PermissionError("paywall")
     return info
 

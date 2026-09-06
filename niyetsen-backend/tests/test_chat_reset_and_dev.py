@@ -70,8 +70,13 @@ def test_dev_email_matching_is_case_insensitive():
     assert dev_accounts.is_dev("dev-user-2") is True
 
 
-def test_closed_test_email_gets_premium_without_purchase(isolated_in_memory_repo):
-    dev_accounts.register_if_dev("closed-tester", "busra@grefins.com")
+def test_closed_test_email_gets_premium_without_purchase(
+    isolated_in_memory_repo, monkeypatch
+):
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "CLOSED_TEST_EMAILS", ["tester@example.com"])
+    dev_accounts.register_if_dev("closed-tester", "tester@example.com")
     assert dev_accounts.is_dev("closed-tester") is True
     info = subscription_service.get_subscription(
         isolated_in_memory_repo, "closed-tester"
@@ -79,3 +84,22 @@ def test_closed_test_email_gets_premium_without_purchase(isolated_in_memory_repo
     assert info.has_premium_access is True
     assert info.show_paywall is False
     assert info.status == "active"
+
+
+def test_empty_closed_test_env_does_not_grant_hardcoded_emails(
+    isolated_in_memory_repo, monkeypatch
+):
+    """CLOSED_TEST_EMAILS boşsa koddaki eski tester listesi geçersiz."""
+    from app.config import settings
+
+    monkeypatch.setattr(settings, "CLOSED_TEST_EMAILS", [])
+    for email in (
+        "busra@grefins.com",
+        "admbrtelfflz.1980@gmail.com",
+        "busra.pehlivan@fauna-studio.com",
+    ):
+        uid = f"ex-tester-{email.split('@')[0]}"
+        dev_accounts.register_if_dev(uid, email)
+        assert dev_accounts.is_dev(uid) is False
+        info = subscription_service.get_subscription(isolated_in_memory_repo, uid)
+        assert info.status == "free"

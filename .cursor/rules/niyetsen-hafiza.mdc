@@ -120,3 +120,17 @@ canlıda yaşanmış bir hatanın veya Şahin'in verdiği bir kararın izidir.
   mobile/ AYRI git deposudur (`Niyetsen-mobile`).
 - Kararsızlıkta: MASTER_PLAN §1 → bu dosya → playstore-cikis-hafiza →
   yoksa Şahin'e sor. UYDURMA.
+
+## 2026-09-06 anlık (API 1.1.1)
+
+- Kapalı test allowlist yalnız `CLOSED_TEST_EMAILS` env; boş = kısa devre yok
+  (kod fallback'i kaldırıldı). Railway `api` değişkeni dolu tutulmalı.
+- JWT allowlist yalnız imzalı `email` claim; `user_metadata.email` yok sayılır.
+- İkinci plan kapısı `info.status == "active"` (dev/tester DB `free` kalsa da).
+- Mobil 1.1.1: klavye/KeyboardAwareView, İlkbahar paywall, lig rumuz opt-in,
+  Bugün `boot-cache` var. Grok sprintindeki bölgesel lig / Realtime / “sınırsız
+  AI rehberi” paywall **YAPILMAZ** (sohbet ücretsiz; lig v3 değil).
+- Ekran gerçeği: 180g plan + bugün görev yok = `needs_extension`; uzatma
+  Gemini bitene kadar tam ekran spinner olmamalı (kart + “uzatılıyor”).
+- Paywall “Abonelik bulunamadı” = RC Customer Center boş ürün; İlkbahar
+  `paywall.tsx` ayrı. Play ürün bağlanınca fiyat gelir.

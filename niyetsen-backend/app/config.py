@@ -22,7 +22,7 @@ def _csv(name: str) -> list[str]:
 
 class Settings:
     # --- Sürüm (Railway /health ile doğrulanır) ---
-    API_VERSION: str = os.environ.get("API_VERSION", "1.1.0")
+    API_VERSION: str = os.environ.get("API_VERSION", "1.1.1")
 
     # --- AI ---
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
@@ -152,15 +152,9 @@ class Settings:
     DEV_ACCOUNT_EMAILS: list[str] = _csv("DEV_ACCOUNT_EMAILS") or [
         "kutluadalarr7@gmail.com"
     ]
-    # Kapalı test e-postaları: Play listesindeki tester'lar IAP olmadan
-    # plan/kanıt/yol deneyebilir. Lansman sonrası env'i boşalt.
-    CLOSED_TEST_EMAILS: list[str] = _csv("CLOSED_TEST_EMAILS") or [
-        "admbrtelfflz.1980@gmail.com",
-        "busra.pehlivan@fauna-studio.com",
-        "busra@grefins.com",
-        "semanurerkek3@gmail.com",
-        "yilmazbelinay864@gmail.com",
-    ]
+    # Kapalı test e-postaları: yalnız env. Boş / tanımsız = kimseye kısa devre yok.
+    # Lansman sonrası CLOSED_TEST_EMAILS'i boş bırak — kod fallback'i YOK.
+    CLOSED_TEST_EMAILS: list[str] = _csv("CLOSED_TEST_EMAILS")
 
 
 settings = Settings()

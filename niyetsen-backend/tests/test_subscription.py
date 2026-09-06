@@ -166,6 +166,33 @@ def test_trial_started_at_z_suffix_and_naive_datetime(repo: InMemoryRepository) 
     assert remaining == 4
 
 
+def test_require_paid_subscription_blocks_trial_and_free(
+    repo: InMemoryRepository,
+) -> None:
+    subscription_service.start_trial_if_needed(repo, "trial-user")
+    with pytest.raises(PermissionError, match="paywall"):
+        subscription_service.require_paid_subscription(repo, "trial-user")
+    with pytest.raises(PermissionError, match="paywall"):
+        subscription_service.require_paid_subscription(repo, "never-paid")
+
+
+def test_require_paid_subscription_uses_allowlist_status_not_db_row(
+    repo: InMemoryRepository, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from app.config import settings
+    from app.core import dev_accounts
+
+    monkeypatch.setattr(settings, "CLOSED_TEST_EMAILS", ["qa@example.com"])
+    dev_accounts.reset()
+    try:
+        dev_accounts.register_if_dev("qa-user", "qa@example.com")
+        assert repo.get_subscription_row("qa-user")["subscription_status"] == "free"
+        info = subscription_service.require_paid_subscription(repo, "qa-user")
+        assert info.status == "active"
+    finally:
+        dev_accounts.reset()
+
+
 def test_subscription_http_survives_iso_string_trial(isolated_in_memory_repo) -> None:
     from fastapi.testclient import TestClient
     from app.main import app

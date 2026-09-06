@@ -184,13 +184,9 @@ def get_current_user(
     user_id = payload.get("sub")
     if not user_id:
         raise AUTH_ERROR
-    # Geliştirici / kapalı test: doğrulanmış e-posta allowlist'teyse işaretle
-    # (abonelik kısa devresi — normal kullanıcılar etkilenmez).
+    # Allowlist yalnız JWT'nin doğrulanmış `email` claim'ine bakar.
+    # user_metadata.email kullanıcı yazabilir — kısa devre için kullanma.
     email = payload.get("email")
-    if not email:
-        meta = payload.get("user_metadata")
-        if isinstance(meta, dict):
-            email = meta.get("email")
     dev_accounts.register_if_dev(user_id, email if isinstance(email, str) else None)
     return user_id
 

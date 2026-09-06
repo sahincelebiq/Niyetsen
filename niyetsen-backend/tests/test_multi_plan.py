@@ -66,6 +66,43 @@ def test_free_user_blocked_from_second_project():
     assert second.json()["detail"]["code"] == "paywall_required"
 
 
+def test_closed_tester_can_start_second_project_without_db_active(monkeypatch):
+    """Allowlist status=active — DB satırı free kalsa da ikinci niyet açılır."""
+    from app.config import settings
+    from app.core import dev_accounts
+    from app.storage.repository import repo
+
+    monkeypatch.setattr(settings, "CLOSED_TEST_EMAILS", ["tester@example.com"])
+    user_id = "multi-plan-closed-tester"
+    headers = _headers(user_id)
+    dev_accounts.reset()
+    try:
+        dev_accounts.register_if_dev(user_id, "tester@example.com")
+        assert client.post("/projects/new", headers=headers).status_code == 200
+        grant_chat_consent(user_id, client)
+        generate = client.post(
+            "/plan/generate",
+            headers=headers,
+            json={
+                "collected": {
+                    "city": "İstanbul",
+                    "interests": ["kitap"],
+                    "weekly_hours": 5,
+                    "duration_days": 7,
+                },
+                "duration_days": 7,
+            },
+        )
+        assert generate.status_code == 200
+        assert repo.get_subscription_row(user_id)["subscription_status"] != "active"
+
+        second = client.post("/projects/new", headers=headers)
+        assert second.status_code == 200
+        assert second.json()["slot_no"] == 2
+    finally:
+        dev_accounts.reset()
+
+
 def test_premium_user_can_start_second_project():
     user_id = "multi-plan-premium-user"
     client.post("/projects/new", headers=_headers(user_id))

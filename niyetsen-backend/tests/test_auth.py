@@ -16,6 +16,7 @@ from starlette.requests import Request
 
 import app.api.routes as routes
 from app.config import settings
+from app.core import dev_accounts
 from app.core.rate_limit import _identity
 from app.main import app
 
@@ -97,3 +98,47 @@ def test_rate_limit_identity_survives_jwt_refresh_for_same_user():
 
     assert _identity(request_for(first)) == "user:stable-user"
     assert _identity(request_for(second)) == "user:stable-user"
+
+
+def test_jwt_email_claim_registers_closed_tester(monkeypatch):
+    monkeypatch.setattr(settings, "CLOSED_TEST_EMAILS", ["tester@example.com"])
+    dev_accounts.reset()
+    try:
+        token = jwt.encode(
+            {
+                "sub": "closed-jwt",
+                "aud": "authenticated",
+                "email": "tester@example.com",
+            },
+            _PRIVATE_KEY,
+            algorithm="RS256",
+        )
+        assert client.get(
+            "/me/state", headers={"Authorization": f"Bearer {token}"}
+        ).status_code == 200
+        assert dev_accounts.is_dev("closed-jwt") is True
+    finally:
+        dev_accounts.reset()
+
+
+def test_jwt_user_metadata_email_does_not_register_allowlist(monkeypatch):
+    """user_metadata.email kullanıcı yazabilir — allowlist taklidi olmasın."""
+    monkeypatch.setattr(settings, "CLOSED_TEST_EMAILS", ["tester@example.com"])
+    monkeypatch.setattr(settings, "DEV_ACCOUNT_EMAILS", ["dev@example.com"])
+    dev_accounts.reset()
+    try:
+        token = jwt.encode(
+            {
+                "sub": "spoof-user",
+                "aud": "authenticated",
+                "user_metadata": {"email": "tester@example.com"},
+            },
+            _PRIVATE_KEY,
+            algorithm="RS256",
+        )
+        assert client.get(
+            "/me/state", headers={"Authorization": f"Bearer {token}"}
+        ).status_code == 200
+        assert dev_accounts.is_dev("spoof-user") is False
+    finally:
+        dev_accounts.reset()
