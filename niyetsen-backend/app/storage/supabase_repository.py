@@ -1215,52 +1215,95 @@ class SupabaseRepository(Repository):
                 for chunk in chunks
             ]).execute()
 
+    def count_completed_tasks(self, user_id: str) -> int:
+        result = (
+            self._db.table("tasks")
+            .select("id, plans!inner(user_id)", count="exact")
+            .eq("status", "done")
+            .eq("plans.user_id", user_id)
+            .limit(1)
+            .execute()
+        )
+        return int(result.count or 0)
+
     # --- faz8.13/4: Online rekabet (opt-in takma adlı lig) ---
-    # Tablo: league_members(user_id, alias, score, streak, updated_at) —
-    # RUN_IN_SUPABASE_SQL_EDITOR.sql'de. KVKK: yalnız rumuz + sayı tutulur.
+    # Tablo: league_members(user_id, alias, score, streak, avatar, region,
+    # updated_at) — score = tamamlanan görev. KVKK: rumuz + hazır simge +
+    # bölge etiketi; gerçek isim/e-posta/foto/GPS yok.
     def league_get_member(self, user_id: str) -> Optional[dict]:
         row = _maybe_single(
             self._db.table("league_members")
-            .select("alias,score,streak")
+            .select("alias,score,streak,avatar,region")
             .eq("user_id", user_id).limit(1)
         )
         return dict(row) if row else None
 
     def league_upsert_member(
-        self, user_id: str, alias: str, score: int, streak: int
+        self,
+        user_id: str,
+        alias: str,
+        score: int,
+        streak: int,
+        avatar: Optional[str] = None,
+        region: Optional[str] = None,
     ) -> None:
         self._db.table("league_members").upsert({
             "user_id": user_id,
             "alias": alias,
             "score": score,
             "streak": streak,
+            "avatar": avatar,
+            "region": region,
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }, on_conflict="user_id").execute()
 
     def league_remove_member(self, user_id: str) -> None:
         self._db.table("league_members").delete().eq("user_id", user_id).execute()
 
-    def league_top(self, limit: int = 50) -> list[dict]:
-        rows = (
+    def league_top(self, limit: int = 50, region: Optional[str] = None) -> list[dict]:
+        query = (
             self._db.table("league_members")
-            .select("user_id,alias,score,streak")
+            .select("user_id,alias,score,streak,avatar,region")
             .order("score", desc=True).order("streak", desc=True)
-            .limit(limit)
-            .execute().data
         )
+        if region:
+            query = query.eq("region", region)
+        rows = query.limit(limit).execute().data
         return [dict(row) for row in rows]
 
-    def league_rank(self, user_id: str) -> Optional[int]:
+    def league_rank(
+        self, user_id: str, region: Optional[str] = None
+    ) -> Optional[int]:
         member = self.league_get_member(user_id)
         if not member:
             return None
-        result = (
+        if region and member.get("region") != region:
+            return None
+        score = int(member.get("score") or 0)
+        streak = int(member.get("streak") or 0)
+        higher_score = (
             self._db.table("league_members")
             .select("user_id", count="exact")
-            .gt("score", int(member.get("score") or 0))
-            .execute()
+            .gt("score", score)
         )
-        higher = result.count if result.count is not None else len(result.data or [])
+        if region:
+            higher_score = higher_score.eq("region", region)
+        higher_score_result = higher_score.execute()
+        tied_higher_streak = (
+            self._db.table("league_members")
+            .select("user_id", count="exact")
+            .eq("score", score)
+            .gt("streak", streak)
+        )
+        if region:
+            tied_higher_streak = tied_higher_streak.eq("region", region)
+        tied_result = tied_higher_streak.execute()
+        higher = (
+            (higher_score_result.count if higher_score_result.count is not None
+             else len(higher_score_result.data or []))
+            + (tied_result.count if tied_result.count is not None
+               else len(tied_result.data or []))
+        )
         return int(higher) + 1
 
     def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
