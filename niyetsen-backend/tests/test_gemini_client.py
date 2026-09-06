@@ -42,6 +42,11 @@ def test_function_calls_apply_thinking_and_rebuild_on_fallback(monkeypatch):
 
     monkeypatch.setattr(gemini_client, "get_client", lambda: FakeClient())
     monkeypatch.setattr(gemini_client.settings, "GEMINI_MAX_RETRIES", 1)
+    # Default GEMINI_MODEL == GEMINI_MODEL_PLAN (both 3.1-pro-preview), so
+    # isolate the chat/tool fallback path from the plan fallback (2.5-pro).
+    monkeypatch.setattr(
+        gemini_client.settings, "GEMINI_MODEL_PLAN", "gemini-3.1-pro-preview-plan"
+    )
     monkeypatch.setattr(
         gemini_client.settings, "GEMINI_FALLBACK_MODEL", "gemini-2.5-flash"
     )
