@@ -84,6 +84,21 @@ def _fallback_for(resolved_model: str) -> Optional[str]:
     return fallback if fallback and fallback != resolved_model else None
 
 
+def _thinking_config_for(for_model: str, disable_thinking: bool):
+    """Gemini 3 rejects thinking_budget=0; 2.5/earlier reject thinking_level.
+
+    Shared by generate_text and generate_function_calls so a model fallback
+    can rebuild a valid config instead of sending the previous family's args.
+    """
+    if not disable_thinking:
+        return None
+    from google.genai import types
+
+    if for_model.startswith("gemini-3"):
+        return types.ThinkingConfig(thinking_level="low")
+    return types.ThinkingConfig(thinking_budget=0)
+
+
 async def generate_text(
     contents: Any,
     system_instruction: Optional[str] = None,
@@ -116,15 +131,9 @@ async def generate_text(
         config_kwargs["response_schema"] = response_schema
     def _build_config(for_model: str) -> "types.GenerateContentConfig":
         kwargs = dict(config_kwargs)
-        if disable_thinking:
-            # Gemini 3 ailesi thinking_budget=0 kabul ETMEZ (Pro'da düşünme
-            # tamamen kapatılamaz); en hızlı geçerli ayar thinking_level="low".
-            # 2.5 ve öncesi eski yolu kullanır. Fallback'te aile değişirse
-            # config yeniden kurulur (aksi halde 400 INVALID_ARGUMENT).
-            if for_model.startswith("gemini-3"):
-                kwargs["thinking_config"] = types.ThinkingConfig(thinking_level="low")
-            else:
-                kwargs["thinking_config"] = types.ThinkingConfig(thinking_budget=0)
+        thinking = _thinking_config_for(for_model, disable_thinking)
+        if thinking is not None:
+            kwargs["thinking_config"] = thinking
         return types.GenerateContentConfig(**kwargs)
 
     config = _build_config(resolved_model)
@@ -244,24 +253,40 @@ async def generate_function_calls(
     *,
     model: Optional[str] = None,
     timeout_sec: Optional[int] = None,
+    max_retries: Optional[int] = None,
+    disable_thinking: bool = True,
 ) -> list[dict]:
-    """Return native Gemini function calls without executing model-selected code."""
+    """Return native Gemini function calls without executing model-selected code.
+
+    disable_thinking defaults True: tool-detect is classification, not prose.
+    Fallback rebuilds thinking_config so Gemini 3 → 2.5 does not 400.
+    """
     from google.genai import types
 
-    config = types.GenerateContentConfig(
-        system_instruction=system_instruction,
-        tools=[types.Tool(function_declarations=declarations)],
-        automatic_function_calling=types.AutomaticFunctionCallingConfig(disable=True),
-        tool_config=types.ToolConfig(
-            function_calling_config=types.FunctionCallingConfig(mode="AUTO")
-        ),
-        max_output_tokens=256,
-    )
+    def _build_config(for_model: str) -> "types.GenerateContentConfig":
+        kwargs: dict[str, Any] = {
+            "system_instruction": system_instruction,
+            "tools": [types.Tool(function_declarations=declarations)],
+            "automatic_function_calling": types.AutomaticFunctionCallingConfig(
+                disable=True
+            ),
+            "tool_config": types.ToolConfig(
+                function_calling_config=types.FunctionCallingConfig(mode="AUTO")
+            ),
+            "max_output_tokens": 256,
+        }
+        thinking = _thinking_config_for(for_model, disable_thinking)
+        if thinking is not None:
+            kwargs["thinking_config"] = thinking
+        return types.GenerateContentConfig(**kwargs)
+
     client = get_client()
     resolved_model = _resolve_model(model)
+    config = _build_config(resolved_model)
     attempt_timeout = timeout_sec or settings.GEMINI_TIMEOUT_SEC
+    retry_limit = settings.GEMINI_MAX_RETRIES if max_retries is None else max_retries
     last_err: Exception | None = None
-    for attempt in range(settings.GEMINI_MAX_RETRIES + 1):
+    for attempt in range(retry_limit + 1):
         try:
             response = await asyncio.wait_for(
                 asyncio.to_thread(
@@ -278,7 +303,7 @@ async def generate_function_calls(
             ]
         except asyncio.TimeoutError as exc:
             last_err = exc
-            if attempt >= settings.GEMINI_MAX_RETRIES:
+            if attempt >= retry_limit:
                 break
             log.warning(
                 "Gemini araç çağrısı zaman aşımı (%s, deneme %s): %ss",
@@ -297,10 +322,11 @@ async def generate_function_calls(
                         resolved_model, fallback,
                     )
                     resolved_model = fallback
+                    config = _build_config(resolved_model)
                     continue
             if not _is_retryable(exc):
                 break
-            if attempt >= settings.GEMINI_MAX_RETRIES:
+            if attempt >= retry_limit:
                 break
             await asyncio.sleep(min(2 ** attempt, 8))
     raise GeminiUnavailable(str(last_err))
