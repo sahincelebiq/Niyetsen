@@ -116,6 +116,16 @@ where schemaname = 'storage'
   and policyname = 'plan_images_public_read';
 -- BEKLENEN: 0 satır (2026-08-02'de kaldırıldı)
 
+-- E2) proofs storage policies (H-06) — authenticated WRITE yok
+select policyname, cmd, roles
+from pg_policies
+where schemaname = 'storage'
+  and tablename = 'objects'
+  and policyname like 'proofs_%'
+order by 1;
+-- BEKLENEN: yalnız proofs_select_own / SELECT / {authenticated}
+-- proofs_insert_own / proofs_update_own / proofs_delete_own = 0 satır
+
 -- ============================================================
 -- F) Tablo policy sayısı (0 = deny-by-default + backend service_role)
 -- ============================================================
