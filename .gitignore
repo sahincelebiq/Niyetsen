@@ -21,6 +21,10 @@ Sosyal Medya*/
 # Cursor MCP (API key içerebilir)
 .cursor/mcp.json
 
+# Website yerel sırları (Vercel OIDC vb.)
+website/.env.local
+website/.vercel/
+
 # Python
 __pycache__/
 *.pyc
