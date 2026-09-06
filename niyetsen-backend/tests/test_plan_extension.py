@@ -176,6 +176,48 @@ def test_ensure_today_race_does_not_duplicate_days(monkeypatch) -> None:
     assert any(t["id"] == "rival-40" for t in day40["tasks"])  # rakip korunur
 
 
+def test_plan_next_accepts_empty_body_and_returns_plan_shape() -> None:
+    """Mobil POST /plan/next gövdesiz (Content-Type: application/json) gelebilir."""
+    user_id = "next-empty-body"
+    today = date(2026, 8, 30)
+    repo.save_profile(user_id, UserProfile(timezone="Europe/Istanbul"))
+    repo.save_plan(
+        user_id,
+        Plan(
+            id="next-full",
+            duration_days=30,
+            batch_generated_until=30,
+            start_date=today,
+            days=[PlanDay(day=1, tasks=[])],
+            name="Dolu plan",
+        ),
+    )
+    expected_keys = {
+        "id", "duration_days", "batch_generated_until", "start_date",
+        "days", "name", "slot_no", "is_active",
+    }
+    no_body = client.post("/plan/next", headers={"X-User-Id": user_id})
+    empty_json = client.post(
+        "/plan/next",
+        headers={"X-User-Id": user_id, "Content-Type": "application/json"},
+        content=b"",
+    )
+    empty_object = client.post("/plan/next", headers={"X-User-Id": user_id}, json={})
+    for resp in (no_body, empty_json, empty_object):
+        assert resp.status_code == 200
+        body = resp.json()
+        assert expected_keys <= set(body)
+        assert body["id"] == "next-full"
+        assert body["duration_days"] == 30
+        assert body["name"] == "Dolu plan"
+
+
+def test_plan_next_404_without_plan() -> None:
+    resp = client.post("/plan/next", headers={"X-User-Id": "next-no-plan"}, json={})
+    assert resp.status_code == 404
+    assert "plan" in resp.json()["detail"].lower()
+
+
 def test_daily_prefetch_flag_on_penultimate_day() -> None:
     from app.services import project_service
 
