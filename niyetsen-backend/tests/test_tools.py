@@ -1,7 +1,7 @@
 import asyncio
 from datetime import date
 
-from app.core import tools
+from app.core import prompts, tools
 from app.models.schemas import (
     ChatMessage, ChatRequest, Plan, PlanDay, Task, ToolCall,
 )
@@ -81,6 +81,69 @@ def test_regular_chat_does_not_trigger_tool_model(monkeypatch):
         )
     )
     assert response.tool_calls == []
+
+
+def test_tool_detect_receives_context_and_chat_history(monkeypatch):
+    captured = {}
+
+    async def fake_tool_calls(*args, **kwargs):
+        captured["contents"] = args[0] if args else kwargs.get("contents")
+        captured["system"] = kwargs.get("system_instruction")
+        return [
+            {
+                "name": "gorev_ertele_mazeretli",
+                "args": {"task_id": "task-today", "excuse_text": "Hastayım"},
+            }
+        ]
+
+    async def fake_json(*args, **kwargs):
+        captured["reply_contents"] = args[0] if args else kwargs.get("contents")
+        captured["reply_system"] = kwargs.get("system_instruction")
+        return {
+            "reply": "Bugünkü görevi mazeretli olarak erteleyebilirim.",
+            "ready_for_plan": False,
+            "collected": {},
+        }
+
+    monkeypatch.setattr(intent_service, "generate_function_calls", fake_tool_calls)
+    monkeypatch.setattr(intent_service, "generate_json", fake_json)
+
+    last_line = "Hastayım, bugünkü görevi mazeretli ertele."
+    response = asyncio.run(
+        intent_service.handle_chat(
+            ChatRequest(
+                messages=[
+                    ChatMessage(role="user", content="Bugün yürüyüş var mıydı?"),
+                    ChatMessage(
+                        role="assistant",
+                        content="Evet, bugünün halkasında yürüyüş var.",
+                    ),
+                    ChatMessage(role="user", content=last_line),
+                ]
+            ),
+            has_active_plan=True,
+            plan_has_content=True,
+            today_status=(
+                "1 bekliyor. Görevler: Yürüyüş [bekliyor] task_id=task-today"
+            ),
+            recent_tasks="Yürüyüş (2026-09-06, bekliyor, task_id=task-today)",
+        )
+    )
+
+    assert [call.name for call in response.tool_calls] == [
+        "gorev_ertele_mazeretli"
+    ]
+    assert captured["contents"] != last_line
+    assert "KULLANICI BELLEĞİ" in captured["contents"]
+    assert "task_id=task-today" in captured["contents"]
+    assert "--- SOHBET ---" in captured["contents"]
+    assert "Bugün yürüyüş var mıydı?" in captured["contents"]
+    assert last_line in captured["contents"]
+    assert prompts.SYSTEM_PROMPT in captured["system"]
+    assert "Aktif planı olan" not in captured["contents"]
+    assert captured["reply_system"] == prompts.SYSTEM_PROMPT
+    assert "task_id=task-today" in captured["reply_contents"]
+    assert "Aktif planı olan" in captured["reply_contents"]
 
 
 def _repo_with_task() -> InMemoryRepository:

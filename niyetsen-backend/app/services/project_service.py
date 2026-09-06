@@ -133,7 +133,8 @@ def describe_today_for_memory(repo: Repository, user_id: str) -> tuple[str, str]
             f"{count} {label}" for label, count in sorted(status_counts.items())
         )
         titles = "; ".join(
-            f"{item.task.title} [{_status_tr(item.task.status)}]"
+            f"{item.task.title} [{_status_tr(item.task.status)}] "
+            f"task_id={item.task.id}"
             for item in today.items[:6]
         )
         today_status = f"{plan_bit}{counts}. Görevler: {titles}"
@@ -154,7 +155,8 @@ def describe_today_for_memory(repo: Repository, user_id: str) -> tuple[str, str]
         reverse=True,
     )[:5]
     recent_tasks = "; ".join(
-        f"{task.title} ({task.date.isoformat()}, {_status_tr(task.status)})"
+        f"{task.title} ({task.date.isoformat()}, {_status_tr(task.status)}, "
+        f"task_id={task.id})"
         for task in recent
     )
     return today_status, recent_tasks
