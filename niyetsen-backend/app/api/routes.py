@@ -204,6 +204,9 @@ def get_current_user(
 # ------------------------------------------------------------------
 @router.get("/health")
 def health() -> dict:
+    # M-05: prod'da auth'suz uç yalnızca canlılık döner; env/model sızmaz.
+    if settings.ENV == "prod":
+        return {"status": "ok"}
     return {
         "status": "ok",
         "env": settings.ENV,

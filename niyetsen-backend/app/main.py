@@ -58,10 +58,18 @@ logging.getLogger("niyetsen.app").info(
     settings.GEMINI_MODEL_PLAN,
 )
 
+def _openapi_docs_kwargs(env: str) -> dict[str, str | None]:
+    """M-04: prod'da Swagger / ReDoc / OpenAPI şeması kapalı."""
+    if env == "prod":
+        return {"docs_url": None, "redoc_url": None, "openapi_url": None}
+    return {"docs_url": "/docs", "redoc_url": "/redoc", "openapi_url": "/openapi.json"}
+
+
 app = FastAPI(
     title="Niyetsen API",
     version="0.1.0",
     description="Niyetini söze, sözünü zincire çevir. 🌙",
+    **_openapi_docs_kwargs(settings.ENV),
 )
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
