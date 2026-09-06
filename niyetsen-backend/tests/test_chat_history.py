@@ -61,6 +61,8 @@ def test_chat_persists_welcome_user_and_assistant_messages():
         "Merhaba 🌙", "İstanbul'dayım", FAKE_REPLY["reply"],
     ]
     assert [m["role"] for m in saved] == ["assistant", "user", "assistant"]
+    # Mobil ChatMessage.id: string — persist yolu her öğeye id yazar.
+    assert all(isinstance(m.get("id"), str) and m["id"] for m in saved)
 
 
 def test_chat_does_not_duplicate_already_saved_messages_on_second_call():

@@ -28,7 +28,7 @@ from app.models.schemas import (
     AttachmentIngestResponse, BonusCompletionRequest, BonusOfferResponse, ChatMessage,
     ChatGreetingResponse, ChatRequest, ChatResponse, ChatSessionResponse, CollectedIntent,
     ChatThread, ConsentStatus, ConsentUpdate, DailyTaskItem, DailyTasksResponse,
-    FortuneChatRequest, FortuneChatResponse, FortuneRecord,
+    ExcuseResponse, FortuneChatRequest, FortuneChatResponse, FortuneRecord,
     FortuneRightsResponse,
     HoroscopeResponse, LeagueJoinRequest, LeagueResponse,
     PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
@@ -344,7 +344,11 @@ async def chat(
 
 @router.get("/chat/history", response_model=list[ChatMessage])
 def chat_history(user_id: str = Depends(get_current_user)) -> list[ChatMessage]:
-    """Uygulama yeniden açılınca / yeni cihazda sohbeti kaldığı yerden göstermek için."""
+    """Aktif oturumun mesajları. Sorgu parametresi yok; boş oturum [] (404 değil).
+
+    Öğeler ChatMessage (id isteğe bağlı — /chat persist yolu id üretir).
+    Tam hydrate için /chat/session (messages + collected + ready_for_plan).
+    """
     return repo.get_chat_history(user_id)
 
 
@@ -612,7 +616,13 @@ async def next_batch(
     req: PlanGenerateRequest = Body(default_factory=PlanGenerateRequest),
     user_id: str = Depends(get_current_user),
 ) -> Plan:
-    """Var olan 1 planın sonraki partisi — geçmiş gün uydurulmaz (ücretsiz devam)."""
+    """Var olan 1 planın sonraki partisi — geçmiş gün uydurulmaz (ücretsiz devam).
+
+    Gövde isteğe bağlı: yok / boş JSON / {} / PlanGenerateRequest.
+    Mobil Content-Type: application/json + boş gövde kabul edilir.
+    duration_days gövdesi yok sayılır (kayıtlı plan süresi). collected yoksa
+    saklı niyet. Plan yoksa 404. Yanıt generate ile aynı Plan şeması.
+    """
     current = repo.get_plan(user_id)
     if not current:
         raise HTTPException(status_code=404, detail="Önce /plan/generate ile plan oluştur.")
@@ -876,8 +886,8 @@ async def upload_proof(
     return result
 
 
-@router.post("/task/{task_id}/excuse")
-def excuse_task(task_id: str, user_id: str = Depends(get_current_user)) -> dict:
+@router.post("/task/{task_id}/excuse", response_model=ExcuseResponse)
+def excuse_task(task_id: str, user_id: str = Depends(get_current_user)) -> ExcuseResponse:
     """Mazeret yolu: chat'teki gorev_ertele_mazeretli aracı da buraya düşer."""
     _require_premium(user_id)
     try:
@@ -886,11 +896,13 @@ def excuse_task(task_id: str, user_id: str = Depends(get_current_user)) -> dict:
         raise HTTPException(status_code=404, detail=str(exc))
     except task_lifecycle_service.TaskAlreadyResolved as exc:
         raise HTTPException(status_code=409, detail=str(exc))
-    return {
-        "message": "Dürüstlüğün için teşekkürler — ceza sabit kaldı, katlanma sıfırlandı. "
-                   "İstersen bugünün en küçük halkasını yine de koyabilirsin. 🌙",
-        "events": [e.model_dump() for e in events],
-    }
+    return ExcuseResponse(
+        message=(
+            "Dürüstlüğün için teşekkürler — ceza sabit kaldı, katlanma sıfırlandı. "
+            "İstersen bugünün en küçük halkasını yine de koyabilirsin. 🌙"
+        ),
+        events=events,
+    )
 
 
 def require_cron_secret(

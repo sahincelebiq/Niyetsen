@@ -145,6 +145,8 @@ class DailyTaskItem(BaseModel):
 
 
 class PlanGenerateRequest(BaseModel):
+    """ /plan/generate gövdesi. /plan/next aynı şemayı isteğe bağlı kabul eder;
+    orada duration_days yok sayılır (kayıtlı plan süresi kullanılır)."""
     collected: CollectedIntent = Field(default_factory=CollectedIntent)
     duration_days: int = 365
 
@@ -205,6 +207,12 @@ class ScoreEvent(BaseModel):
     category: str
     delta: int
     reason: str
+
+
+class ExcuseResponse(BaseModel):
+    """POST /task/{id}/excuse — mobil ExcuseResponse ile birebir."""
+    message: str
+    events: list[ScoreEvent]
 
 
 class PointLogRecord(ScoreEvent):

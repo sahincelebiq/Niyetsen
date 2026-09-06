@@ -67,7 +67,9 @@ Her yuva kodda `Cursor notu` / `CURSOR YUVASI` yorumlarıyla işaretli:
 1. **SupabaseRepository** (`storage/repository.py`) — aynı arayüz, tablolar
    MASTER_PLAN §2. Routes değişmez.
 2. **JWT doğrulama** (`api/routes.py > get_current_user`) — pyjwt +
-   SUPABASE_JWT_SECRET; sonra `.env`'de `AUTH_DISABLED=false`.
+   Supabase JWKS (`RS256`/`ES256`). Bearer varsa `AUTH_DISABLED` açıkken de
+   doğrulanır; yalnız Bearer yokken `X-User-Id` kabul edilir. Prod:
+   `AUTH_DISABLED=false`.
 3. **Gün sonu zamanlayıcı** — `/cron/close-day` tek kullanıcı sürümü hazır;
    tüm kullanıcılar için APScheduler/Railway cron döngüsü yaz (kullanıcı
    timezone'unda 23:59).
