@@ -90,7 +90,7 @@ class Settings:
     # --- Kanıt ---
     PROOF_MAX_BYTES: int = 5 * 1024 * 1024        # 5 MB
     PROOF_MIN_CONFIDENCE: int = 60                 # Gemini Vision güven eşiği
-    PROOF_MAX_ATTEMPTS: int = 3                    # 3. denemede beyanla kabul
+    PROOF_MAX_ATTEMPTS: int = 3                    # 3. denemede Vision + düşük puanlı beyan
 
     # --- Rate limit (kullanıcı başına) ---
     CHAT_RATE_LIMIT_PER_MIN: int = int(os.environ.get("CHAT_RATE_LIMIT_PER_MIN", "10"))
@@ -169,6 +169,7 @@ settings = Settings()
 CATEGORIES = ["İrade", "İstikrar", "Disiplin", "Özgüven", "Sosyallik", "Özsaygı"]
 
 POINTS_PER_TASK = 50          # görev tamamlama: etiketli her kategoriye +50
+POINTS_PER_DECLARATION = 10   # H-02: Vision eşiği geçmeyen 3. deneme beyanı (≠ +50)
 BONUS_POINTS = 10             # fotoğrafsız motivasyon bonus görevi
 BASE_PENALTY = 25             # ceza tabanı
 SILENT_PENALTY_CAP = 200      # sessiz kaçırma katlanma TAVANI (25→50→100→200)

@@ -6,6 +6,7 @@ listesi döndürür. Bu yüzden %100 birim-testlenebilir (tests/test_scoring.py)
 
 Kurallar MASTER_PLAN §1.2–1.3'ten birebir:
 - Görev +50 (etiketli her kategoriye)
+- Beyanla kabul (H-02): +10, +50 ile aynı değil
 - Sessiz kaçırma: 25 × 2^n, TAVAN 200; herhangi bir tamamlama sayacı sıfırlar
 - Mazeret yolu: sabit 25, katlanmaz, sayaç sıfırlanır; 10. mazerette ×0.5
 - Puan tabanı 0 (asla negatif değil)
@@ -23,6 +24,7 @@ from app.config import (
     EXCUSE_PENALTY,
     FREEZE_TOKENS_PER_MONTH,
     POINTS_FLOOR,
+    POINTS_PER_DECLARATION,
     POINTS_PER_TASK,
     RANK_LADDER,
     RANK_UNRANKED,
@@ -71,6 +73,17 @@ def complete_task(state: GameState, categories: list[str]) -> list[ScoreEvent]:
     events: list[ScoreEvent] = []
     for c in categories:
         _apply(state, c, POINTS_PER_TASK, "görev tamamlandı", events)
+    state.silent_miss_streak = 0
+    return events
+
+
+def complete_task_by_declaration(
+    state: GameState, categories: list[str]
+) -> list[ScoreEvent]:
+    """H-02: Vision eşiği geçmeyen 3. deneme — görev biter, puan +50 değildir."""
+    events: list[ScoreEvent] = []
+    for c in categories:
+        _apply(state, c, POINTS_PER_DECLARATION, "kanıt beyanıyla kabul", events)
     state.silent_miss_streak = 0
     return events
 

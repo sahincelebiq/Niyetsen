@@ -114,6 +114,11 @@ class Repository(ABC):
     def get_proofs(self, user_id: str, task_id: str) -> list[ProofRecord]: ...
 
     @abstractmethod
+    def list_proof_content_hashes(self, user_id: str, task_id: str) -> list[str]:
+        """Aynı görevdeki önceki kanıt karelerinin sha256 listesi (dedupe)."""
+        ...
+
+    @abstractmethod
     def append_point_log(
         self, user_id: str, task_id: str | None, events: list[ScoreEvent]
     ) -> None: ...

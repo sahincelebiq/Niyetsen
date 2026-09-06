@@ -35,6 +35,15 @@ def test_unknown_category_is_ignored():
     assert all(v == 0 for v in s.points.values())
 
 
+def test_declaration_awards_ten_not_fifty_and_resets_silent_streak():
+    s = fresh(silent_miss_streak=3)
+    sc.complete_task_by_declaration(s, ["İrade", "Sosyallik"])
+    assert s.points["İrade"] == 10
+    assert s.points["Sosyallik"] == 10
+    assert s.points["Disiplin"] == 0
+    assert s.silent_miss_streak == 0
+
+
 # ---------------- Sessiz kaçırma: katlanma + TAVAN ----------------
 def test_silent_penalty_doubles_then_caps_at_200():
     assert [sc.silent_penalty_amount(n) for n in range(6)] == [25, 50, 100, 200, 200, 200]
