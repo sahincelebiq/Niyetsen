@@ -5,7 +5,7 @@
   var gsc = (cfg.GSC_VERIFICATION || '').trim();
   var storageKey = 'niyetsen_cookie_consent';
 
-  if (gsc) {
+  if (gsc && !document.querySelector('meta[name="google-site-verification"]')) {
     var meta = document.createElement('meta');
     meta.name = 'google-site-verification';
     meta.content = gsc;

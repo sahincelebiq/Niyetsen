@@ -2,21 +2,44 @@
 
 > Niyetsen, kullanıcının 365 günlük yaşam vizyonunu (niyetini) sohbetle çıkaran, görsel günlük plana çeviren, görevleri fotoğraf kanıtıyla tamamlatan ve oyunlaştırmayla istikrarı destekleyen bir mobil yaşam asistanıdır (iOS & Android). Resmî web sitesi: https://niyetsen.com/
 
-Niyetsen bir “kader” veya fal uygulaması değildir; **niyet → plan → eylem** döngüsünü somutlaştırır. Marka simgesi: terracotta zemin üzerinde altın sonsuzluk (∞). Favicon ve logo: https://niyetsen.com/favicon-48x48.png ve https://niyetsen.com/images/logo.jpg
+Niyetsen bir “kader” veya fal uygulaması değildir; **niyet → plan → eylem** döngüsünü somutlaştırır. Marka: terracotta zemin üzerinde altın sonsuzluk (∞).
 
-## “Niyet” kelimesi
+Herkese açık App Store / Play Store yayını yoktur. Android için **Google Play kapalı test** daveti erken erişim formuyla alınır. İç anahtar, sunucu veya yapılandırma kamuya yazılmaz.
 
-Türkçede “niyet” hem içsel karar hem yaşam yönü anlamına gelir. Niyetsen bu kelimenin **yaşam planlama** anlamını ürüne çevirir (dini ansiklopedi veya şarkı sonuçlarından farklı niş). Pillar yazı: https://niyetsen.com/blog/niyet-nedir-nasil-hayata-gecirilir.html
+## Global / sosyal SEO anahtar kelimeleri (Web · Instagram · TikTok)
+
+Birincil (TR): niyet, niyet belirleme, yaşam asistanı, 365 günlük plan, alışkanlık takibi, hedef takibi, kişisel gelişim, motivasyon, disiplin, istikrar
+
+Psikoloji: ertelemek, erteleme psikolojisi, procrastination, potansiyel, potansiyelini ortaya çıkarmak, self-efficacy, özgüven, özsaygı
+
+Yeni içerik (2026-08): yapay zeka alışkanlık, sürdürülebilir alışkanlık, dijital sürdürülebilirlik, dikkat ekonomisi, sürdürülebilir niyet, Google Play kapalı test, erken erişim
+
+EN eşdeğer: intention, habit tracker, goal tracker, daily plan, AI life coach, sustainable habits, digital sustainability, attention economy, closed testing, streak, consistency
+
+Sosyal öneri hashtag seti: #niyet #niyetsen #alışkanlık #kişiselgelişim #erteleme #potansiyel #365gün #sürdürülebilirlik #discipline #habits
+
+Instagram: https://www.instagram.com/niyetsen.ai/
+
+## ASO (App Store) hizası
+
+Alt başlık: 365 günlük plan · foto kanıt · zincir
+
+Anahtarlar: niyet, yaşam asistanı, alışkanlık takibi, hedef takibi, kişisel gelişim, motivasyon, disiplin, oyunlaştırma, yapay zeka
 
 ## Önemli sayfalar
 
-- [Ana sayfa](https://niyetsen.com/): Ürün özeti, özellikler, SSS
-- [Niyet nedir?](https://niyetsen.com/blog/niyet-nedir-nasil-hayata-gecirilir.html): Niyet belirleme ve hayata geçirme
-- [Niyetsen nedir?](https://niyetsen.com/blog/niyetsen-nedir-nasil-calisir.html): Ürün tanımı
-- [Odyssey & niyet](https://niyetsen.com/blog/odyssey-niyet-ve-donus-yolculugu.html): Felsefi çerçeve
-- [Blog](https://niyetsen.com/blog/): İrade, istikrar, disiplin, özgüven, sosyallik, özsaygı
-- [Geliştirme günlüğü](https://niyetsen.com/gelistirme.html)
-- [Gizlilik / KVKK](https://niyetsen.com/gizlilik.html)
+- [Ana sayfa](https://niyetsen.com/)
+- [Erken erişim / Play kapalı test](https://niyetsen.com/erkenerisim)
+- [Geliştirme vitrini](https://niyetsen.com/gelistirme.html)
+- [Yapay zekâ ile sürdürülebilir alışkanlık](https://niyetsen.com/blog/yapay-zeka-surdurulebilir-aliskanlik.html)
+- [Dijital sürdürülebilirlik](https://niyetsen.com/blog/dijital-surdurulebilirlik-dikkat-enerji.html)
+- [Sürdürülebilir niyet: 365 gün](https://niyetsen.com/blog/surdurulebilir-niyet-365-gun.html)
+- [Ertelemek psikolojisi](https://niyetsen.com/blog/ertelemek-psikolojisi.html)
+- [Potansiyel psikolojisi](https://niyetsen.com/blog/potansiyelini-cikaramamak-psikolojisi.html)
+- [Niyet nedir?](https://niyetsen.com/blog/niyet-nedir-nasil-hayata-gecirilir.html)
+- [Blog](https://niyetsen.com/blog/)
+- [Gizlilik](https://niyetsen.com/gizlilik.html)
+- [Hesap silme](https://niyetsen.com/hesap-silme)
 - [Kullanım koşulları](https://niyetsen.com/kullanim-kosullari.html)
 
 ## İletişim

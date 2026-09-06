@@ -1,32 +1,62 @@
-# niyetsen.com — HTTPS + www birleştirme + akıllı önbellek
+# niyetsen.com — hız + güvenlik + Safari/Chrome uyumu
 RewriteEngine On
 
-# HTTP → HTTPS
 RewriteCond %{HTTPS} off
 RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
-# www → kök domain (canonical: niyetsen.com)
 RewriteCond %{HTTP_HOST} ^www\.niyetsen\.com$ [NC]
 RewriteRule ^ https://niyetsen.com%{REQUEST_URI} [L,R=301]
 
-# Dizin isteklerinde index.html
 DirectoryIndex index.html
+Options -Indexes
+FileETag MTime Size
+
+# Temiz URL: /erkenerisim → erkenerisim.html
+RewriteRule ^erkenerisim/?$ /erkenerisim.html [L]
+RewriteRule ^erken-erisim/?$ /erkenerisim.html [L,R=301]
+RewriteRule ^hesap-silme/?$ /hesap-silme.html [L]
+
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml application/manifest+json application/xml
+</IfModule>
 
 <IfModule mod_headers.c>
-  # HTML: tarayıcı eski sayfayı tutmasın (Google tıklaması dahil)
+  Header set X-Content-Type-Options "nosniff"
+  Header set Referrer-Policy "strict-origin-when-cross-origin"
+  Header set X-Frame-Options "SAMEORIGIN"
+  Header set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+  Header set Cross-Origin-Opener-Policy "same-origin-allow-popups"
+  # Hostinger zaten upgrade-insecure-requests ekliyor; CSP'yi sıkı tutuyoruz
+  Header always set Content-Security-Policy "upgrade-insecure-requests; base-uri 'self'; form-action 'self' https://formsubmit.co; object-src 'none'; frame-ancestors 'self'"
+
   <FilesMatch "\.(html|htm)$">
-    Header set Cache-Control "no-cache, no-store, must-revalidate"
-    Header set Pragma "no-cache"
-    Header set Expires "0"
+    # must-revalidate Hostinger CDN'i BYPASS ettiriyordu
+    Header set Cache-Control "public, max-age=300, stale-while-revalidate=86400"
+    Header set Vary "Accept-Encoding"
+    Header unset Pragma
   </FilesMatch>
 
-  # Statik varlıklar: uzun önbellek (sürüm query ?v= ile kırılır)
-  <FilesMatch "\.(css|js|png|jpg|jpeg|webp|svg|ico|woff2|woff|webmanifest)$">
+  <FilesMatch "\.(css|js|png|jpg|jpeg|webp|svg|ico|woff2|woff|webmanifest|txt|xml)$">
     Header set Cache-Control "public, max-age=31536000, immutable"
+    Header set Vary "Accept-Encoding"
   </FilesMatch>
+</IfModule>
+
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 5 minutes"
+  ExpiresByType text/css "access plus 1 year"
+  ExpiresByType application/javascript "access plus 1 year"
+  ExpiresByType image/png "access plus 1 year"
+  ExpiresByType image/jpeg "access plus 1 year"
+  ExpiresByType image/webp "access plus 1 year"
+  ExpiresByType image/svg+xml "access plus 1 year"
+  ExpiresByType font/woff2 "access plus 1 year"
 </IfModule>
 
 <IfModule mod_mime.c>
   AddType image/webp .webp
   AddType font/woff2 .woff2
+  AddType application/manifest+json .webmanifest
+  AddCharset UTF-8 .html .css .js .json .txt .xml .svg
 </IfModule>

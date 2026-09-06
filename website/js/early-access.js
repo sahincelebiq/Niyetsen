@@ -44,6 +44,9 @@
     fd.append('platform', (formData.get('platform') || '').toString().trim());
     var message = (formData.get('message') || '').toString().trim();
     if (message) fd.append('message', message);
+    var playInvite = formData.get('play_closed_test');
+    fd.append('play_closed_test', playInvite ? 'Evet — Google Play kapalı test daveti istiyorum' : 'Hayır');
+    fd.append('kaynak', window.location.pathname || '/');
     fd.append('_subject', 'Niyetsen — Erken erişim talebi');
     fd.append('_captcha', 'false');
     fd.append('_template', 'table');

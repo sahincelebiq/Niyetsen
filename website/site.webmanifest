@@ -1,7 +1,7 @@
 {
   "name": "Niyetsen",
   "short_name": "Niyetsen",
-  "description": "Niyetini sohbetten günlük plana dönüştüren yaşam asistanı. Resmî site: niyetsen.com",
+  "description": "Niyet belirleme, 365 günlük plan, alışkanlık ve hedef takibi — yapay zeka yaşam asistanı. Resmî site: niyetsen.com",
   "start_url": "https://niyetsen.com/",
   "display": "standalone",
   "background_color": "#faf1eb",

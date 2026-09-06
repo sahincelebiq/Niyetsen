@@ -51,7 +51,17 @@
       canvas.setAttribute("aria-hidden", "true");
     }
   } else {
-    var ctx = canvas.getContext("2d", { alpha: true, desynchronized: true });
+    // Safari: desynchronized bazen boş canvas / hata üretir — sade context
+    var ctx = null;
+    try {
+      ctx = canvas.getContext("2d", { alpha: true });
+    } catch (e) {
+      ctx = canvas.getContext("2d");
+    }
+    if (!ctx) {
+      canvas.style.display = "none";
+      return;
+    }
     var particles = [];
     var dpr = Math.min(window.devicePixelRatio || 1, 1.25);
     var w = 0;

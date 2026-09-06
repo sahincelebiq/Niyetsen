@@ -1,0 +1,47 @@
+---
+description: niyetsen.com web vitrin hafızası — layout, performans, Safari, deploy
+globs: website/**
+alwaysApply: false
+---
+
+# niyetsen.com vitrin hafızası (2026-08-02)
+
+## Marka / UI
+- Palet: terracotta `#d89b7c` / deep `#b4623c` / gold `#e8c98a` / cream `#faf1eb`
+- Font: Cormorant Garamond (display) + Source Sans 3 (body) — yerel woff2
+- Logo: ∞ mark (`/images/logo-mark.png`) — `.logo::before` ASLA eski N ikonu eklemez
+- Generic AI look yasak: mor gradient, Inter default, fazla pill/stat strip yok
+
+## Layout tuzakları (tekrarlama)
+1. `.vision-center` float animasyonu centering `translate(-50%,-50%)` ile BİRLİKTE olmalı — yalnız `translateY` kaydırır
+2. `.reveal` varsayılan görünür; `html.js` ile gizlenir — JS yoksa boş sayfa olmaz
+3. `100vw` full-bleed kullanma → scrollbar kayması; `width:100%`
+4. Mobil: hamburger menü (`.nav-toggle`) — sütun nav sticky header şişirmesin
+5. Showcase `transform: scale` + negatif margin kullanma; kutuyu küçült
+
+## Performans
+- Cache bust: HTML `?v=YYYYMMDD-N` — asset immutable 1y, HTML ~5dk + SWR
+- Prefetch: yalnız desktop mouseover/focusin — touchstart spam YASAK
+- Canvas: Safari'de `desynchronized` yok; mobilde canvas kapalı
+- Deploy: Hostinger `hosting_deployStaticWebsite` + `hosting_clearWebsiteCacheV1`
+
+## SEO / ASO
+- Anahtar aile: niyet, alışkanlık takibi, hedef takibi, ertelemek, potansiyel, yaşam asistanı
+- Referans: `website/llms.txt`
+- Ödeme linki sitede YOK (yalnız IAP)
+
+## Sayfalar
+- `/` ürün vitrin · `/erkenerisim` form + Play kapalı test + uygulama önizleme
+- `/gizlilik.html` KVKK · `/hesap-silme` Play hesap silme URL’si · `/kullanim-kosullari.html`
+- `/gelistirme.html` faz kutuları (Backend/Arayüz/Kullanıcı) + açık güncellemeler
+- Blog pillar: niyet, erteleme, potansiyel + 6 kategori + AI/sürdürülebilirlik (3 yazı, 2026-08-16)
+
+## Erken erişim / Play
+- Nav ve CTA `/erkenerisim` açar (eski `#erken-erisim` oraya yönlenir)
+- Google Play **kapalı test** daveti e-posta ile; herkese açık mağaza URL’si UYDURULMAZ
+- Sır yok: `.env`, API anahtarı, form hash, sunucu/Railway/Supabase ayrıntısı sitede yazılmaz
+- Ödeme linki sitede YOK (yalnız IAP)
+
+## Görseller
+- Uygulama önizleme: `/images/app/*.webp` (lazy; ilk kare hariç)
+- `100vw` full-bleed kullanma; galeri grid bozmasın
