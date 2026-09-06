@@ -14,7 +14,7 @@ from typing import Optional
 
 import jwt
 from fastapi import (
-    APIRouter, BackgroundTasks, Body, Depends, File, Form, Header, HTTPException, Request,
+    APIRouter, BackgroundTasks, Body, Depends, File, Form, Header, HTTPException, Query, Request,
     Response, UploadFile,
 )
 from jwt import PyJWKClient
@@ -30,7 +30,7 @@ from app.models.schemas import (
     ChatThread, ConsentStatus, ConsentUpdate, DailyTaskItem, DailyTasksResponse,
     FortuneChatRequest, FortuneChatResponse, FortuneRecord,
     FortuneRightsResponse,
-    HoroscopeResponse, LeagueJoinRequest, LeagueResponse,
+    HoroscopeResponse, LeagueJoinRequest, LeagueProfileUpdate, LeagueResponse,
     PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
     RecapResponse,
     PlanSummary, ProfileUpdate, ProofRecord, ProofResult, PushTokenRecord,
@@ -1465,24 +1465,50 @@ async def fortune_horoscope(
 
 
 @router.get("/league", response_model=LeagueResponse)
-def league_board(user_id: str = Depends(get_current_user)) -> LeagueResponse:
+def league_board(
+    user_id: str = Depends(get_current_user),
+    region: str | None = Query(default=None, max_length=40),
+) -> LeagueResponse:
     """faz8.13/4 — opt-in takma adlı gelişim ligi. Üyeysen kendi anlık
     görüntün tazelenir; değilsen yalnız panoyu görürsün (katılım CTA'sı
-    istemcide). KVKK: yalnız rumuz + puan + zincir döner."""
+    istemcide). KVKK: rumuz + hazır avatar + bölge + tamamlanan görev +
+    zincir. score = completed_tasks. ?region=İstanbul isteğe bağlı filtre.
+    Presence yok (Realtime yığında yok)."""
     from app.services import league_service
 
-    return league_service.get_board(repo, user_id)
+    try:
+        return league_service.get_board(repo, user_id, region=region)
+    except league_service.LeagueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
 
 
 @router.post("/league/join", response_model=LeagueResponse)
 def league_join(
     req: LeagueJoinRequest, user_id: str = Depends(get_current_user)
 ) -> LeagueResponse:
-    """Lige rumuzla katıl (opt-in). Rumuzda e-posta/bağlantı reddedilir."""
+    """Lige rumuzla katıl (opt-in). Avatar hazır listedendir; bölge serbest
+    etiket. Rumuzda e-posta/bağlantı reddedilir. Foto/GPS yok."""
     from app.services import league_service
 
     try:
-        return league_service.join(repo, user_id, req.alias)
+        return league_service.join(
+            repo, user_id, req.alias, avatar=req.avatar, region=req.region
+        )
+    except league_service.LeagueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@router.patch("/league", response_model=LeagueResponse)
+def league_update(
+    req: LeagueProfileUpdate, user_id: str = Depends(get_current_user)
+) -> LeagueResponse:
+    """Rumuz / hazır avatar / bölge etiketini güncelle. Üye değilse 400."""
+    from app.services import league_service
+
+    try:
+        return league_service.update_profile(
+            repo, user_id, alias=req.alias, avatar=req.avatar, region=req.region
+        )
     except league_service.LeagueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 

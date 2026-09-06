@@ -1,4 +1,4 @@
--- Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (35 başlık, 2026-09-06)
+-- Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (37 başlık, 2026-09-06)
 --
 -- AMAÇ: Dashboard Private'daki eski Untitled / DDL snippet'lerini
 -- TEKRAR ÇALIŞTIRMA. Bu dosya salt DOĞRULAMA'dır.
@@ -7,7 +7,7 @@
 --   Toplu CREATE, idol seed, chat_threads backfill, Untitled fortune_log,
 --   last_tarot_push_date ALTER, rastgele policy ekleme.
 --
--- Kullanım: 01–35'i tek tek Run. Beklenen: eksik satır yok, rls_off=0.
+-- Kullanım: 01–37'i tek tek Run. Beklenen: eksik satır yok, rls_off=0.
 -- Nested /* */ yorum YASAK (42601). Başlık = çift tire.
 
 -- ============================================================
@@ -48,7 +48,9 @@ from (
     ('push_tokens','last_tarot_push_date'),
     ('push_tokens','last_recap_push_date'),
     ('tasks','date'),
-    ('tasks','tiny_version')
+    ('tasks','tiny_version'),
+    ('league_members','avatar'),
+    ('league_members','region')
 ) as t(table_name, col)
 where not exists (
   select 1 from information_schema.columns c
@@ -378,7 +380,25 @@ where table_schema = 'public' and table_name = 'plans' and column_name = 'id';
 -- BEKLENEN: text
 
 -- ============================================================
--- 35) Özet — hepsi yeşil mi?
+-- 35) Lig KVKK kolonları (avatar + bölge; isim/foto/GPS yok)
+-- ============================================================
+select column_name
+from information_schema.columns
+where table_schema = 'public' and table_name = 'league_members'
+  and column_name in ('avatar', 'region')
+order by 1;
+-- BEKLENEN: 2 satır (avatar, region)
+
+-- ============================================================
+-- 36) Lig bölge sıralama indeksi
+-- ============================================================
+select indexname
+from pg_indexes
+where schemaname = 'public' and indexname = 'league_members_region_score_idx';
+-- BEKLENEN: 1 satır
+
+-- ============================================================
+-- 37) Özet — hepsi yeşil mi?
 -- ============================================================
 select
   (select count(*) from pg_class c

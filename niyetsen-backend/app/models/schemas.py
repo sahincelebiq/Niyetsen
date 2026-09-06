@@ -491,16 +491,28 @@ class PhotoFortuneResponse(BaseModel):
 
 
 # faz8.13/4 — Online rekabet: opt-in takma adlı gelişim ligi (Şahin kararı,
-# 2026-08-10: leaderboard öne çekildi). KVKK: gerçek isim/veri sızmaz —
-# yalnız kullanıcının seçtiği RUMUZ + puan + zincir görünür.
+# 2026-08-10: leaderboard öne çekildi). KVKK: gerçek isim/e-posta/foto/GPS
+# sızmaz — yalnız rumuz + hazır avatar + bölge etiketi + tamamlanan görev
+# + zincir görünür. score = completed_tasks (geriye uyum alanı).
 class LeagueJoinRequest(BaseModel):
     alias: str = Field(min_length=2, max_length=24)
+    avatar: Optional[str] = Field(default=None, max_length=80)
+    region: Optional[str] = Field(default=None, max_length=40)
+
+
+class LeagueProfileUpdate(BaseModel):
+    alias: Optional[str] = Field(default=None, min_length=2, max_length=24)
+    avatar: Optional[str] = Field(default=None, max_length=80)
+    region: Optional[str] = Field(default=None, max_length=40)
 
 
 class LeagueMember(BaseModel):
     alias: str
     score: int = 0
+    completed_tasks: int = 0
     streak: int = 0
+    avatar: Optional[str] = None
+    region: Optional[str] = None
     rank: int = 0
     is_me: bool = False
 
@@ -508,6 +520,8 @@ class LeagueMember(BaseModel):
 class LeagueResponse(BaseModel):
     opted_in: bool = False
     alias: Optional[str] = None
+    avatar: Optional[str] = None
+    region: Optional[str] = None
     my_rank: Optional[int] = None
     members: list[LeagueMember] = Field(default_factory=list)
 

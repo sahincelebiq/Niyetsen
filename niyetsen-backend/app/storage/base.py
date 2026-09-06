@@ -279,26 +279,40 @@ class Repository(ABC):
     def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
         """Fal geçmişi — en yeniden eskiye."""
 
+    def count_completed_tasks(self, user_id: str) -> int:
+        """Tüm planlarda status=done görev sayısı. Varsayılan 0."""
+        return 0
+
     # --- faz8.13/4: Online rekabet (opt-in takma adlı lig) ---
     @abstractmethod
     def league_get_member(self, user_id: str) -> Optional[dict]:
-        """Kullanıcının lig üyeliği: {alias, score, streak} ya da None."""
+        """Kullanıcının lig üyeliği: {alias, score, streak, avatar, region}."""
 
     @abstractmethod
     def league_upsert_member(
-        self, user_id: str, alias: str, score: int, streak: int
+        self,
+        user_id: str,
+        alias: str,
+        score: int,
+        streak: int,
+        avatar: Optional[str] = None,
+        region: Optional[str] = None,
     ) -> None:
-        """Üyelik + puan/zincir anlık görüntüsünü yazar (opt-in)."""
+        """Üyelik + tamamlanan görev/zincir anlık görüntüsünü yazar (opt-in)."""
 
     @abstractmethod
     def league_remove_member(self, user_id: str) -> None:
         """Opt-out: üyelik silinir — KVKK gereği iz bırakmaz."""
 
     @abstractmethod
-    def league_top(self, limit: int = 50) -> list[dict]:
-        """Puana göre ilk N üye: [{user_id, alias, score, streak}]."""
+    def league_top(self, limit: int = 50, region: Optional[str] = None) -> list[dict]:
+        """Tamamlanan görev + zincire göre ilk N üye.
+        region verilirse yalnız o etiket. user_id yalnız sıralama içindir;
+        API yanıtına gerçek kimlik konmaz."""
 
-    def league_rank(self, user_id: str) -> Optional[int]:
+    def league_rank(
+        self, user_id: str, region: Optional[str] = None
+    ) -> Optional[int]:
         """Üyenin panodaki gerçek sırası (ilk 50 dışındayken de).
         Üye değilse None. Varsayılan None: istemci 'ilk 50 dışında' der."""
         return None

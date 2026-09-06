@@ -48,7 +48,7 @@ class InMemoryRepository(Repository):
         self._bonus_offers: dict[str, BonusOffer] = {}
         self._subscriptions: dict[str, dict] = {}
         self._fortunes: dict[str, list[FortuneRecord]] = {}
-        # faz8.13/4: lig üyelikleri — user_id -> {alias, score, streak}
+        # faz8.13/4: lig üyelikleri — user_id -> {alias, score, streak, avatar, region}
         self._league: dict[str, dict] = {}
         # FAZ 7.6: sohbet oturumları — user -> thread_id -> meta
         self._threads: dict[str, dict[str, dict]] = {}
@@ -754,34 +754,69 @@ class InMemoryRepository(Repository):
         )
         return records[:limit]
 
+    def count_completed_tasks(self, user_id: str) -> int:
+        return sum(
+            1
+            for plan in self._user_plans(user_id).values()
+            for day in plan.days
+            for task in day.tasks
+            if task.status == "done"
+        )
+
     # --- faz8.13/4: Online rekabet (opt-in takma adlı lig) ---
     def league_get_member(self, user_id: str) -> Optional[dict]:
         member = self._league.get(user_id)
         return dict(member) if member else None
 
     def league_upsert_member(
-        self, user_id: str, alias: str, score: int, streak: int
+        self,
+        user_id: str,
+        alias: str,
+        score: int,
+        streak: int,
+        avatar: Optional[str] = None,
+        region: Optional[str] = None,
     ) -> None:
-        self._league[user_id] = {"alias": alias, "score": score, "streak": streak}
+        self._league[user_id] = {
+            "alias": alias,
+            "score": score,
+            "streak": streak,
+            "avatar": avatar,
+            "region": region,
+        }
 
     def league_remove_member(self, user_id: str) -> None:
         self._league.pop(user_id, None)
 
-    def league_top(self, limit: int = 50) -> list[dict]:
+    def league_top(self, limit: int = 50, region: Optional[str] = None) -> list[dict]:
         rows = [
             {"user_id": uid, **member} for uid, member in self._league.items()
         ]
-        rows.sort(key=lambda r: (-r["score"], -r["streak"], r["alias"]))
+        if region:
+            rows = [row for row in rows if row.get("region") == region]
+        rows.sort(key=lambda r: (-int(r["score"]), -int(r["streak"]), r["alias"]))
         return rows[:limit]
 
-    def league_rank(self, user_id: str) -> Optional[int]:
+    def league_rank(
+        self, user_id: str, region: Optional[str] = None
+    ) -> Optional[int]:
         member = self._league.get(user_id)
         if not member:
             return None
-        higher = sum(
-            1 for other in self._league.values()
-            if other["score"] > member["score"]
-        )
+        if region and member.get("region") != region:
+            return None
+        score = int(member["score"])
+        streak = int(member["streak"])
+        higher = 0
+        for other in self._league.values():
+            if region and other.get("region") != region:
+                continue
+            other_score = int(other["score"])
+            other_streak = int(other["streak"])
+            if other_score > score or (
+                other_score == score and other_streak > streak
+            ):
+                higher += 1
         return higher + 1
 
     def get_subscription_row(self, user_id: str) -> dict:
