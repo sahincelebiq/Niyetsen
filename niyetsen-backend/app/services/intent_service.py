@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import time
 
 from app.config import settings
 from app.core import prompt_builder, prompts, tools
@@ -43,7 +44,13 @@ def _fill_intent_defaults(collected: CollectedIntent) -> CollectedIntent:
         "interests": collected.interests or ["kişisel gelişim"],
         "weekly_hours": collected.weekly_hours or 5,
     })
+
+
 CHAT_HISTORY_LIMIT = 24
+# Tool-detect is classification on the cheap fallback model; do not let its
+# retries/timeout sit on the chat critical path (reply is independent).
+TOOL_DETECT_TIMEOUT_SEC = 12
+TOOL_DETECT_MAX_RETRIES = 1
 
 
 def _wants_replan(message: str) -> bool:
@@ -123,18 +130,53 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
     normalized_message = last_user_msg.casefold()
     wants_tools = any(marker in normalized_message for marker in TOOL_INTENT_MARKERS)
 
+    # 2) Bellek + bağlam — araç tespiti de aynı CONTEXT + geçmişi görür
+    # (yalnız son kullanıcı satırı yetmez: bugünün task_id'si bellekledir).
+    # RAG yanıt yoluna özgüdür; araç yolu bellek CONTEXT'i ile yetinir ki
+    # iki Pro/Flash çağrısı birbirini beklemesin.
+    memory = prompt_builder.build_memory_block(
+        state=state,
+        name=user_name,
+        birth_date=birth_date,
+        zodiac=zodiac,
+        gender=gender,
+        active_intent=active_intent,
+        today_status=today_status,
+        recent_tasks=recent_tasks,
+        mood_notes=mood_notes,
+        preferred_language=preferred_language,
+        plan_day=plan_day,
+        duration_days=duration_days,
+        philosophy_paths=philosophy_paths,
+    )
+    history = [m.model_dump() for m in req.messages[-CHAT_HISTORY_LIMIT:]]
+    tool_contents = prompt_builder.build_chat_contents(
+        context=prompt_builder.build_context(memory),
+        history=history,
+    )
+    intent_mode = _use_intent_mode(has_active_plan, plan_has_content, last_user_msg)
+
     async def _detect_tools() -> list[ToolCall]:
         if not wants_tools:
             return []
         try:
             raw_calls = await generate_function_calls(
-                last_user_msg,
+                tool_contents,
                 declarations=tools.TOOL_DECLARATIONS,
                 system_instruction=(
+                    prompts.SYSTEM_PROMPT
+                    + "\n\n"
                     "Yalnız kullanıcı açıkça bir işlem istiyorsa uygun aracı çağır. "
-                    "Gerekli task_id bilinmiyorsa araç çağırma; kısa bir açıklama döndür. "
+                    "Gerekli task_id CONTEXT'teki bugünün görevlerinden seç; "
+                    "bilinmiyorsa araç çağırma; kısa bir açıklama döndür. "
                     "Listede olmayan hiçbir işlemi çağırma."
                 ),
+                # image_service keyword enrich ile aynı ucuz model — araç
+                # seçimi sınıflandırmadır, 3.1 Pro yakılmaz.
+                model=settings.GEMINI_FALLBACK_MODEL,
+                timeout_sec=TOOL_DETECT_TIMEOUT_SEC,
+                max_retries=TOOL_DETECT_MAX_RETRIES,
+                disable_thinking=True,
             )
             return [
                 ToolCall(name=call["name"], args=call.get("args", {}))
@@ -164,52 +206,44 @@ async def handle_chat(req: ChatRequest, state: GameState | None = None,
             log.warning("RAG bağlamı atlandı", exc_info=True)
             return []
 
-    detected_tools, rag_chunks = await asyncio.gather(_detect_tools(), _retrieve_rag())
+    async def _retrieve_and_reply() -> dict:
+        rag_chunks = await _retrieve_rag()
+        contents = prompt_builder.build_chat_contents(
+            context=prompt_builder.build_context(memory, rag_chunks),
+            history=history,
+            extra_instructions=(
+                (
+                    prompts.INTENT_JSON_INSTRUCTIONS
+                    if intent_mode else prompts.GUIDE_JSON_INSTRUCTIONS
+                )
+                + f"\n\nŞU ANA KADAR TOPLANAN: {req.collected.model_dump_json()}"
+            ),
+        )
+        return await generate_json(
+            contents,
+            system_instruction=prompts.SYSTEM_PROMPT,
+            model=settings.GEMINI_MODEL,
+            max_output_tokens=settings.GEMINI_CHAT_MAX_OUTPUT_TOKENS,
+            json_retries=2,
+            max_retries=2,
+            response_schema=prompts.CHAT_RESPONSE_SCHEMA,
+            disable_thinking=True,
+        )
+
+    async def _timed(stage: str, coro):
+        started = time.perf_counter()
+        try:
+            return await coro
+        finally:
+            log.info("chat stage %s=%.2fs", stage, time.perf_counter() - started)
+
+    # Yanıt ve araç tespiti bağımsız: sırayla iki model çağrısı yapma.
+    # Marker yoksa _detect_tools hemen [] döner; kritik yol yalnız yanıt.
+    detected_tools, data = await asyncio.gather(
+        _timed("tools", _detect_tools()),
+        _timed("reply", _retrieve_and_reply()),
+    )
     tool_calls = detected_tools
-
-    intent_mode = _use_intent_mode(has_active_plan, plan_has_content, last_user_msg)
-
-    # 2) Bellek + bağlam kur (değişmez sıra: SYSTEM ayrı, CONTEXT + USER burada)
-    memory = prompt_builder.build_memory_block(
-        state=state,
-        name=user_name,
-        birth_date=birth_date,
-        zodiac=zodiac,
-        gender=gender,
-        active_intent=active_intent,
-        today_status=today_status,
-        recent_tasks=recent_tasks,
-        mood_notes=mood_notes,
-        preferred_language=preferred_language,
-        plan_day=plan_day,
-        duration_days=duration_days,
-        philosophy_paths=philosophy_paths,
-    )
-    history = [m.model_dump() for m in req.messages[-CHAT_HISTORY_LIMIT:]]
-
-    contents = prompt_builder.build_chat_contents(
-        context=prompt_builder.build_context(memory, rag_chunks),
-        history=history,
-        extra_instructions=(
-            (
-                prompts.INTENT_JSON_INSTRUCTIONS
-                if intent_mode else prompts.GUIDE_JSON_INSTRUCTIONS
-            )
-            + f"\n\nŞU ANA KADAR TOPLANAN: {req.collected.model_dump_json()}"
-        ),
-    )
-
-    # 3) Model çağrısı (yapısal JSON)
-    data = await generate_json(
-        contents,
-        system_instruction=prompts.SYSTEM_PROMPT,
-        model=settings.GEMINI_MODEL,
-        max_output_tokens=settings.GEMINI_CHAT_MAX_OUTPUT_TOKENS,
-        json_retries=2,
-        max_retries=2,
-        response_schema=prompts.CHAT_RESPONSE_SCHEMA,
-        disable_thinking=True,
-    )
 
     merged = _merge_collected(req.collected, data.get("collected", {}))
 

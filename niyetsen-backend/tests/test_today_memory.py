@@ -41,7 +41,9 @@ def test_today_memory_uses_turkish_status_labels():
     assert "bekliyor" in today_status
     assert "pending" not in today_status
     assert "Yürüyüş" in today_status
+    assert "task_id=t1" in today_status
     assert "Yürüyüş" in recent
+    assert "task_id=t1" in recent
 
 
 def test_today_memory_points_to_today_tab_when_extension_needed():
