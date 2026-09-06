@@ -48,6 +48,37 @@ def test_webhook_rejects_missing_secret() -> None:
     assert res.status_code == 401
 
 
+def test_webhook_rejects_wrong_secret() -> None:
+    res = client.post(
+        "/webhooks/revenuecat",
+        headers={"Authorization": "Bearer wrong-webhook-secret"},
+        json=_event("INITIAL_PURCHASE"),
+    )
+    assert res.status_code == 401
+
+
+def test_webhook_rejects_secret_without_bearer_prefix() -> None:
+    """Ham sır, beklenen `Bearer {secret}` ile eşleşmez."""
+    res = client.post(
+        "/webhooks/revenuecat",
+        headers={"Authorization": WEBHOOK_SECRET},
+        json=_event("INITIAL_PURCHASE"),
+    )
+    assert res.status_code == 401
+
+
+def test_webhook_returns_503_when_secret_unconfigured(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(settings, "REVENUECAT_WEBHOOK_SECRET", "")
+    res = client.post(
+        "/webhooks/revenuecat",
+        headers=_auth_headers(),
+        json=_event("INITIAL_PURCHASE"),
+    )
+    assert res.status_code == 503
+
+
 def test_webhook_initial_purchase_activates() -> None:
     subscription_service.start_trial_if_needed(repo, USER)
     expires = int(datetime(2027, 1, 1, tzinfo=timezone.utc).timestamp() * 1000)
