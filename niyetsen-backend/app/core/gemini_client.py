@@ -324,12 +324,16 @@ async def generate_json_with_images(
     model: Optional[str] = None,
     response_schema: Optional[dict] = None,
     max_output_tokens: int = 256,
+    system_instruction: Optional[str] = None,
 ) -> dict:
     """Çoklu görselli vision çağrısı (faz8.13/2d: kahve falı maks 3 foto).
 
     faz8.13 kök düzeltmesi: response_schema önceden kanıt şemasına SABİTTİ —
     fal ve ek özeti çağrıları yanlış şemayla boş dönüyordu. Artık her çağrı
     kendi şemasını geçirir.
+
+    system_instruction SYSTEM rolünde gider; prompt gövdesine gömülmez
+    (fal vision hijyeni — kullanıcı/görsel metni system olamaz).
     """
     from google.genai import types
 
@@ -342,6 +346,7 @@ async def generate_json_with_images(
         return await asyncio.wait_for(
             generate_json(
                 parts,
+                system_instruction=system_instruction,
                 model=model,
                 max_output_tokens=max_output_tokens,
                 json_retries=2,
@@ -365,6 +370,7 @@ async def generate_json_with_image(
     model: Optional[str] = None,
     response_schema: Optional[dict] = None,
     max_output_tokens: int = 256,
+    system_instruction: Optional[str] = None,
 ) -> dict:
     """Tek görselli vision çağrısı (kanıt doğrulama, ek özeti, fal)."""
     return await generate_json_with_images(
@@ -373,6 +379,7 @@ async def generate_json_with_image(
         model=model,
         response_schema=response_schema,
         max_output_tokens=max_output_tokens,
+        system_instruction=system_instruction,
     )
 
 
