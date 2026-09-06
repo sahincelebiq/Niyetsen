@@ -1,14 +1,18 @@
 """
 Niyetsen — Kanıt Doğrulama Servisi (MASTER_PLAN §1.5)
 Foto + görev başlığı → Gemini Vision → 0-100 güven skoru.
-  skor >= 60            → onay
+  skor >= 60            → onay (accepted_by_declaration=False, tam +50)
   skor <  60, deneme <3 → nazik "bir kare daha" (reddetme, davet et)
-  3. deneme             → kullanıcı beyanıyla KABUL (kullanıcıyla savaşma —
-                          philosophy.py Yasa 1: sistem polislik için değil,
-                          alışkanlık için var)
+  skor <  60, 3. deneme → beyanla KABUL (kullanıcıyla savaşma) ama Vision
+                          ATLANMAZ; gerçek skor korunur, oyun etkisi düşük
+                          (POINTS_PER_DECLARATION). H-02.
+Vision geçici hata: GeminiUnavailable yükseltilir — 503, deneme yakılmaz,
+beyan yolu AÇILMAZ (kota/hata ile +puan bypass yok).
 Konum verilmişse skora +10 bonus güven.
 """
 from __future__ import annotations
+
+import hashlib
 
 from app.config import settings
 from app.core import prompts
@@ -85,6 +89,11 @@ def prepare_upload(image_bytes: bytes, mime_type: str) -> bytes:
     return image_bytes
 
 
+def image_content_hash(image_bytes: bytes) -> str:
+    """Hazırlanmış kanıt baytlarının sha256'sı — aynı kare tekrarı (M-02/H-02)."""
+    return hashlib.sha256(image_bytes).hexdigest()
+
+
 async def evaluate_proof(
     task_title: str,
     image_bytes: bytes,
@@ -98,17 +107,18 @@ async def evaluate_proof(
     plan_name: str = "",
     day_theme: str = "",
     task_context: str = "",
+    previous_content_hashes: list[str] | None = None,
 ) -> ProofResult:
     image_bytes = prepare_upload(image_bytes, mime_type)
-
-    # 3. deneme: beyanla kabul — Vision'a hiç gitmeden onayla, maliyet de tasarruf.
-    if attempt_no >= settings.PROOF_MAX_ATTEMPTS:
-        return ProofResult(
-            approved=True, confidence=settings.PROOF_MIN_CONFIDENCE,
-            reason="Sana güveniyorum — beyanınla kabul edildi. 🌙",
-            attempt_no=attempt_no, accepted_by_declaration=True,
+    content_hash = image_content_hash(image_bytes)
+    known = {digest for digest in (previous_content_hashes or []) if digest}
+    if content_hash in known:
+        raise ProofRejected(
+            "Aynı kareyi tekrar almışım gibi duruyor. Yeni bir kare çeker misin?"
         )
 
+    # H-02: 3. denemede de Vision çalışır. Beyan yolu yalnız Vision skoru
+    # eşiğin altında kaldığında açılır — erken return yok.
     try:
         data = await generate_json_with_image(
             prompt=prompts.PROOF_VALIDATION_PROMPT.format(
@@ -133,6 +143,7 @@ async def evaluate_proof(
             raise ProofRejected(
                 "Fotoğraf okunamadı veya işlenemedi. Yeni bir kare çekip tekrar dener misin?"
             ) from exc
+        # Geçici Vision hatası: beyanla onay YOK — 503, deneme yakılmaz.
         raise
 
     try:
@@ -143,11 +154,23 @@ async def evaluate_proof(
         confidence = min(100, confidence + 10)
 
     approved = confidence >= settings.PROOF_MIN_CONFIDENCE
+    accepted_by_declaration = False
     reason = str(data.get("reason") or "")
-    if not approved:
+    if not approved and attempt_no >= settings.PROOF_MAX_ATTEMPTS:
+        # §1.5: kullanıcıyla savaşma — görevi kabul et, gerçek skoru sakla.
+        approved = True
+        accepted_by_declaration = True
+        reason = (
+            "Tam emin olamadım; yine de 3. denemede beyanınla kabul ettim. 🌙"
+        )
+    elif not approved:
         reason = "Tam emin olamadım, bir kare daha dener misin? " + reason
 
     return ProofResult(
-        approved=approved, confidence=confidence,
-        reason=reason, attempt_no=attempt_no,
+        approved=approved,
+        confidence=confidence,
+        reason=reason,
+        attempt_no=attempt_no,
+        accepted_by_declaration=accepted_by_declaration,
+        content_hash=content_hash,
     )

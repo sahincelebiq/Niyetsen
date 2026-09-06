@@ -165,9 +165,10 @@ class ProofResult(BaseModel):
     confidence: int
     reason: str
     attempt_no: int
-    accepted_by_declaration: bool = False  # 3. denemede kullanıcı beyanıyla kabul
+    accepted_by_declaration: bool = False  # Vision eşiği altında 3. deneme beyanı
     proof_id: Optional[str] = None
     photo_url: Optional[str] = None
+    content_hash: Optional[str] = Field(default=None, exclude=True)
 
 
 class ProofRecord(BaseModel):

@@ -32,6 +32,8 @@ def approve_proof(
     repository: Repository,
     user_id: str,
     proof: ProofRecord,
+    *,
+    accepted_by_declaration: bool = False,
 ) -> list[ScoreEvent]:
     task = repository.get_task(user_id, proof.task_id)
     if task is None:
@@ -40,7 +42,10 @@ def approve_proof(
         raise TaskAlreadyResolved("Görev zaten sonuçlanmış.")
 
     state = repository.get_state(user_id)
-    events = scoring_service.complete_task(state, task.categories)
+    if accepted_by_declaration:
+        events = scoring_service.complete_task_by_declaration(state, task.categories)
+    else:
+        events = scoring_service.complete_task(state, task.categories)
     task.status = "done"
     task.proof_id = proof.id
     repository.save_state(state)

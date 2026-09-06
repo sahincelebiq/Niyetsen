@@ -835,6 +835,9 @@ async def upload_proof(
             plan_name=plan_name,
             day_theme=day_theme,
             task_context=task_context,
+            previous_content_hashes=repo.list_proof_content_hashes(
+                user_id, task_id
+            ),
         )
     except GeminiUnavailable:
         repo.abort_proof_attempt(user_id, task_id, idempotency_key)
@@ -865,7 +868,12 @@ async def upload_proof(
         repo.save_proof(user_id, proof)
         result.proof_id = proof.id
         result.photo_url = photo_url
-        task_lifecycle_service.approve_proof(repo, user_id, proof)
+        task_lifecycle_service.approve_proof(
+            repo,
+            user_id,
+            proof,
+            accepted_by_declaration=result.accepted_by_declaration,
+        )
     except task_lifecycle_service.TaskAlreadyResolved as exc:
         repo.abort_proof_attempt(user_id, task_id, idempotency_key)
         raise HTTPException(status_code=409, detail=str(exc))

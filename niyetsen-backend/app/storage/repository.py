@@ -387,6 +387,21 @@ class InMemoryRepository(Repository):
             if proof.task_id == task_id
         ]
 
+    def list_proof_content_hashes(self, user_id: str, task_id: str) -> list[str]:
+        if self.get_task(user_id, task_id) is None:
+            return []
+        hashes: list[str] = []
+        for key, (status, _attempt_no, result) in self._proof_requests.items():
+            if (
+                key[0] == user_id
+                and key[1] == task_id
+                and status == "completed"
+                and result is not None
+                and result.content_hash
+            ):
+                hashes.append(result.content_hash)
+        return hashes
+
     def append_point_log(
         self, user_id: str, task_id: str | None, events: list[ScoreEvent]
     ) -> None:

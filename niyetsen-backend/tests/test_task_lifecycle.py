@@ -142,11 +142,35 @@ def test_first_proof_attempt_calls_vision_with_mime_type(monkeypatch):
     assert result.accepted_by_declaration is False
 
 
-def test_third_proof_attempt_is_accepted_without_vision(monkeypatch):
-    async def vision_should_not_run(**_kwargs):
-        raise AssertionError("Vision üçüncü denemede çağrılmamalı")
+def test_third_proof_attempt_calls_vision_and_declares_on_low_score(monkeypatch):
+    captured: dict = {}
 
-    monkeypatch.setattr(proof_service, "generate_json_with_image", vision_should_not_run)
+    async def fake_vision(**kwargs):
+        captured.update(kwargs)
+        return {"confidence": 22, "reason": "Görevle eşleşmedi", "matches": False}
+
+    monkeypatch.setattr(proof_service, "generate_json_with_image", fake_vision)
+    result = asyncio.run(
+        proof_service.evaluate_proof(
+            task_title="Yürüyüş",
+            image_bytes=_image(),
+            mime_type="image/png",
+            attempt_no=3,
+        )
+    )
+    assert captured.get("mime_type") == "image/png"
+    assert result.approved is True
+    assert result.accepted_by_declaration is True
+    assert result.confidence == 22
+    assert "beyanınla kabul" in result.reason
+    assert "eşleşmedi" not in result.reason
+
+
+def test_third_proof_attempt_high_score_is_normal_approval(monkeypatch):
+    async def fake_vision(**_kwargs):
+        return {"confidence": 88, "reason": "Görevle uyumlu", "matches": True}
+
+    monkeypatch.setattr(proof_service, "generate_json_with_image", fake_vision)
     result = asyncio.run(
         proof_service.evaluate_proof(
             task_title="Yürüyüş",
@@ -156,8 +180,44 @@ def test_third_proof_attempt_is_accepted_without_vision(monkeypatch):
         )
     )
     assert result.approved is True
-    assert result.accepted_by_declaration is True
-    assert result.confidence == 60
+    assert result.accepted_by_declaration is False
+    assert result.confidence == 88
+
+
+def test_third_proof_attempt_does_not_declare_when_vision_unavailable(monkeypatch):
+    async def vision_down(**_kwargs):
+        raise GeminiUnavailable("down")
+
+    monkeypatch.setattr(proof_service, "generate_json_with_image", vision_down)
+    with pytest.raises(GeminiUnavailable):
+        asyncio.run(
+            proof_service.evaluate_proof(
+                task_title="Yürüyüş",
+                image_bytes=_image(),
+                mime_type="image/png",
+                attempt_no=3,
+            )
+        )
+
+
+def test_repeated_frame_is_rejected_without_vision(monkeypatch):
+    image = _image()
+    digest = proof_service.image_content_hash(image)
+
+    async def vision_should_not_run(**_kwargs):
+        raise AssertionError("Aynı kare tekrarında Vision çağrılmamalı")
+
+    monkeypatch.setattr(proof_service, "generate_json_with_image", vision_should_not_run)
+    with pytest.raises(proof_service.ProofRejected, match="Yeni bir kare"):
+        asyncio.run(
+            proof_service.evaluate_proof(
+                task_title="Yürüyüş",
+                image_bytes=image,
+                mime_type="image/png",
+                attempt_no=2,
+                previous_content_hashes=[digest],
+            )
+        )
 
 
 def test_rejected_proof_is_not_persisted_or_scored(monkeypatch):
@@ -186,6 +246,69 @@ def test_rejected_proof_is_not_persisted_or_scored(monkeypatch):
     assert response.json()["photo_url"] is None
     assert repo.get_task(user_id, "rejected-task").status == "pending"
     assert repo.get_point_log(user_id) == []
+
+
+def test_declaration_proof_awards_reduced_points_not_full_task(monkeypatch):
+    user_id = "declared-proof-user"
+    task_id = "declared-task"
+    repo.save_plan(user_id, _plan(task_id, date.today(), ["İrade", "Disiplin"]))
+    _allow_proof(user_id)
+    repo._attempts[(user_id, task_id)] = 2
+
+    async def low_score(**_kwargs):
+        return {"confidence": 18, "reason": "Eşleşmedi", "matches": False}
+
+    monkeypatch.setattr(proof_service, "generate_json_with_image", low_score)
+    response = client.post(
+        f"/task/{task_id}/proof",
+        files={"photo": ("proof.png", _image(), "image/png")},
+        headers={"X-User-Id": user_id, "X-Idempotency-Key": "declaration-capture"},
+    )
+    assert response.status_code == 200
+    body = response.json()
+    assert body["approved"] is True
+    assert body["accepted_by_declaration"] is True
+    assert body["confidence"] == 18
+    assert "content_hash" not in body
+    task = repo.get_task(user_id, task_id)
+    assert task.status == "done"
+    assert repo.get_state(user_id).points["İrade"] == 10
+    assert repo.get_state(user_id).points["Disiplin"] == 10
+    events = repo.get_point_log(user_id)
+    assert [(event.category, event.delta, event.reason) for event in events] == [
+        ("İrade", 10, "kanıt beyanıyla kabul"),
+        ("Disiplin", 10, "kanıt beyanıyla kabul"),
+    ]
+
+
+def test_same_frame_second_attempt_is_rejected_and_not_scored(monkeypatch):
+    user_id = "repeat-frame-user"
+    task_id = "repeat-frame-task"
+    repo.save_plan(user_id, _plan(task_id, date.today()))
+    _allow_proof(user_id)
+    image = _image()
+
+    async def low_score(**_kwargs):
+        return {"confidence": 15, "reason": "Eşleşmedi", "matches": False}
+
+    monkeypatch.setattr(proof_service, "generate_json_with_image", low_score)
+    first = client.post(
+        f"/task/{task_id}/proof",
+        files={"photo": ("proof.png", image, "image/png")},
+        headers={"X-User-Id": user_id, "X-Idempotency-Key": "frame-1"},
+    )
+    second = client.post(
+        f"/task/{task_id}/proof",
+        files={"photo": ("proof.png", image, "image/png")},
+        headers={"X-User-Id": user_id, "X-Idempotency-Key": "frame-2"},
+    )
+    assert first.status_code == 200
+    assert first.json()["approved"] is False
+    assert second.status_code == 400
+    assert "Yeni bir kare" in second.json()["detail"]
+    assert repo.get_proof_attempts(user_id, task_id) == 1
+    assert repo.get_point_log(user_id) == []
+    assert repo.get_task(user_id, task_id).status == "pending"
 
 
 def test_approved_proof_persists_task_points_and_event(monkeypatch):

@@ -514,11 +514,14 @@ class SupabaseRepository(Repository):
         idempotency_key: str,
         result: ProofResult,
     ) -> None:
+        payload = result.model_dump(mode="json")
+        if result.content_hash:
+            payload["content_hash"] = result.content_hash
         self._db.rpc("finish_proof_attempt", {
             "p_user_id": user_id,
             "p_task_id": task_id,
             "p_idempotency_key": idempotency_key,
-            "p_result": result.model_dump(mode="json"),
+            "p_result": payload,
         }).execute()
 
     def abort_proof_attempt(
@@ -567,6 +570,39 @@ class SupabaseRepository(Repository):
             .order("attempt_no").execute().data
         )
         return [ProofRecord(**row) for row in rows]
+
+    def list_proof_content_hashes(self, user_id: str, task_id: str) -> list[str]:
+        if self.get_task(user_id, task_id) is None:
+            return []
+        try:
+            rows = (
+                self._db.table("proof_requests")
+                .select("result_json")
+                .eq("user_id", user_id)
+                .eq("task_id", task_id)
+                .eq("status", "completed")
+                .execute()
+                .data
+            )
+        except Exception:
+            log.warning(
+                "Kanıt içerik hash listesi okunamadı (user_id=%s task_id=%s)",
+                user_id,
+                task_id,
+                exc_info=True,
+            )
+            return []
+        hashes: list[str] = []
+        for row in rows or []:
+            payload = (
+                parse_json_object(row.get("result_json"))
+                if row.get("result_json")
+                else {}
+            )
+            digest = payload.get("content_hash")
+            if isinstance(digest, str) and digest:
+                hashes.append(digest)
+        return hashes
 
     def append_point_log(
         self, user_id: str, task_id: str | None, events: list[ScoreEvent]
