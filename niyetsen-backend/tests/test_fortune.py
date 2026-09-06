@@ -303,6 +303,8 @@ def test_mystic_chat_prompt_follows_locale_header(monkeypatch):
     assert "Reply entirely in German" in prompt
     assert "Tercih edilen dil: de (German)" in prompt
     assert "Reply entirely in en" not in prompt
+    assert "--- NİYETSEN BAĞLAMI ---" in prompt
+    assert "YAN BAŞLIKTIR" in prompt
 
 
 def test_mystic_chat_crisis_stops_reading():
@@ -451,3 +453,59 @@ def test_palm_knowledge_refuses_lifespan_reading():
     joined = " ".join(chunks).lower()
     assert "ömür" in joined
     assert "okunmaz" in joined or "i̇lgi̇si̇z" in joined or "ilgisiz" in joined
+
+
+def test_tarot_deck_parses_seventy_eight_cards():
+    fortune_service.reset_deck_cache()
+    deck = fortune_service._load_deck()
+    assert len(deck) == 78
+    names = {card["name"] for card in deck}
+    assert "Deli" in names
+    assert "Tılsımlar Kralı" in names
+    assert all(card["upright"] and card["reversed"] for card in deck)
+
+
+def test_mystic_intent_is_compact_not_raw_json(monkeypatch):
+    """Eksik sohbet JSON'u mistik promptu basmasın — yağ ve uydurma kaynağıydı."""
+    captured: dict[str, str] = {}
+
+    async def capturing(contents, **kwargs):
+        captured["prompt"] = contents
+        return {"reply": "Ayna sessiz."}
+
+    monkeypatch.setattr(fortune_service, "generate_json", capturing)
+    from app.models.schemas import CollectedIntent
+
+    user = "mystic_compact_intent"
+    grant_chat_consent(user, client)
+    repo.save_intent(
+        user,
+        CollectedIntent(
+            city="belirtilmedi",
+            interests=["kitap", "Gaia Yolu"],
+            weekly_hours=5,
+        ),
+        365,
+        ready_for_plan=True,
+    )
+    resp = client.post(
+        "/fortune/chat",
+        headers={"X-User-Id": user},
+        json={"messages": [{"role": "user", "content": "tarot ne diyor?"}]},
+    )
+    assert resp.status_code == 200
+    prompt = captured["prompt"]
+    assert "ilgi: kitap, Gaia Yolu" in prompt
+    assert '"weekly_hours"' not in prompt
+    assert "belirtilmedi" not in prompt
+
+
+def test_fortune_prompts_require_honest_mirror():
+    from app.core import prompts
+
+    assert "AYNA DÜRÜSTLÜĞÜ" in prompts.FORTUNE_SYSTEM_PROMPT
+    assert "Niyetsen ile:" in prompts.TAROT_JSON_INSTRUCTIONS
+    assert "olumlu cilalama" in prompts.MYSTIC_CHAT_JSON_INSTRUCTIONS
+    assert "SOHBET KALİTESİ" in prompts.SYSTEM_PROMPT
+    assert "Gaia Yolu" in prompts.SYSTEM_PROMPT
+    assert "Kozmos Yolu" in prompts.SYSTEM_PROMPT

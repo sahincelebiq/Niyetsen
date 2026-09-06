@@ -101,6 +101,12 @@ def _load_deck() -> list[dict]:
     return deck
 
 
+def reset_deck_cache() -> None:
+    """Testler için deste önbelleğini sıfırla."""
+    global _deck_cache
+    _deck_cache = None
+
+
 # ------------------------------------------------------------------
 # Ortak yardımcılar
 # ------------------------------------------------------------------
@@ -221,7 +227,7 @@ def build_mystic_memory(repository: Repository, user_id: str, limit: int = 8) ->
 # ------------------------------------------------------------------
 MYSTIC_CHAT_HISTORY_LIMIT = 12
 MYSTIC_CHAT_SOURCES = [
-    "tarot", "burclar", "kahve_fali", "el_fali", "motivasyon",
+    "tarot", "burclar", "burc_gelisim", "kahve_fali", "el_fali",
 ]
 
 MYSTIC_CHAT_SCHEMA = {
@@ -345,7 +351,7 @@ async def draw_tarot(
     )
     rag_chunks = await _rag_async(
         f"tarot {' '.join(c.name for c in cards)} {question}",
-        sources=["tarot", "motivasyon"],
+        sources=["tarot"],
     )
     contents = "\n\n".join(filter(None, [
         "\n".join(rag_chunks) if rag_chunks else "",
@@ -438,7 +444,7 @@ async def read_photo_fortune(
     # derinlik hem de "korku satma" güvenlik çerçevesi oradan geliyor.
     rag_chunks = await _rag_async(
         FORTUNE_RAG_QUERY[kind],
-        sources=[FORTUNE_RAG_SOURCE[kind], "motivasyon"],
+        sources=[FORTUNE_RAG_SOURCE[kind]],
     )
     prompt = "\n\n".join(filter(None, [
         prompts.FORTUNE_SYSTEM_PROMPT,
@@ -518,7 +524,10 @@ async def daily_horoscope(
             interpretation=cached.result.get("interpretation", ""),
         )
 
-    rag_chunks = await _rag_async(f"{sign} burcu", sources=["burclar"])
+    rag_chunks = await _rag_async(
+        f"{sign} burcu felsefe gölge",
+        sources=["burclar", "burc_gelisim"],
+    )
     period_note = (
         "Bu HAFTALIK bir yorum: haftanın genel enerjisi + haftaya yayılan "
         "2-3 küçük adım öner." if period == "weekly" else ""

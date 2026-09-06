@@ -146,7 +146,7 @@ class DailyTaskItem(BaseModel):
 
 class PlanGenerateRequest(BaseModel):
     collected: CollectedIntent = Field(default_factory=CollectedIntent)
-    duration_days: int = 365
+    duration_days: int = Field(default=365, ge=1, le=365)
 
 
 class DailyTasksResponse(BaseModel):

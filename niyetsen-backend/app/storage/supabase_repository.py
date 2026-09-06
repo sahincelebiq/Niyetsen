@@ -22,7 +22,7 @@ from app.models.schemas import (
     PlanSummary, PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult,
     PushTokenRecord, ScoreEvent, Task, UserProfile,
 )
-from app.core.datetimes import coerce_datetime
+from app.core.datetimes import coerce_date, coerce_datetime
 from app.storage.base import Repository
 from app.storage.db_coerce import is_unique_violation, parse_json_object
 
@@ -37,11 +37,7 @@ def _maybe_single(builder) -> Optional[dict]:
 
 
 def _parse_optional_date(value) -> dt_date | None:
-    if value is None or value == "":
-        return None
-    if isinstance(value, dt_date):
-        return value
-    return dt_date.fromisoformat(str(value))
+    return coerce_date(value)
 
 
 def _task_from_row(row: dict) -> Task:
@@ -59,7 +55,7 @@ def _task_from_row(row: dict) -> Task:
         duration_min=row["duration_min"],
         tiny_version=row["tiny_version"],
         status=row["status"],
-        date=row["date"],
+        date=coerce_date(row.get("date")),
         proof_id=row.get("proof_id"),
     )
 
@@ -91,7 +87,7 @@ def _fortune_from_row(row: dict) -> FortuneRecord:
     return FortuneRecord(
         id=row["id"],
         type=row["type"],
-        day=row["day"],
+        day=coerce_date(row.get("day")) or dt_date.today(),
         result=parse_json_object(row.get("result_json")),
         created_at=coerce_datetime(row.get("created_at")) or datetime.now(timezone.utc),
     )
@@ -138,9 +134,7 @@ class SupabaseRepository(Repository):
             .eq("id", user_id)
         ) or {}
 
-        last_active = streak_row.get("last_active_date")
-        if last_active is not None and not isinstance(last_active, dt_date):
-            last_active = dt_date.fromisoformat(str(last_active))
+        last_active = coerce_date(streak_row.get("last_active_date"))
 
         return GameState(
             user_id=user_id,
@@ -216,7 +210,7 @@ class SupabaseRepository(Repository):
             id=plan_row["id"],
             duration_days=plan_row["duration_days"],
             batch_generated_until=plan_row["batch_generated_until"],
-            start_date=plan_row["start_date"],
+            start_date=coerce_date(plan_row.get("start_date")) or dt_date.today(),
             days=[days[k] for k in sorted(days)],
             name=plan_row.get("name") or "Planım",
             slot_no=plan_row.get("slot_no") or 1,

@@ -94,3 +94,119 @@ Tılsımlar Uşağı (Page of Pentacles) — Öğrenme, hedef odağı, çırakl�
 Tılsımlar Şövalyesi (Knight of Pentacles) — Yavaş ama emin, rutin, güven. Ters: durağanlık. Niyet: hızlı olman gerekmiyor; durmaman yeterli.
 Tılsımlar Kraliçesi (Queen of Pentacles) — Besleyen pratiklik, kaynak yönetimi. Ters: öz bakım ihmali. Niyet: başkalarına baktığın kadar kendine de bak.
 Tılsımlar Kralı (King of Pentacles) — Bolluk, güvenilirlik, tamamlanmış emek. Ters: hırsın esareti. Niyet: emeğin taçlandı; şimdi bilgeliğini paylaş.
+
+## OKUMA İLKESİ — gölge, ters, Niyetsen köprüsü
+Tarot kader fermanı değil ayna dilidir. Rider–Waite–Smith ve Marseille
+geleneklerinde ters kart "kötü şans" değil içe dönmüş, gecikmiş veya
+inkâr edilen enerjidir. Yayılımın işi müjde üretmek değildir: geçmiş /
+şimdi / niyetin yönü bir hikâye kurar; hikâyede gerilim yoksa okuma yassıdır.
+Yağ çekme yasak. Korku satmak da yasak. Zor kart (Ölüm, Şeytan, Kule, On
+Kılıç) felaket kehaneti değil; bakılmayan yeri işaret eder.
+Niyetsen köprüsü ayrı başlıktır: kartlar konuşur, sonra kısa "Niyetsen ile"
+cümlesi plan veya zincire bağlanır. Eksik sohbet tam portre değildir —
+boş niyeti "hayatın açılıyor" diye doldurma.
+
+## BÜYÜK ARKANA DERİN OKUMA
+### Deli derin
+Eşiğin bilgeliği: henüz isim almamış adım. Düz: masum cesaret. Ters veya
+gölge: hazırlıksız atlamak, ya da eşiğe hiç basmamak. Niyetsen: yeni niyet
+kurmak ile kaçış olarak "yeni başlangıç" aynı şey değildir — hangisi?
+
+### Büyücü derin
+Araçlar masada, irade düğümdedir. Düz: eldeki kaynakları bir işte birleştir.
+Gölge: dağınık araç, gösteriş, kendini kandırma. Niyetsen: "her şeye sahipsin"
+yağ değil; hangi tek aracı bugün kullanacaksın?
+
+### Azize derin
+Konuşulmayan bilgi. Düz: iç sese yer aç. Gölge: sezgiyi bastırıp dışarıda
+cevap aramak, ya da sezgiyi bahane edip eylemi ertelemek. Niyetsen: bir gece
+yaz, sabah tek halka.
+
+### İmparatoriçe derin
+Büyüme tempo ister. Düz: emek verdiğin şey olgunlaşıyor. Gölge: bakımı
+ihmal, ya da üretmeden tüketmek. Niyetsen: bir şeyi besle — beden, iş veya
+ilişki; üçünü birden değil.
+
+### İmparator derin
+Çerçeve olmadan ateş ev yakar. Düz: rutin ve sınır. Gölge: katı kontrol,
+ya da hiç yapı yok. Niyetsen: bugüne tek çerçeve (saat veya yer).
+
+### Aziz derin
+Öğreti ve topluluk. Düz: kanıtlanmış yöntemi takip. Gölge: kör itaat veya
+kalıbı kırmak adına her yöntemi çöpe atmak. Niyetsen: bir yöntemi 7 gün
+değiştirme.
+
+### Aşıklar derin
+Seçim ve hizalanma. Düz: kalp ile aklın aynı niyette olup olmadığı. Gölge:
+kararsızlık, iki hayatı birden yaşama hayali. Niyetsen: bugün bir evet, bir
+hayır.
+
+### Savaş Arabası derin
+İrade yön ister. Düz: dizginler sende. Gölge: hız var, rota yok; ya da
+dümeni bırakmak. Niyetsen: tek hedef, kısa blok.
+
+### Güç derin
+Yumuşak hâkimiyet. Düz: sabır ve şefkatle içgüdüyü taşımak. Gölge: kaba
+kuvvet veya özgüven çöküşü. Niyetsen: zor görevi küçült, bırakma.
+
+### Ermiş derin
+Işığı dışarıda aramayı bırakma. Düz: geri çekilip netleş. Gölge: kaçış
+olarak yalnızlık. Niyetsen: 10 dakika telefonsuz, sonra bir halka.
+
+### Kader Çarkı derin
+Döngü kişisel iradenin üstündedir — ama tepki senindir. Düz: evre değişiyor.
+Gölge: direnç, "neden ben". Niyetsen: kontrolünde olan tek halkayı at.
+
+### Adalet derin
+Sonuç, ekinden gelir. Düz: sorumluluk. Gölge: kaçış, başkasını suçlama.
+Niyetsen: bugün ektiğin tek şey nedir — adlandır.
+
+### Asılan Adam derin
+Zorlamak durur, bakış döner. Düz: bekleyiş ve yeni açı. Gölge: kısır
+inat. Niyetsen: aynı sorunu tersinden bir cümleyle yaz.
+
+### Ölüm derin
+Bitiş, yok oluş kehaneti değildir; form değişir. Düz: eski alışkanlık
+ölmeli. Gölge: değişime yapışmak. Niyetsen: bırakılacak tek şeyi yaz,
+korku satma.
+
+### Denge derin
+Karışım ve ölçü. Düz: sürdürülebilir tempo. Gölge: aşırılık, ya hep ya hiç.
+Niyetsen: hafif gün hakkı.
+
+### Şeytan derin
+Bağ, bağımlılık, gölge alışkanlık. Düz: zinciri gör ve adını koy. Gölge:
+inkâr. Niyetsen: seni bağlayan alışkanlığı bir cümlede söyle; felaket yok.
+
+### Kule derin
+Yanlış temel çöker. Düz: sarsıntı, gerçek. Gölge: ertelenen kriz. Niyetsen:
+çöken planı utançla örtme; bir yama veya yeni küçük çerçeve.
+
+### Yıldız derin
+Şifa ve uzak ışık. Düz: umut, ama emek ister. Gölge: umutsuzluk veya
+boş beklenti. Niyetsen: umudu bir mikro adıma bağla.
+
+### Ay derin
+Sis, projeksiyon, korku. Düz: her şey net değil. Gölge: kuruntuyu gerçek
+sanmak. Niyetsen: bir korkuyu yaz, kanıtını sor; acele etme.
+
+### Güneş derin
+Görünürlük ve basit sevinç. Düz: açıklık. Gölge: gecikmiş sevinç veya
+sahte parlaklık. Niyetsen: küçük zaferi abartmadan kaydet.
+
+### Mahkeme derin
+Hesap ve uyanış. Düz: geçmişle yüzleş, affet, yeniden başla. Gölge:
+kendini yargılayıp kilitlenmek. Niyetsen: bir eski günü silme, 2 dakikalık
+yeni halka.
+
+### Dünya derin
+Döngü kapanır. Düz: tamamlanma. Gölge: yarım kalmışlık, eşiği geçmeme.
+Niyetsen: biten bir döngüyü adlandır; hemen yeni dağa atlama.
+
+## KÜÇÜK ARKANA GÖLGE NOTU
+Asalar gölgesi: heves yangını, tükeniş, savunan ego.
+Kupalar gölgesi: bastırılmış his, nostaljiye saplanma, boş hayal.
+Kılıçlar gölgesi: zihinsel hapis, kuruntu, keskin ama merhametsiz söz.
+Tılsımlar gölgesi: sıkılık, darlık hissi, emeği ertelemek.
+Sayılar: As tohum, 5 çatışma/kayıp, 10 yük veya tamamlanma — 5 ve 10'u
+otomatik müjde sayma.

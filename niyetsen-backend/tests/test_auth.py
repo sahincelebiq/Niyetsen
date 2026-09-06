@@ -46,7 +46,9 @@ def _token(sub: str = "user-abc") -> str:
 
 
 def test_health_does_not_require_auth():
-    assert client.get("/health").status_code == 200
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["version"] == settings.API_VERSION
 
 
 def test_missing_token_returns_401():

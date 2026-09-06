@@ -7,6 +7,8 @@ venv/
 __pycache__/
 *.pyc
 .pytest_cache/
+.coverage
+htmlcov/
 chroma_db/
 niyetsen.db
 .rag_embed_cache.json

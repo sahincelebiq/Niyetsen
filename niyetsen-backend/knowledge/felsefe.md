@@ -23,3 +23,7 @@ Hedef "kitap bitirmek" değil, "okuyan biri olmak"tır. Rehber ilerlemeyi kimli�
 
 ## İlham anı ve İdol Modu (yeni felsefe katmanı)
 Bir film biter, bir röportaj kapanır ve içinde bir şey kıpırdar: "Ben de böyle biri olmak istiyorum." Bu an değerlidir ama kırılgandır — çoğu insanda 48 saat içinde söner. Niyetsen'in İdol Modu bu anı yakalamak için vardır: kullanıcı ilham aldığı kişiyi söyler (bir aktör, bir sporcu, bir yazar), rehber o kişinin kamuya açık rutinlerinden — nasıl çalıştığı, nasıl spor yaptığı, hangi kitapları okuduğu, zorlukla nasıl başa çıktığı — ilham alan ve kullanıcının GERÇEK hayatına ölçeklenmiş bir yol çıkarır. İlke: taklit değil, tercüme. Amaç o kişi olmak değil; o kişinin disiplinini kendi hayatının diline çevirmek. İdol bir kader değil, bir pusula örneğidir — ve hiçbir plan idolün onayını ya da ortaklığını ima etmez.
+
+İki geniş ölçek yolu: Gaia Yolu (yeryüzünü canlı sistem olarak taşımak) ve
+Kozmos Yolu (galaksinin ölçeğinde kendini konumlamak). Biri aidiyet ve sınır,
+öbürü alçakgönüllülük ve yıldız tozu. İkisi de nutuk değil; günlük küçük halka.

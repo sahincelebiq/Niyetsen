@@ -74,7 +74,9 @@ _SYNONYMS: dict[str, tuple[str, ...]] = {
     "kanit": ("foto", "fotograf", "cek", "kamer"),
     "plan": ("gorev", "niyet", "vizyon"),
     "burc": ("astro", "horoskop", "yukselen", "koc", "boga"),
-    "tarot": ("destesi", "yayilim", "arkana"),
+    "tarot": ("destesi", "yayilim", "arkana", "golge", "ters kart"),
+    "gaia": ("yeryuzu", "dunya", "ekoloji", "gezegen"),
+    "kozmos": ("galaksi", "evren", "yildiz", "pale blue"),
     "kahve": ("telve", "fincan"),
     "avuc": ("elcizgi", "palmistry"),
     # Release QA T4: 6 kategori kavramları — Türkçe ekli hâller prefix ile yakalanır.
@@ -362,6 +364,7 @@ _TOPIC_TRIGGERS: dict[str, tuple[str, ...]] = {
         "dayanıklılık yolu", "dayaniklilik", "minimalizm", "cesaret yolu",
         "wabi", "antifragil", "ubuntu",
         "amor fati", "sisu", "wu wei", "wu-wei",
+        "gaia", "yeryüzü", "yeryuzu", "kozmos", "galaksi", "evren yolu",
     ),
     "senaryolar": (
         "ertele", "mazeret", "zincir kir", "zinciri kır", "beceriksiz",

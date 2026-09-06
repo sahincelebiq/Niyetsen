@@ -60,7 +60,7 @@ logging.getLogger("niyetsen.app").info(
 
 app = FastAPI(
     title="Niyetsen API",
-    version="0.1.0",
+    version=settings.API_VERSION,
     description="Niyetini söze, sözünü zincire çevir. 🌙",
 )
 app.state.limiter = limiter

@@ -110,3 +110,9 @@ Toprak (Boğa, Başak, Oğlak): sağlam sürdürür — Özsaygı ve esneklikle 
 Hava (İkizler, Terazi, Kova): fikir ve bağ kurar — Disiplin ritmiyle dengelenir.
 Su (Yengeç, Akrep, Balık): duyguyla hareket eder — duygudan bağımsız mikro
 İrade halkalarıyla dengelenir.
+
+## Yorum disiplini (Niyetsen mistik)
+Burç × kategori sentezi ayna dilidir, yağ değildir. Kullanıcının sohbeti
+eksikse "hayatın açılıyor / her şey yolunda" uydurma. Güçlü kategoriyi öv,
+gelişim alanını utandırmadan adlandır. Niyetsen köprüsü ayrı kısa başlıktır:
+plan günü ve bugünkü görev, burç masalının yerine geçmez.

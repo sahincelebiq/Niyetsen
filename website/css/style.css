@@ -1487,6 +1487,25 @@ body.home header.is-scrolled {
   box-shadow: var(--shadow);
 }
 
+.legal-langs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.85rem;
+  margin: 0 0 1.25rem;
+  font-size: 0.9rem;
+}
+.legal-langs a {
+  color: var(--text-soft);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+}
+.legal-langs a[aria-current="page"],
+.legal-langs a:hover {
+  color: var(--text);
+  border-bottom-color: var(--text);
+}
+.legal[dir="rtl"] { text-align: right; }
+
 .legal h2 { margin-top: 2rem; font-size: 1.4rem; }
 .legal h2:first-of-type { margin-top: 0; }
 .legal p, .legal li { color: var(--text-soft); }

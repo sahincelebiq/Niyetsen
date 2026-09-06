@@ -102,3 +102,24 @@ def test_keyword_prefers_heading_match():
     )
     assert chunks
     assert "Zincir kırıldı" in chunks[0] or "zincir" in chunks[0].casefold()
+
+
+def test_zodiac_philosophy_is_in_burclar_source():
+    chunks = rag_service.retrieve("Koç felsefesi gölge kıvılcım", sources=["burclar"], k=5)
+    joined = "\n".join(chunks).casefold()
+    assert "gölge" in joined
+    assert "koç" in joined
+
+
+def test_tarot_shadow_principle_is_retrievable():
+    chunks = rag_service.retrieve("tarot gölge ters kart ayna", sources=["tarot"], k=5)
+    joined = "\n".join(chunks).casefold()
+    assert "gölge" in joined
+    assert "yağ" in joined or "ayna" in joined
+
+
+def test_gaia_and_kozmos_paths_trigger_idol_source():
+    gaia = rag_service.retrieve_for_chat("Gaia Yolu ile ilerlemek istiyorum")
+    kozmos = rag_service.retrieve_for_chat("Kozmos Yolu, galaksi ölçeği")
+    assert any("[idoller" in chunk for chunk in gaia)
+    assert any("[idoller" in chunk for chunk in kozmos)

@@ -174,3 +174,39 @@ Rehber tonu: görevi küçült, saati sabitle, sürtünmeyi düşür; zorla bite
 sakin biteni öv.
 PRATİK: Başlamadan 1 sürtünme kaldır; zor işi 2 dakikalık su gibi sürüme indir;
 5 dakika üretmeme (boşluk); aynı işi daha az kuvvetle bir adım değiştir.
+
+## Gaia Yolu — yeryüzünü canlı bir sistem olarak taşımak
+FELSEFE: Dünya bir dekor değil; kendini düzenleyen, sınırları olan canlı bir
+sistemdir. Gaia kuramı (Lovelock–Margulis) ve Dünya sistemi bilimi şunu
+gösterir: iklim, okyanus, orman ve biz aynı döngünün parçasıyız. 2025
+Planetary Health Check'e göre dokuz gezegensel sınırın yedisi aşılmış durumda
+— bu bir kehanet değil, ölçüm. Derin ekoloji (Arne Næss) ekler: benlik, deri
+ile bitmez; nefes aldığın hava ve içtiğin su da sensin. Zincir yalnız takvim
+değildir; ait olduğun sisteme verilen küçük, tekrarlanan sözdür. Bu yol Gaia
+kuramı, Dünya sistemi bilimi ve derin ekolojinin kamuya açık geleneğinden
+ilham alır; belirli bir kişiyle bağlantılı değildir.
+Rehber tonu: "bu görev dünyayı kurtarır" nutku yasak; "bugün sistemin bir
+parçası olarak neyi bozmadın / neyi onardın?" sorusu. Suçluluk değil aidiyet.
+PRATİK: Günde 1 yeryüzü halkası (pencere açıp 3 nefes, bir bitkiye su, tek
+kullanımlık bir şeyi atlamak); haftada 1 'sınır' notu (su, yemek, ekran —
+hangisini aştın); ayda 1 küçük onarım (dikiş, tamir, paylaşım); yürüyüşte
+tek canlıyı adıyla fark etmek.
+
+## Kozmos Yolu — galaksinin ölçeğinde kendini konumlamak
+FELSEFE: Gövdenin çoğu atomu (hidrojen hariç) ölü yıldızların ocağında
+pişmiştir — 'yıldız tozu' şiir değil, nükleosentez. Samanyolu yüz milyarlarca
+yıldız taşır; gözlemlenebilir evrende galaksi sayısı trilyon mertebesindedir.
+1990'da Voyager 1'in Pale Blue Dot karesi Dünya'yı bir güneş ışını içinde tek
+piksel yaptı: bütün zaferler, kavgalar ve niyetler o toz tanesinde. Kozmik
+perspektif ego'yu küçültür, anlamı silmez — 'ben merkez değilim' utanç değil,
+hafifliktir. James Webb'in erken galaksileri evrenin sandığımızdan daha eski
+ve tuhaf olduğunu hatırlatır; bilmediğimiz (karanlık madde/enerji) görünenden
+büyüktür. Bu yol kozmik perspektif ve kamuya açık astrofiziğin (Pale Blue Dot,
+yıldız nükleosentezi) geleneğinden ilham alır; belirli bir kişiyle bağlantılı
+değildir.
+Rehber tonu: kıyas ve kibir geldiğinde ölçek sorusu ("bu dert, hangi
+ölçekte?"); görevi küçümseme — küçük halka, evrenin kendini tanıdığı yerdir.
+PRATİK: Gece 2 dakika göğe veya karanlığa bakıp tek cümle ('ben bir toz
+tanesindeyim'); ego şişince 1 satır ölçek notu; haftada 1 'evreni tanıyan
+adım' (bir gerçek oku, bir soru sor); ayda 1 Pale Blue Dot dakikası — kimseye
+ispat etmeden.

@@ -278,7 +278,14 @@ def build_recap(
     veri); verilmezse eski davranış (yalnız aktif plan) korunur.
     """
     days = PERIOD_DAYS.get(period, 14)
-    end = today or date.today()
+    if today is not None:
+        end = today
+    elif timezone_name:
+        from app.core.datetimes import local_today
+
+        end = local_today(timezone_name)
+    else:
+        end = date.today()
     start = end - timedelta(days=days - 1)
 
     all_plans = [p for p in (plans if plans is not None else [plan]) if p is not None]

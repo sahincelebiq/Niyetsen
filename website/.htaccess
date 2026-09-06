@@ -20,6 +20,11 @@ RewriteRule ^hesap-silme/?$ /hesap-silme.html [L]
   AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml application/manifest+json application/xml
 </IfModule>
 
+# Şifre sıfırlama / e-posta dönüşü — Google OAuth callback değil
+RewriteRule ^auth/callback/?$ /auth-callback.html [L]
+RewriteRule ^sifre-sifirla/?$ /auth-callback.html [L]
+RewriteRule ^reset-password/?$ /auth-callback.html [L]
+
 <IfModule mod_headers.c>
   Header set X-Content-Type-Options "nosniff"
   Header set Referrer-Policy "strict-origin-when-cross-origin"

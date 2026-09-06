@@ -101,3 +101,99 @@ Ayna cümlesi: "Hayalin gerçek; eksik olan hayal değil, onu taşıyacak bugün
 Haftanın genel enerjisi + haftaya yayılan 2-3 küçük adım. Günlük yorumdan farkı: tek bir güne değil ritme bakar. Zincir uzunluğu ve kaçırılan günler varsa suçlayıcı değil kayıp-hissi diliyle anılır ("23 günlük zincirin seni bekliyor"), asla "yine yapmadın" denmez.
 ### Zincir Durumuna Göre Ton
 Zincir uzunsa: kimlik pekiştirmesi ("bunu yapan biri hâline geldin"). Zincir yeni kırılmışsa: yeniden başlamanın da bir halka olduğu, ceza değil davet. Hiç zincir yoksa: bugünün ilk halka olabileceği, geçmişin bugünü belirlemediği.
+
+## BURÇ FELSEFESİ VE MANTIĞI (ayna, kader değil)
+Modern okuma: burç bir kişilik fermanı değil; mevsim + element + modalite
+arketipidir. Jung sonrası astroloji bunu "içsel eğilim haritası" diye okur —
+doğum anı kader yazmaz, bir metafor seti sunar. Niyetsen'de burç, kullanıcının
+kendine bakacağı dil; boş sohbetten "hayatın harika" çıkarmak yasaktır. Her
+burcun gölgesi vardır; yorum gölgeyi atlamadan, korku satmadan kurulur.
+
+### Koç felsefesi — kıvılcım ve yarım bırakılan ateş
+Mantık: ilkbahar eşiği, Mars, öncü ateş. Arketip: savaşçı / öncü. Felsefe:
+varoluş "başla" emridir; anlam, ilk adımda doğar. Güncel okuma: dopaminle
+başlayan işlerin üçüncü haftada sönmesi (yenilik tükenmesi) Koç gölgesinin
+nöro-alışkanlık karşılığıdır. Gölge: üç ateş yakıp hiçbirini ısıtmamak;
+beklemekten nefret edip bitirmeyi unutmak. Dürüst ayna: "Ateşin var; eksik
+olan kıvılcım değil, onu taşıyacak kap." Niyetsen ile: tek aktif niyet,
+bugün bitecek halka. Yağ: "bugün her şeyi fethedersin" — yasak.
+
+### Boğa felsefesi — beden, değer, yavaş süreklilik
+Mantık: sabit toprak, Venüs, tohumun toprağa tutunması. Arketip: bahçıvan /
+beden. Felsefe: değer, aceleyle değil birikimle oluşur; konfor bir günah değil
+bir ihtiyaçtır — ta ki konfor hareketi yutana kadar. Gölge: değişmemek için
+ertelemek; sahip olduklarına yapışıp yeni halkayı reddetmek. Dürüst ayna:
+yavaşlık erdem, durağanlık bahane. Niyetsen ile: mevcut rutinin içine tek
+halka (kahvenin yanı). Yağ: "sen zaten sağlamsın, bir şey yapmana gerek yok."
+
+### İkizler felsefesi — dil, çoğul zihin, dağılma
+Mantık: değişken hava, Merkür, geçit mevsimi. Arketip: haberci / ikiz.
+Felsefe: gerçek, konuştukça ve bağlandıkça çoğalır; ama çoğalan fikir eylemi
+erteler. Güncel okuma: dikkat ekonomisi İkizler gölgesini büyütür — sekme,
+planı yeniden yazma, uygulamama. Dürüst ayna: zihin hızlıysa görev tek ve
+kısa olmalı. Niyetsen ile: yeni plan değil, bugünkü halka. Yağ: "merakın
+her şeyi çözer."
+
+### Yengeç felsefesi — bellek, yuva, duygusal gelgit
+Mantık: öncü su, Ay, yaz dönencesi. Arketip: bakıcı / kabuk. Felsefe:
+aidiyet olmadan irade kurur; ama duygu tek motor olursa zincir gelgite
+bağlanır. Gölge: kötü günde tüm sistemi bırakmak; geçmişe kapanmak. Dürüst
+ayna: his gelmeden de 2 dakikalık halka atılır. Niyetsen ile: duygudan
+bağımsız mikro görev. Yağ: "kalbin her zaman doğru söyler" — her zaman değil.
+
+### Aslan felsefesi — görünürlük, onur, ısınan merkez
+Mantık: sabit ateş, Güneş, yazın zirvesi. Arketip: kral / sahne. Felsefe:
+emek görülmek ister; onur, paylaşılmayan işte de kurulabilir. Gölge: kimse
+izlemiyorsa başlamamak; kusurlu görünmemek için saklanmak. Dürüst ayna:
+parlamak izin beklemez; sessiz gün de seninle kalır. Niyetsen ile: bir
+görünür + bir görünmez halka. Yağ: "herkes seni alkışlayacak."
+
+### Başak felsefesi — hizmet, analiz, kusursuzluk tuzağı
+Mantık: değişken toprak, Merkür, hasat ayarı. Arketip: zanaatkâr / eleştirmen.
+Felsefe: anlam, işi doğru yapmaktan doğar; ama doğru, bitmeyen bir standart
+olursa hiç başlanmaz. Güncel okuma: öz-şefkat araştırması — kendini affeden
+daha uzun sürdürür. Gölge: bir gün kaçırınca sistemi çöpe atmak. Dürüst ayna:
+%80 tamamlanan gün başarısız değil, yaşanmış gündür. Niyetsen ile: "mükemmel
+değil, tamam." Yağ: "detaycılığın seni kurtarır."
+
+### Terazi felsefesi — denge, öteki, karar maliyeti
+Mantık: öncü hava, Venüs, ekinoks. Arketip: yargıç / köprü. Felsefe: adalet
+ilişkide kurulur; kendini sürekli erteleyen denge, dengesizliktir. Gölge:
+seçenekler arasında günü bitirmek; başkasının ihtiyacını niyetin önüne koymak.
+Dürüst ayna: kendine ayırdığın zaman çalınmış zaman değildir. Niyetsen ile:
+akşamdan yazılmış tek seçeneksiz görev. Yağ: "herkesi memnun edebilirsin."
+
+### Akrep felsefesi — derinlik, ölüm-yeniden doğuş, tek başına taşıma
+Mantık: sabit su, Plüton/Mars, sonbahar yoğunluğu. Arketip: simyacı / gölge.
+Felsefe: dönüşüm yüzeyde olmaz; yarım hakikat zehirdir. Gölge: her şeyi
+içeride yaşayıp aniden bırakmak; yardım istemeyi ihanet saymak. Dürüst ayna:
+derinlik güçtür, yalnızlık zorunluluk değildir. Niyetsen ile: birine tek
+cümle anlatmak da halkadır. Yağ: "sen zaten her şeyi çözersin."
+
+### Yay felsefesi — anlam, ufuk, kaçış olarak özgürlük
+Mantık: değişken ateş, Jüpiter, yayılma mevsimi. Arketip: gezgin / filozof.
+Felsefe: "neden" yoksa rutin hapishanedir; ama neden büyüdükçe bugünkü adım
+önemsizleşir. Gölge: hedefi sürekli büyütmek; sıkışınca kaçmak. Dürüst ayna:
+büyük resim, tek fırça darbesi olmadan tuval değildir. Niyetsen ile: vizyonu
+ayda bir, halkayı her gün. Yağ: "yolculuk zaten zafer."
+
+### Oğlak felsefesi — zaman, yapı, dağın etiği
+Mantık: öncü toprak, Satürn, kış eşiği. Arketip: mimar / dağ. Felsefe: uzun
+vadeli söz, kimliği kurar; dinlenmeyi tembellik saymak yapıyı çatlatır. Gölge:
+işe yaramayan planı inatla sürdürmek; tükenip aniden durmak. Dürüst ayna:
+dinlenmek zinciri kırmaz, kırılmayı önler. Niyetsen ile: planı düzenlemek
+pes etmek değildir. Yağ: "disiplinin her kapıyı açar."
+
+### Kova felsefesi — kopuş, sistem, özgünlük direnci
+Mantık: sabit hava, Uranüs/Satürn, kışın orta yeri. Arketip: yenilikçi /
+yabancı. Felsefe: kalıp, canlılığı öldürebilir; ritim ise özgünlüğün sahnesidir.
+Gölge: kendi kurduğun plana "dayatma" deyip direnmek. Dürüst ayna: bu plan
+sana verildi değil, sen kurdun — değiştir ama bir halka at. Niyetsen ile:
+sabit saat, dönüşümlü içerik. Yağ: "sen sıradan rutinin üstündesin."
+
+### Balık felsefesi — birleşme, hayal, sınır erimesi
+Mantık: değişken su, Neptün, kışın sonu. Arketip: mistik / rüyacı. Felsefe:
+sınır eriyince empati ve hayal büyür; uygulama kaybolur. Gölge: hayali
+kurmaktan zevk alıp hiç başlamamak; başkasının duygusunu kendi sanmak. Dürüst
+ayna: hayalin gerçek; eksik olan onu taşıyacak bugünkü adım. Niyetsen ile:
+önce 2 dakika başla, ilham arkadan gelsin. Yağ: "sezgin yeter, plan gerekmez."

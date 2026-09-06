@@ -3,7 +3,11 @@ from datetime import date, timedelta
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.core.prompt_builder import build_memory_block, normalize_app_locale
+from app.core.prompt_builder import (
+    build_memory_block,
+    normalize_app_locale,
+    wrap_mystic_niyetsen_context,
+)
 from app.models.schemas import GameState
 from app.services.profile_service import zodiac_for
 
@@ -49,6 +53,23 @@ def test_memory_block_separates_plan_day_from_streak():
     assert "plan günü DEĞİL" in memory
     assert "Aktif felsefe yolu: Sisu Yolu" in memory
     assert memory.index("Plan günü") < memory.index("Zincir:")
+
+
+def test_mystic_wrap_marks_niyetsen_as_side_heading():
+    memory = build_memory_block(
+        GameState(user_id="mystic-wrap", streak_len=3),
+        name="Şahin",
+        active_intent="ilgi: kitap",
+        plan_day=4,
+        duration_days=30,
+    )
+    wrapped = wrap_mystic_niyetsen_context(memory)
+    assert wrapped.startswith("--- NİYETSEN BAĞLAMI ---")
+    assert "YAN BAŞLIKTIR" in wrapped
+    assert "kahramanlıkla doldurma" in wrapped
+    assert "İsim: Şahin" in wrapped
+    assert wrapped.endswith("--- /NİYETSEN BAĞLAMI ---")
+    assert wrap_mystic_niyetsen_context("  ") == ""
 
 
 def test_profile_can_be_saved_before_consent_without_implied_rejection():

@@ -21,6 +21,9 @@ def _csv(name: str) -> list[str]:
 
 
 class Settings:
+    # --- Sürüm (Railway /health ile doğrulanır) ---
+    API_VERSION: str = os.environ.get("API_VERSION", "1.1.0")
+
     # --- AI ---
     GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
     # FAZ 8 (2026-07-29, Şahin kararı): sohbet + plan artık Gemini 3.1 Pro.
@@ -99,19 +102,19 @@ class Settings:
 
     # --- Hukuki metin metadata'sı (metin değişince sürümü değiştir) ---
     PRIVACY_POLICY_VERSION: str = os.environ.get(
-        "PRIVACY_POLICY_VERSION", "2026-07-11"
+        "PRIVACY_POLICY_VERSION", "2026-09-06"
     )
     KVKK_CONSENT_VERSION: str = os.environ.get(
-        "KVKK_CONSENT_VERSION", "2026-07-11"
+        "KVKK_CONSENT_VERSION", "2026-09-06"
     )
     AI_CHAT_CONSENT_VERSION: str = os.environ.get(
-        "AI_CHAT_CONSENT_VERSION", "2026-07-11"
+        "AI_CHAT_CONSENT_VERSION", "2026-09-06"
     )
     PROOF_PHOTO_CONSENT_VERSION: str = os.environ.get(
-        "PROOF_PHOTO_CONSENT_VERSION", "2026-07-11"
+        "PROOF_PHOTO_CONSENT_VERSION", "2026-09-06"
     )
     MARKETING_CONSENT_VERSION: str = os.environ.get(
-        "MARKETING_CONSENT_VERSION", "2026-07-11"
+        "MARKETING_CONSENT_VERSION", "2026-09-06"
     )
     LEGAL_DATA_CONTROLLER: str = os.environ.get(
         "LEGAL_DATA_CONTROLLER", "Şahin Çelebi"

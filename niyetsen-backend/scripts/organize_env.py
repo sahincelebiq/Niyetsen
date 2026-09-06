@@ -109,12 +109,18 @@ def organize_backend(existing: dict[str, str], railway: dict[str, str]) -> str:
 ENV=dev
 AUTH_DISABLED=true
 
-# --- Gemini ---
+# --- Gemini (FAZ 8: sohbet + plan 3.1 Pro; fallback 2.5 ailesi) ---
 GEMINI_API_KEY={gemini_key}
-GEMINI_MODEL={existing.get("GEMINI_MODEL", "gemini-2.5-flash")}
-GEMINI_MODEL_PLAN={existing.get("GEMINI_MODEL_PLAN", "gemini-2.5-pro")}
+GEMINI_MODEL={existing.get("GEMINI_MODEL", "gemini-3.1-pro-preview")}
+GEMINI_MODEL_PLAN={existing.get("GEMINI_MODEL_PLAN", "gemini-3.1-pro-preview")}
+GEMINI_FALLBACK_MODEL={existing.get("GEMINI_FALLBACK_MODEL", "gemini-2.5-flash")}
+GEMINI_FALLBACK_MODEL_PLAN={existing.get("GEMINI_FALLBACK_MODEL_PLAN", "gemini-2.5-pro")}
 GEMINI_CHAT_MAX_OUTPUT_TOKENS={existing.get("GEMINI_CHAT_MAX_OUTPUT_TOKENS", "2048")}
+GEMINI_TIMEOUT_SEC={existing.get("GEMINI_TIMEOUT_SEC", "30")}
 GEMINI_PLAN_TIMEOUT_SEC={existing.get("GEMINI_PLAN_TIMEOUT_SEC", "90")}
+GEMINI_PROOF_TIMEOUT_SEC={existing.get("GEMINI_PROOF_TIMEOUT_SEC", "45")}
+GEMINI_MAX_RETRIES={existing.get("GEMINI_MAX_RETRIES", "3")}
+RAG_CHAT_EMBEDDINGS={existing.get("RAG_CHAT_EMBEDDINGS", "false")}
 
 # --- Unsplash ---
 UNSPLASH_ACCESS_KEY={unsplash_access}
@@ -140,14 +146,14 @@ CORS_ALLOWED_ORIGINS={existing.get("CORS_ALLOWED_ORIGINS", "http://localhost:808
 PLAN_BATCH_DAYS={existing.get("PLAN_BATCH_DAYS", "7")}
 MAX_TASKS_PER_DAY={existing.get("MAX_TASKS_PER_DAY", "5")}
 CHAT_RATE_LIMIT_PER_MIN={existing.get("CHAT_RATE_LIMIT_PER_MIN", "10")}
-PROOF_RATE_LIMIT_PER_MIN={existing.get("PROOF_RATE_LIMIT_PER_MIN", "5")}
+PROOF_RATE_LIMIT_PER_MIN={existing.get("PROOF_RATE_LIMIT_PER_MIN", "12")}
 
 # --- Hukuki metin sürümleri ---
-PRIVACY_POLICY_VERSION={existing.get("PRIVACY_POLICY_VERSION", "2026-07-11")}
-KVKK_CONSENT_VERSION={existing.get("KVKK_CONSENT_VERSION", "2026-07-11")}
-AI_CHAT_CONSENT_VERSION={existing.get("AI_CHAT_CONSENT_VERSION", "2026-07-11")}
-PROOF_PHOTO_CONSENT_VERSION={existing.get("PROOF_PHOTO_CONSENT_VERSION", "2026-07-11")}
-MARKETING_CONSENT_VERSION={existing.get("MARKETING_CONSENT_VERSION", "2026-07-11")}
+PRIVACY_POLICY_VERSION={existing.get("PRIVACY_POLICY_VERSION", "2026-09-06")}
+KVKK_CONSENT_VERSION={existing.get("KVKK_CONSENT_VERSION", "2026-09-06")}
+AI_CHAT_CONSENT_VERSION={existing.get("AI_CHAT_CONSENT_VERSION", "2026-09-06")}
+PROOF_PHOTO_CONSENT_VERSION={existing.get("PROOF_PHOTO_CONSENT_VERSION", "2026-09-06")}
+MARKETING_CONSENT_VERSION={existing.get("MARKETING_CONSENT_VERSION", "2026-09-06")}
 LEGAL_DATA_CONTROLLER={existing.get("LEGAL_DATA_CONTROLLER", "Şahin Çelebi")}
 LEGAL_CONTACT_EMAIL={existing.get("LEGAL_CONTACT_EMAIL", "ai@niyetsen.com")}
 

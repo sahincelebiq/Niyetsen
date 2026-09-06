@@ -1,0 +1,54 @@
+{
+  "slug": "gaia-yolu",
+  "path_name": "Gaia Yolu",
+  "tagline": "yeryüzünü canlı bir sistem olarak taşımak",
+  "category": "anlam",
+  "inspired_by": "Gaia kuramı, Dünya sistemi bilimi ve derin ekoloji",
+  "source_note": "Bu yol Gaia kuramı, Dünya sistemi bilimi ve derin ekolojinin kamuya açık geleneğinden ilham alır; belirli bir kişiyle bağlantılı değildir.",
+  "tags": [
+    "dünya",
+    "yeryüzü",
+    "gaia",
+    "ekoloji",
+    "aidiyet",
+    "sınır"
+  ],
+  "dossier": {
+    "why_important": "Dünya bir sahne dekoru değil; kendini düzenleyen, sınırları olan canlı bir sistemdir. Gaia kuramı (Lovelock–Margulis) ve Dünya sistemi bilimi şunu söyler: iklim, okyanus, orman ve insan aynı döngünün parçasıdır. 2025 Planetary Health Check'e göre dokuz gezegensel sınırın yedisi aşılmıştır — kehanet değil ölçüm. Derin ekoloji ekler: benlik deride bitmez. Niyetsen'de zincir yalnız takvim değil; ait olduğun sisteme verilen küçük, tekrarlanan sözdür. Büyük nutuk zinciri kırar; bugün bir sınırı fark etmek zinciri taşır.",
+    "core_beliefs": [
+      "Sen dünyanın üstünde değil, içindesin — nefes ve su seni sisteme bağlar.",
+      "Sınır düşman değil habercidir: aşılınca sistem uyarır.",
+      "Tek kahramanlık görevi yok; tekrarlanan küçük onarım vardır.",
+      "Suçluluk aidiyetin kötü kopyasıdır — bak, ölç, bir halka at."
+    ],
+    "mindset": "Güne 'bugün sistemin neresindeyim?' diye bak. İsraf, acele ve 'nasıl olsa bir şey değişmez' cümlesi gölgedir. Rehber nutuk atmaz: bir sınırı adlandır, bir onarım seç, devam et. Dünya kurtarılmaz; taşınır.",
+    "habits": [
+      "Günde 1 yeryüzü halkası (3 nefes dışarıda, bir bitkiye su, tek kullanımlık bir şeyi atlamak)",
+      "Haftada 1 sınır notu: su, yemek veya ekran — hangisini aştın",
+      "Ayda 1 küçük onarım (dikiş, tamir, paylaşım)",
+      "Yürüyüşte tek bir canlıyı veya ağacı fark edip adıyla anmak"
+    ],
+    "daily_routine": "Sabah: pencere veya balkon, 3 bilinçli nefes. Öğün: bir lokmayı çöpe atmadan bitir. Akşam: bugün sistemi nerede yok saydın — tek satır, cezasız.",
+    "sports_or_physical_practice": "Açık havada 8–12 dakika yavaş yürüyüş; tempo dayatmadan, ayak ve yeri hisset.",
+    "reading_profile": "Dünya sistemi, Gaia ve derin ekoloji üzerine kısa kamuya açık özetler; korku değil ölçüm dili.",
+    "books_read_or_recommended": [
+      "Gaia kuramı — ansiklopedik ve Dünya sistemi özetleri",
+      "Planetary Boundaries / Planetary Health Check — kamuya açık değerlendirmeler"
+    ],
+    "decision_style": "İki seçenek varsa sistemi daha az zorlayanı, geri dönüşü olanı seç. 'Hepsini çözeceğim' karar değildir.",
+    "failure_and_recovery": "Unutulan geri dönüşüm veya israf bir ahlak çöküşü değil. Adlandır, bir sonraki halkayı küçült, utanç nutku yok. İkinci gün aynı ihmali tekrarlamak asıl kırılmadır.",
+    "public_quotes": [
+      "Dünya sistemi, fiziksel, kimyasal, biyolojik ve insani bileşenleriyle kendini düzenleyen tek bir sistem gibi davranır. (Amsterdam Bildirisi, 2001 — mealen)"
+    ],
+    "lessons_for_users": [
+      "Pencereyi aç, 3 yavaş nefes al — yeryüzü halkası budur.",
+      "Bugün tek kullanımlık bir şeyi atla veya bir şeyi tamir et (2 dakika yeter).",
+      "Bir sınır yaz: su, yemek veya ekran — hangisini aştın, yarın 2 dakika kıs.",
+      "Dışarıda tek bir ağaç veya kuşu fark et ve bir cümle bırak."
+    ],
+    "sources": [
+      "https://en.wikipedia.org/wiki/Gaia_hypothesis",
+      "https://www.stockholmresilience.org/research/planetary-boundaries.html"
+    ]
+  }
+}

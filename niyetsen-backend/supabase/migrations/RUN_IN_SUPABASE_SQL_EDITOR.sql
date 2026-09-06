@@ -1,23 +1,17 @@
--- Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (nizami, 2026-08-13)
+-- Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (35 başlık, 2026-09-06)
 --
--- AMAÇ: Dashboard'daki 33 kayıtlı sorguyu TEKRAR ÇALIŞTIRMA.
--- Bu dosya salt DOĞRULAMA'dır (bölüm I hariç — o bir kez güvenlik).
+-- AMAÇ: Dashboard Private'daki eski Untitled / DDL snippet'lerini
+-- TEKRAR ÇALIŞTIRMA. Bu dosya salt DOĞRULAMA'dır.
 --
--- SQL Editor'da ÇALIŞTIRMA (DDL / backfill — şema zaten prod'da):
---   Toplu şema, idol persona, İdol Modu persona dosyaları,
---   chat_threads (+ backfill), faz 8 kadın erkek algılaması,
---   Untitled fortune_log CREATE, last_tarot_push_date ALTER.
+-- SQL Editor'da ÇALIŞTIRMA (şema zaten prod'da):
+--   Toplu CREATE, idol seed, chat_threads backfill, Untitled fortune_log,
+--   last_tarot_push_date ALTER, rastgele policy ekleme.
 --
--- Güvenli (bu dosyanın A–H kopyaları): RLS, kritik tablo/kolon, RPC,
---   storage, policy sayıları, cinsiyet + dil.
---
--- Kullanım: A–H'yi yapıştır → Run. Beklenen: eksik satır yok, rls_off=0.
--- I yalnız bir kez: anon GRANT kapatma (PostgREST savunması).
---
--- NOT: Başlık çift tire. Eski /** */ iç içe yorum = 42601.
+-- Kullanım: 01–35'i tek tek Run. Beklenen: eksik satır yok, rls_off=0.
+-- Nested /* */ yorum YASAK (42601). Başlık = çift tire.
 
 -- ============================================================
--- A) Tablolar + RLS (hepsi true; rls_off = 0)
+-- 01) RLS açık tablolar (hepsi true)
 -- ============================================================
 select c.relname as table_name, c.relrowsecurity as rls_on
 from pg_class c
@@ -25,6 +19,9 @@ join pg_namespace n on n.oid = c.relnamespace
 where n.nspname = 'public' and c.relkind = 'r'
 order by 1;
 
+-- ============================================================
+-- 02) RLS kapalı tablo sayısı
+-- ============================================================
 select count(*) as rls_disabled_tables
 from pg_class c
 join pg_namespace n on n.oid = c.relnamespace
@@ -32,7 +29,7 @@ where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity;
 -- BEKLENEN: 0
 
 -- ============================================================
--- B) Kritik kolonlar (eksik satır = sorun)
+-- 03) Kritik kolonlar (eksik satır = sorun)
 -- ============================================================
 select t.col
 from (
@@ -62,7 +59,7 @@ where not exists (
 -- BEKLENEN: 0 satır
 
 -- ============================================================
--- C) Kritik tablolar var mı
+-- 04) Kritik tablolar var mı
 -- ============================================================
 select t.tbl
 from (
@@ -84,7 +81,7 @@ where not exists (
 -- BEKLENEN: 0 satır
 
 -- ============================================================
--- D) RPC (service_role) — kanıt / bonus
+-- 05) RPC (service_role) — kanıt / bonus
 -- ============================================================
 select need.proname
 from (
@@ -102,7 +99,7 @@ where not exists (
 -- BEKLENEN: 0 satır
 
 -- ============================================================
--- E) Storage bucket'ları
+-- 06) Storage bucket'ları
 -- ============================================================
 select id, name, public, file_size_limit
 from storage.buckets
@@ -110,6 +107,9 @@ where id in ('proofs', 'plan-images')
 order by 1;
 -- BEKLENEN: proofs public=false; plan-images public=true
 
+-- ============================================================
+-- 07) Kaldırılmış plan-images listing policy
+-- ============================================================
 select policyname
 from pg_policies
 where schemaname = 'storage'
@@ -117,7 +117,7 @@ where schemaname = 'storage'
 -- BEKLENEN: 0 satır (2026-08-02'de kaldırıldı)
 
 -- ============================================================
--- F) Tablo policy sayısı (0 = deny-by-default + backend service_role)
+-- 08) Tablo policy sayısı (0 = deny-by-default + backend service_role)
 -- ============================================================
 select t.tablename,
   (select count(*) from pg_policies p
@@ -128,34 +128,43 @@ order by 1;
 -- BEKLENEN: hepsi 0
 
 -- ============================================================
--- G) Gender + dil + fal tipi (kayıtlı sorgulardaki 'Tarot' YANLIŞ)
+-- 09) Cinsiyet kısıtı (kayıtlı sorgulardaki 'Tarot' / 'kadın-erkek' YANLIŞ)
 -- ============================================================
-select conname, pg_get_constraintdef(oid)
+select conname, pg_get_constraintdef(oid) as def
 from pg_constraint
 where conrelid = 'public.users'::regclass
   and conname = 'users_gender_check';
 -- BEKLENEN: kadın | erkek | belirtmek istemiyorum
 
+-- ============================================================
+-- 10) Tercih edilen dil
+-- ============================================================
 select column_name, data_type
 from information_schema.columns
 where table_schema = 'public' and table_name = 'users'
   and column_name = 'preferred_language';
 -- BEKLENEN: 1 satır, text
 
+-- ============================================================
+-- 11) Fal tipi (chat dahil)
+-- ============================================================
 select pg_get_constraintdef(oid) as fortune_type_check
 from pg_constraint
 where conrelid = 'public.fortune_log'::regclass
   and conname = 'fortune_log_type_check';
 -- BEKLENEN: tarot | kahve | el | burc | chat
--- (chat yoksa aşağıdaki ALTER'ı bir kez çalıştır)
-
--- alter table public.fortune_log drop constraint if exists fortune_log_type_check;
--- alter table public.fortune_log
---   add constraint fortune_log_type_check
---   check (type in ('tarot', 'kahve', 'el', 'burc', 'chat'));
 
 -- ============================================================
--- H) Lig tablosu — yalnız doğrula (CREATE yok; tablo prod'da var)
+-- 12) Anon / authenticated GRANT artığı
+-- ============================================================
+select count(*) as leftover_grants
+from information_schema.role_table_grants
+where table_schema = 'public'
+  and grantee in ('anon', 'authenticated');
+-- BEKLENEN: 0
+
+-- ============================================================
+-- 13) Lig tablosu
 -- ============================================================
 select relname, relrowsecurity
 from pg_class
@@ -163,19 +172,224 @@ where relnamespace = 'public'::regnamespace and relname = 'league_members';
 -- BEKLENEN: 1 satır, relrowsecurity = true
 
 -- ============================================================
--- I) BİR KEZ — anon/authenticated GRANT kapat (PostgREST savunması)
--- RLS policy=0 satırları keser; GRANT ALL (TRUNCATE dahil) yine yüzey.
--- A–H yeşil kaldıktan sonra AYRI çalıştır. Tekrar çalıştırmak güvenli.
+-- 14) chat_threads kolonları
 -- ============================================================
--- revoke all on all tables in schema public from anon, authenticated;
--- revoke all on all sequences in schema public from anon, authenticated;
--- alter default privileges in schema public
---   revoke all on tables from anon, authenticated;
--- alter default privileges in schema public
---   revoke all on sequences from anon, authenticated;
---
--- select count(*) as leftover_grants
--- from information_schema.role_table_grants
--- where table_schema = 'public'
---   and grantee in ('anon', 'authenticated');
--- BEKLENEN leftover_grants: 0  (2026-08-20 uygulandı)
+select column_name
+from information_schema.columns
+where table_schema = 'public' and table_name = 'chat_threads'
+order by ordinal_position;
+-- BEKLENEN: id, user_id, plan_id, title, created_at, updated_at
+
+-- ============================================================
+-- 15) İdol persona tohumu
+-- ============================================================
+select count(*)::int as idol_rows
+from public.idol_personas;
+-- BEKLENEN: 10 (DB tohumu). Dosya yedeği 18 yol (Gaia + Kozmos dahil).
+
+-- ============================================================
+-- 16) persona_chunks (0 = dosya fallback; zorunlu değil)
+-- ============================================================
+select count(*)::int as chunk_rows
+from public.persona_chunks;
+-- BEKLENEN: 0 veya daha fazla; 0 ise ingest_personas.py yedeği çalışır
+
+-- ============================================================
+-- 17) FAZ 8 covering index'ler
+-- ============================================================
+select t.idx
+from (
+  values
+    ('chat_msgs_plan_id_idx'),
+    ('chat_threads_plan_id_idx'),
+    ('intents_plan_id_idx'),
+    ('point_log_task_id_idx'),
+    ('tasks_proof_id_idx'),
+    ('users_active_plan_id_idx'),
+    ('users_active_thread_id_idx')
+) as t(idx)
+where not exists (
+  select 1 from pg_indexes i
+  where i.schemaname = 'public' and i.indexname = t.idx
+);
+-- BEKLENEN: 0 satır
+
+-- ============================================================
+-- 18) Cron / görev indeksleri
+-- ============================================================
+select t.idx
+from (
+  values
+    ('tasks_date_pending_idx'),
+    ('tasks_date_status_idx'),
+    ('tasks_plan_date_idx'),
+    ('chat_threads_user_updated_idx')
+) as t(idx)
+where not exists (
+  select 1 from pg_indexes i
+  where i.schemaname = 'public' and i.indexname = t.idx
+);
+-- BEKLENEN: 0 satır
+
+-- ============================================================
+-- 19) Storage policy (kanıt yazma kapalı; yalnız own SELECT)
+-- ============================================================
+select policyname, cmd
+from pg_policies
+where schemaname = 'storage'
+order by 1;
+-- BEKLENEN: yalnız proofs_select_own / SELECT
+-- YOK: proofs_insert_own, proofs_update_own, proofs_delete_own
+
+-- ============================================================
+-- 20) users.notif_minute
+-- ============================================================
+select column_name, data_type
+from information_schema.columns
+where table_schema = 'public' and table_name = 'users'
+  and column_name = 'notif_minute';
+-- BEKLENEN: 1 satır
+
+-- ============================================================
+-- 21) users.subscription_status
+-- ============================================================
+select column_name, data_type
+from information_schema.columns
+where table_schema = 'public' and table_name = 'users'
+  and column_name = 'subscription_status';
+-- BEKLENEN: 1 satır
+
+-- ============================================================
+-- 22) users.trial_started_at
+-- ============================================================
+select column_name, data_type
+from information_schema.columns
+where table_schema = 'public' and table_name = 'users'
+  and column_name = 'trial_started_at';
+-- BEKLENEN: 1 satır
+
+-- ============================================================
+-- 23) Aktif plan + aktif thread
+-- ============================================================
+select column_name
+from information_schema.columns
+where table_schema = 'public' and table_name = 'users'
+  and column_name in ('active_plan_id', 'active_thread_id')
+order by 1;
+-- BEKLENEN: 2 satır
+
+-- ============================================================
+-- 24) tasks.date + tiny_version (kanıt bağlamı)
+-- ============================================================
+select column_name
+from information_schema.columns
+where table_schema = 'public' and table_name = 'tasks'
+  and column_name in ('date', 'tiny_version')
+order by 1;
+-- BEKLENEN: 2 satır
+
+-- ============================================================
+-- 25) Push: tarot + rapor tarihi
+-- ============================================================
+select column_name
+from information_schema.columns
+where table_schema = 'public' and table_name = 'push_tokens'
+  and column_name in ('last_tarot_push_date', 'last_recap_push_date')
+order by 1;
+-- BEKLENEN: 2 satır
+
+-- ============================================================
+-- 26) plans.name + slot_no (çoklu plan)
+-- ============================================================
+select column_name
+from information_schema.columns
+where table_schema = 'public' and table_name = 'plans'
+  and column_name in ('name', 'slot_no')
+order by 1;
+-- BEKLENEN: 2 satır
+
+-- ============================================================
+-- 27) chat_msgs.thread_id + plan_id
+-- ============================================================
+select column_name
+from information_schema.columns
+where table_schema = 'public' and table_name = 'chat_msgs'
+  and column_name in ('thread_id', 'plan_id')
+order by 1;
+-- BEKLENEN: 2 satır
+
+-- ============================================================
+-- 28) fortune_log.type değerleri (chat şart)
+-- ============================================================
+select pg_get_constraintdef(oid) as fortune_type_check
+from pg_constraint
+where conrelid = 'public.fortune_log'::regclass
+  and conname = 'fortune_log_type_check';
+-- BEKLENEN: içinde 'chat' geçer
+
+-- ============================================================
+-- 29) proof_requests tablosu
+-- ============================================================
+select 1 as ok
+from information_schema.tables
+where table_schema = 'public' and table_name = 'proof_requests';
+-- BEKLENEN: 1 satır
+
+-- ============================================================
+-- 30) user_consents tablosu
+-- ============================================================
+select 1 as ok
+from information_schema.tables
+where table_schema = 'public' and table_name = 'user_consents';
+-- BEKLENEN: 1 satır
+
+-- ============================================================
+-- 31) bonus_offers tablosu
+-- ============================================================
+select 1 as ok
+from information_schema.tables
+where table_schema = 'public' and table_name = 'bonus_offers';
+-- BEKLENEN: 1 satır
+
+-- ============================================================
+-- 32) Gerekli eklentiler
+-- ============================================================
+select extname
+from pg_extension
+where extname in ('pgcrypto', 'uuid-ossp', 'plpgsql', 'pg_stat_statements')
+order by 1;
+-- BEKLENEN: 4 satır
+
+-- ============================================================
+-- 33) Uygulanmış migration kayıtları
+-- ============================================================
+select version, name
+from supabase_migrations.schema_migrations
+order by version;
+-- BEKLENEN: gender, recap, normalize, preferred_language,
+--           revoke grants, fortune_log chat type
+
+-- ============================================================
+-- 34) plans.id TEXT (uuid değil — 42804 tuzağı)
+-- ============================================================
+select data_type
+from information_schema.columns
+where table_schema = 'public' and table_name = 'plans' and column_name = 'id';
+-- BEKLENEN: text
+
+-- ============================================================
+-- 35) Özet — hepsi yeşil mi?
+-- ============================================================
+select
+  (select count(*) from pg_class c
+   join pg_namespace n on n.oid = c.relnamespace
+   where n.nspname = 'public' and c.relkind = 'r' and not c.relrowsecurity
+  ) as rls_off,
+  (select count(*) from information_schema.role_table_grants
+   where table_schema = 'public' and grantee in ('anon', 'authenticated')
+  ) as leftover_grants,
+  (select count(*) from public.idol_personas) as idol_rows,
+  (select public from storage.buckets where id = 'proofs') as proofs_public,
+  (select public from storage.buckets where id = 'plan-images') as plan_images_public;
+-- BEKLENEN: rls_off=0, leftover_grants=0, idol_rows=10 (DB tohumu),
+--           proofs_public=false, plan_images_public=true

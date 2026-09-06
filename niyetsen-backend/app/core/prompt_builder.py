@@ -148,6 +148,26 @@ def build_memory_block(
     return "\n".join(lines)
 
 
+def wrap_mystic_niyetsen_context(memory_block: str) -> str:
+    """Fal/mistik promptunda kullanıcı belleğini YAN BAŞLIK yapar.
+
+    Ana konu kart/burç/semboldür. Plan ve zincir 'Niyetsen ile' köprüsüdür;
+    eksik sohbet tam portre sayılmaz — yağ çekme ve uydurma yasak.
+    """
+    body = (memory_block or "").strip()
+    if not body:
+        return ""
+    return "\n".join((
+        "--- NİYETSEN BAĞLAMI ---",
+        "Bu blok YAN BAŞLIKTIR, yorumun ana konusu değildir. Asıl konu fal, "
+        "tarot, burç veya semboldür. Köprü kuracaksan kısa ayrı bir 'Niyetsen "
+        "ile:' paragrafı yaz. Eksik sohbet / boş niyet tam portre değildir — "
+        "boşluğu kahramanlıkla doldurma, her şeyi olumlu cilalama.",
+        body,
+        "--- /NİYETSEN BAĞLAMI ---",
+    ))
+
+
 def build_context(memory_block: str, rag_chunks: list[str] | None = None) -> str:
     """
     CONTEXT bloğu. RAG (knowledge/ içerikleri) v2'de devreye girer; yuva hazır.

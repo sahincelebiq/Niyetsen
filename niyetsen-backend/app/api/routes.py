@@ -11,7 +11,6 @@ import secrets
 import uuid
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
-from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import jwt
 from fastapi import (
@@ -22,6 +21,7 @@ from jwt import PyJWKClient
 
 from app.config import BONUS_POINTS, CATEGORIES, settings
 from app.core import dev_accounts, prompts
+from app.core.datetimes import local_today
 from app.core.gemini_client import GeminiUnavailable
 from app.core.rate_limit import limiter
 from app.models.schemas import (
@@ -135,11 +135,7 @@ def _recent_mood(messages: list[ChatMessage]) -> str:
 
 
 def _user_today(timezone_name: str) -> date:
-    try:
-        target = ZoneInfo(timezone_name)
-    except ZoneInfoNotFoundError:
-        target = ZoneInfo("Europe/Istanbul")
-    return datetime.now(timezone.utc).astimezone(target).date()
+    return local_today(timezone_name)
 
 
 # ------------------------------------------------------------------
@@ -206,6 +202,7 @@ def get_current_user(
 def health() -> dict:
     return {
         "status": "ok",
+        "version": settings.API_VERSION,
         "env": settings.ENV,
         "model_chat": settings.GEMINI_MODEL,
         "model_plan": settings.GEMINI_MODEL_PLAN,
@@ -228,6 +225,8 @@ async def chat(
     Rate limit (10/dk) kötüye kullanımı frenlemeye devam eder.
     """
     _require_consent(user_id, "chat")
+    if not req.messages or not any(message.role == "user" for message in req.messages):
+        raise HTTPException(status_code=400, detail="Mesaj gerekli.")
     state = repo.get_state(user_id)
     profile = repo.get_profile(user_id)
     active = repo.get_active_intent(user_id)
@@ -319,7 +318,11 @@ async def chat(
         ChatMessage(id=assistant_id, role="assistant", content=response.reply)
     )
     # Tek toplu upsert: eski hâli mesaj başına 4+ Supabase sorgusuydu (N+1).
-    repo.append_chat_messages(user_id, to_persist)
+    # Geçmiş yazılamazsa sohbet yine de dönsün — istemci mesajları zaten elinde.
+    try:
+        repo.append_chat_messages(user_id, to_persist)
+    except Exception:  # noqa: BLE001 — thread/geçmiş degrade (hafıza kuralı)
+        log.warning("Sohbet geçmişi yazılamadı (yoksayıldı).", exc_info=True)
 
     # faz8.13/1b: konu netleşince (2-4. kullanıcı mesajı) oturum başlığı bir kez
     # konu özetiyle güncellenir. Degrade: hata sohbeti düşürmez.
@@ -546,9 +549,12 @@ async def generate_plan(
             status_code=409,
             detail="Bu niyet için plan zaten oluşturulmuş. Yeni plan için yeni niyet başlat.",
         )
+    profile = repo.get_profile(user_id)
     try:
         plan = await plan_service.generate_batch(
-            req.collected, duration_days=req.duration_days, start_date=date.today(),
+            req.collected,
+            duration_days=req.duration_days,
+            start_date=_user_today(profile.timezone),
         )
     except ValueError as e:
         raise HTTPException(status_code=422, detail=str(e))
@@ -634,6 +640,8 @@ async def next_batch(
             start_day=start_day,
             start_date=current.start_date,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
     return _merge_generated_batch(user_id, current, batch)
@@ -667,6 +675,8 @@ async def ensure_today_batch(user_id: str = Depends(get_current_user)) -> Plan:
             start_day=start_day,
             start_date=current.start_date,
         )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
     return _merge_generated_batch(user_id, current, batch)
@@ -689,6 +699,7 @@ def edit_plan_task(
             task_id,
             title=body.title,
             new_date=body.date,
+            today=_user_today(repo.get_profile(user_id).timezone),
         )
     except plan_edit_service.TaskNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc))
@@ -718,6 +729,7 @@ def add_plan_day_task(
             categories=body.categories,
             tiny_version=body.tiny_version,
             duration_min=body.duration_min,
+            today=_user_today(repo.get_profile(user_id).timezone),
         )
     except plan_edit_service.PlanNotFound as exc:
         raise HTTPException(status_code=404, detail=str(exc))
@@ -866,6 +878,9 @@ async def upload_proof(
         result.proof_id = proof.id
         result.photo_url = photo_url
         task_lifecycle_service.approve_proof(repo, user_id, proof)
+    except task_lifecycle_service.TaskNotFound as exc:
+        repo.abort_proof_attempt(user_id, task_id, idempotency_key)
+        raise HTTPException(status_code=404, detail=str(exc))
     except task_lifecycle_service.TaskAlreadyResolved as exc:
         repo.abort_proof_attempt(user_id, task_id, idempotency_key)
         raise HTTPException(status_code=409, detail=str(exc))
@@ -1083,6 +1098,7 @@ def my_recap(
         plans=all_plans or None,
         user_name=profile.name or "",
         period=period,
+        today=_user_today(profile.timezone),
         point_log=point_log,
         timezone_name=profile.timezone,
         bonus_counts=bonus_counts,
@@ -1211,11 +1227,31 @@ def _request_locale(request: Request | None) -> str:
     return (request.headers.get("x-app-locale") or "").strip()
 
 
+def _compact_intent_for_mystic(active) -> str:
+    """Mistikte tam JSON dökümü yok — eksik sohbeti masala çevirmesin."""
+    if not active:
+        return ""
+    collected = active[0]
+    bits: list[str] = []
+    interests = [str(item) for item in (collected.interests or []) if item]
+    if interests:
+        bits.append("ilgi: " + ", ".join(interests[:6]))
+    city = (collected.city or "").strip()
+    if city and city.casefold() not in {"belirtilmedi", "belirtilmemiş"}:
+        bits.append(f"şehir: {city}")
+    return "; ".join(bits)
+
+
 def _fortune_context(
     user_id: str, request: Request | None = None
 ) -> tuple[UserProfile, bool, str]:
     """profil + premium bilgisi + bellek bloğu (yorum kişiselleştirme)."""
-    from app.core.prompt_builder import build_memory_block, normalize_app_locale
+    from app.core.prompt_builder import (
+        build_memory_block,
+        normalize_app_locale,
+        wrap_mystic_niyetsen_context,
+    )
+    from app.services import persona_service
 
     profile = repo.get_profile(user_id)
     subscription_service.sync_expired_trials(repo, user_id)
@@ -1226,6 +1262,17 @@ def _fortune_context(
         or normalize_app_locale(profile.preferred_language)
         or "tr"
     )
+    active = repo.get_active_intent(user_id)
+    today_status, recent_tasks = _task_memory(user_id, profile.timezone)
+    plan = repo.get_plan(user_id)
+    plan_day = None
+    duration_days = None
+    if plan is not None:
+        today = _user_today(profile.timezone)
+        plan_day = (today - plan.start_date).days + 1
+        duration_days = plan.duration_days
+    interest_pool = list(active[0].interests) if active else []
+    philosophy_paths = persona_service.paths_in_interests(interest_pool)
     memory = build_memory_block(
         state=state,
         name=profile.name or "",
@@ -1233,12 +1280,18 @@ def _fortune_context(
         zodiac=profile.zodiac_sign or "",
         gender=profile.gender or "",
         preferred_language=preferred,
+        active_intent=_compact_intent_for_mystic(active),
+        today_status=today_status,
+        recent_tasks=recent_tasks,
+        plan_day=plan_day,
+        duration_days=duration_days,
+        philosophy_paths=philosophy_paths,
     )
     # faz8.13/2c: mistik hafıza — geçmiş fallar rehber bağlamına girer.
     mystic_memory = fortune_service.build_mystic_memory(repo, user_id)
     if mystic_memory:
         memory = f"{memory}\n\n{mystic_memory}"
-    return profile, info.status == "active", memory
+    return profile, info.status == "active", wrap_mystic_niyetsen_context(memory)
 
 
 @router.get("/paths/{slug}")

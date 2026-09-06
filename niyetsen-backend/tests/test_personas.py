@@ -16,6 +16,8 @@ def test_persona_files_load():
     assert "amor-fati-yolu" in slugs
     assert "sisu-yolu" in slugs
     assert "wu-wei-yolu" in slugs
+    assert "gaia-yolu" in slugs
+    assert "kozmos-yolu" in slugs
 
 
 def test_list_personas_keeps_file_only_slugs_when_db_is_subset(monkeypatch):
@@ -30,6 +32,8 @@ def test_list_personas_keeps_file_only_slugs_when_db_is_subset(monkeypatch):
     assert "amor-fati-yolu" in slugs
     assert "sisu-yolu" in slugs
     assert "wu-wei-yolu" in slugs
+    assert "gaia-yolu" in slugs
+    assert "kozmos-yolu" in slugs
 
 
 def test_path_name_is_philosophy_not_person():
@@ -90,6 +94,8 @@ def test_paths_endpoint_includes_dossier_and_markdown_paths():
     assert "Amor Fati Yolu" in names
     assert "Sisu Yolu" in names
     assert "Wu Wei Yolu" in names
+    assert "Gaia Yolu" in names
+    assert "Kozmos Yolu" in names
 
 
 def test_seed_today_lessons_adds_idempotent_tasks(isolated_in_memory_repo):
