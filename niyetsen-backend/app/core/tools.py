@@ -81,6 +81,53 @@ TOOL_DECLARATIONS = [
             "required": ["title", "date"],
         },
     },
+    {
+        "name": "etkinlik_olustur",
+        "description": (
+            "Bu plana fotosuz etkinlik/hatırlatma ekler (örn. 100 şınav, 23:00 uyku, "
+            "her sabah yürüyüş). Yeni 365 plan üretmez. Tekrar: none (tek sefer), "
+            "daily (her gün), weekdays (hafta içi), weekly (haftanın seçili günleri)."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "title": {"type": "string", "description": "Kısa etkinlik adı"},
+                "date": {
+                    "type": "string",
+                    "description": "YYYY-MM-DD başlangıç; söylenmediyse bugün",
+                },
+                "time": {"type": "string", "description": "HH:MM 24 saat"},
+                "recurrence": {
+                    "type": "string",
+                    "enum": ["none", "daily", "weekdays", "weekly"],
+                },
+                "byweekday": {
+                    "type": "array",
+                    "items": {"type": "integer"},
+                    "description": "weekly için 0=Pzt … 6=Paz",
+                },
+                "duration_min": {"type": "integer", "description": "Süre (dk)"},
+                "categories": {
+                    "type": "array",
+                    "items": {"type": "string"},
+                    "description": (
+                        "İrade, İstikrar, Disiplin, Özgüven, Sosyallik, Özsaygı"
+                    ),
+                },
+            },
+            "required": ["title", "time"],
+        },
+    },
+]
+
+# Global /chat bu aracı görmez; plan-içi ajan görür (Şahin 2026-09-10).
+PLAN_AGENT_TOOL_DECLARATIONS = [
+    d for d in TOOL_DECLARATIONS if d["name"] in {
+        "etkinlik_olustur", "alarm_kur", "takvime_ekle",
+    }
+]
+GLOBAL_TOOL_DECLARATIONS = [
+    d for d in TOOL_DECLARATIONS if d["name"] != "etkinlik_olustur"
 ]
 
 ALLOWED_TOOL_NAMES = frozenset(d["name"] for d in TOOL_DECLARATIONS)

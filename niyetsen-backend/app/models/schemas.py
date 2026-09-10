@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from datetime import date as dt_date, datetime, timezone
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.config import CATEGORIES
 
@@ -149,14 +149,100 @@ class PlanGenerateRequest(BaseModel):
     duration_days: int = Field(default=365, ge=1, le=365)
 
 
+class DailyEventItem(BaseModel):
+    """Fotosuz etkinlik kalemi — Bugün'de Yaptım; kamera yok."""
+    occurrence_id: str
+    event_id: str
+    plan_id: str
+    plan_name: str = ""
+    title: str
+    categories: list[Category] = Field(default_factory=list)
+    scheduled_time: str = "09:00"
+    duration_min: int = 15
+    status: Literal["pending", "done"] = "pending"
+    recurrence: str = "none"
+
+
 class DailyTasksResponse(BaseModel):
     """Bugünün görevleri + parti kapsamı (boş günün nedeni + uzatma CTA)."""
     items: list[DailyTaskItem] = Field(default_factory=list)
+    events: list[DailyEventItem] = Field(default_factory=list)
     needs_extension: bool = False
     plan_day: Optional[int] = None
     batch_generated_until: Optional[int] = None
     active_plan_name: str = ""
     has_active_plan: bool = False
+
+
+EventRecurrence = Literal["none", "daily", "weekdays", "weekly"]
+
+
+class PlanEventOccurrence(BaseModel):
+    id: str
+    event_id: str
+    user_id: str
+    plan_id: str
+    date: dt_date
+    status: Literal["pending", "done"] = "pending"
+    completed_at: Optional[datetime] = None
+
+
+class PlanEvent(BaseModel):
+    id: str
+    user_id: str
+    plan_id: str
+    title: str
+    categories: list[Category] = Field(default_factory=list)
+    scheduled_time: str = "09:00"
+    duration_min: int = 15
+    recurrence: EventRecurrence = "none"
+    byweekday: list[int] = Field(default_factory=list)
+    start_date: dt_date
+    end_date: Optional[dt_date] = None
+    created_by: Literal["user", "agent"] = "user"
+    occurrences: list[PlanEventOccurrence] = Field(default_factory=list)
+
+
+def is_valid_clock(value: str) -> bool:
+    """HH:MM — 00:00..23:59. Regex tek başına 99:99'u geçiriyordu."""
+    if not isinstance(value, str) or len(value) != 5 or value[2] != ":":
+        return False
+    hh, mm = value[:2], value[3:]
+    if not (hh.isdigit() and mm.isdigit()):
+        return False
+    return 0 <= int(hh) <= 23 and 0 <= int(mm) <= 59
+
+
+class PlanEventCreateRequest(BaseModel):
+    title: str = Field(min_length=1, max_length=200)
+    scheduled_time: str = Field(default="09:00", pattern=r"^\d{2}:\d{2}$")
+    start_date: dt_date
+    end_date: Optional[dt_date] = None
+    recurrence: EventRecurrence = "none"
+    byweekday: list[int] = Field(default_factory=list, max_length=7)
+    categories: list[Category] = Field(default_factory=list)
+    duration_min: int = Field(default=15, ge=1, le=240)
+
+    @field_validator("scheduled_time")
+    @classmethod
+    def _clock_range(cls, value: str) -> str:
+        if not is_valid_clock(value):
+            raise ValueError("Saat 00:00 ile 23:59 arasında olmalı.")
+        return value
+
+    @field_validator("byweekday")
+    @classmethod
+    def _weekday_range(cls, value: list[int]) -> list[int]:
+        cleaned = sorted({int(day) for day in value})
+        if any(day < 0 or day > 6 for day in cleaned):
+            raise ValueError("Haftanın günleri 0 (Pzt) ile 6 (Paz) arasında olmalı.")
+        return cleaned
+
+    @model_validator(mode="after")
+    def _date_order(self) -> "PlanEventCreateRequest":
+        if self.end_date is not None and self.end_date < self.start_date:
+            raise ValueError("Bitiş tarihi başlangıçtan önce olamaz.")
+        return self
 
 
 # ---------- Kanıt ----------

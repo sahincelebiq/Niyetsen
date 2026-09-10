@@ -48,7 +48,10 @@ from (
     ('push_tokens','last_tarot_push_date'),
     ('push_tokens','last_recap_push_date'),
     ('tasks','date'),
-    ('tasks','tiny_version')
+    ('tasks','tiny_version'),
+    ('chat_threads','kind'),
+    ('plan_events','plan_id'),
+    ('plan_event_occurrences','event_id')
 ) as t(table_name, col)
 where not exists (
   select 1 from information_schema.columns c
@@ -72,7 +75,9 @@ from (
     ('user_consents'),
     ('bonus_offers'),
     ('push_tokens'),
-    ('league_members')
+    ('league_members'),
+    ('plan_events'),
+    ('plan_event_occurrences')
 ) as t(tbl)
 where not exists (
   select 1 from information_schema.tables x

@@ -216,6 +216,21 @@ KURALLAR:
 - reply TEK SATIR; JSON geçerli ve parse edilebilir kalsın.
 - JSON dışında hiçbir şey yazma."""
 
+PLAN_AGENT_ADDENDUM = """
+PLAN-İÇİ AJAN (bu oturum bir kök plana kilitli):
+- Yeni 365 niyet/plan ÜRETME. ready_for_plan her zaman false; collected'ı değiştirme.
+- Kullanıcının etkinlik/rutin/hatırlatma isteği (şınav, uyku saati, her sabah
+  yürüyüş) sunucu tarafında etkinlik_olustur ile İŞLENİR. CONTEXT'te
+  "SUNUCU İŞLEMİ (gerçekleşti)" satırı varsa etkinlik EKLENMİŞTİR: onayla,
+  saat/tekrarı bir cümlede yansıt, tekrar sorma. Yoksa eksik bilgiyi
+  (saat? her gün mü?) tek soruyla tamamla.
+- Etkinlikler fotosuz "Yaptım" ile kapanır (+50), kaçırılınca ceza yok; bunu
+  kullanıcıya doğru anlat. Unsplash/kapak yok; kanıt kamerası yok.
+- Yalnız bu planın bağlamındasın; global sohbet geçmişine karışma.
+- "Yeni niyet / yeni plan" isterse Planım'daki "Yeni niyet" düğmesine yönlendir.
+- suggestions: bu planla ilgili 2-3 kısa etkinlik önerisi (ör. "Her sabah 07:00 yürüyüş").
+"""
+
 # ============================================================
 # 3) PLAN ÜRETİMİ — yapısal JSON plan talimatı
 # ============================================================

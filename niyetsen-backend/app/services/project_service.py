@@ -85,9 +85,14 @@ def get_daily_tasks_response(
     else:
         current = today
     items = repo.list_daily_tasks_for_date(user_id, current)
+    from app.services import event_service
+
+    event_items = event_service.list_daily_events(repo, user_id, current)
     plan = repo.get_plan(user_id)
     if plan is None or not plan.days:
-        return DailyTasksResponse(items=items, has_active_plan=False)
+        return DailyTasksResponse(
+            items=items, events=event_items, has_active_plan=False
+        )
     plan_day = (current - plan.start_date).days + 1
     needs = plan_service.needs_plan_extension(
         duration_days=plan.duration_days,
@@ -96,6 +101,7 @@ def get_daily_tasks_response(
     )
     return DailyTasksResponse(
         items=items,
+        events=event_items,
         needs_extension=needs,
         plan_day=max(plan_day, 0),
         batch_generated_until=plan.batch_generated_until,

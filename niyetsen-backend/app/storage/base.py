@@ -8,12 +8,13 @@ Repository'nin burada, iki yönlü bağımlılık yaratmayan bir yerde durması 
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from datetime import date as dt_date
+from datetime import date as dt_date, datetime
 from typing import Optional
 
 from app.models.schemas import (
     BonusOffer, ChatMessage, ChatThread, CollectedIntent, ConsentRecord, CronUser,
-    DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanSummary,
+    DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanEvent,
+    PlanEventOccurrence, PlanSummary,
     PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord,
     ScoreEvent, Task, UserProfile,
 )
@@ -297,6 +298,75 @@ class Repository(ABC):
     @abstractmethod
     def league_top(self, limit: int = 50) -> list[dict]:
         """Puana göre ilk N üye: [{user_id, alias, score, streak}]."""
+
+    def save_plan_event(self, event: PlanEvent) -> None:
+        return
+
+    def get_plan_event(self, user_id: str, event_id: str) -> Optional[PlanEvent]:
+        return None
+
+    def list_plan_events(
+        self, user_id: str, plan_id: str | None = None
+    ) -> list[PlanEvent]:
+        return []
+
+    def ensure_event_occurrence(
+        self, event: PlanEvent, day: dt_date
+    ) -> PlanEventOccurrence:
+        raise NotImplementedError
+
+    def save_event_occurrence(self, occ: PlanEventOccurrence) -> None:
+        return
+
+    def mark_event_occurrence_done(
+        self, user_id: str, occurrence_id: str, completed_at: datetime
+    ) -> bool:
+        """pending → done; zaten done ise False (çift dokunuş puan vermez).
+        Varsayılan yol atomik değildir; Supabase koşullu UPDATE ile ezer."""
+        occ = self.get_event_occurrence(user_id, occurrence_id)
+        if occ is None or occ.status == "done":
+            return False
+        occ.status = "done"
+        occ.completed_at = completed_at
+        self.save_event_occurrence(occ)
+        return True
+
+    def delete_plan_event(self, user_id: str, event_id: str) -> bool:
+        """Etkinliği + occurrence'larını siler. Yoksa / sahibi değilse False."""
+        return False
+
+    def get_event_occurrence(
+        self, user_id: str, occurrence_id: str
+    ) -> Optional[PlanEventOccurrence]:
+        return None
+
+    def list_event_occurrences_for_date(
+        self, user_id: str, day: dt_date
+    ) -> list[PlanEventOccurrence]:
+        return []
+
+    def count_done_event_occurrences(self, user_id: str, day: dt_date) -> int:
+        return sum(
+            1
+            for occ in self.list_event_occurrences_for_date(user_id, day)
+            if occ.status == "done"
+        )
+
+    def get_or_create_plan_agent_thread(
+        self, user_id: str, plan_id: str
+    ) -> ChatThread:
+        raise NotImplementedError
+
+    def append_chat_messages_to_thread(
+        self, user_id: str, thread_id: str, messages: list[ChatMessage]
+    ) -> None:
+        for message in messages:
+            self.append_chat_message(user_id, message)
+
+    def get_chat_history_for_thread(
+        self, user_id: str, thread_id: str
+    ) -> list[ChatMessage]:
+        return []
 
     def league_rank(self, user_id: str) -> Optional[int]:
         """Üyenin panodaki gerçek sırası (ilk 50 dışındayken de).

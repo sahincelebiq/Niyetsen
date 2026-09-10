@@ -19,7 +19,8 @@ from app.config import CATEGORIES, settings
 from app.models.schemas import (
     BonusOffer, ChatMessage, ChatThread, CollectedIntent, ConsentRecord, CronUser,
     DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanDay,
-    PlanSummary, PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult,
+    PlanEvent, PlanEventOccurrence, PlanSummary, PointLogRecord, ProofAttemptClaim,
+    ProofRecord, ProofResult,
     PushTokenRecord, ScoreEvent, Task, UserProfile,
 )
 from app.core.datetimes import coerce_date, coerce_datetime
@@ -38,6 +39,35 @@ def _maybe_single(builder) -> Optional[dict]:
 
 def _parse_optional_date(value) -> dt_date | None:
     return coerce_date(value)
+
+
+def _event_from_row(row: dict) -> PlanEvent:
+    return PlanEvent(
+        id=row["id"],
+        user_id=row["user_id"],
+        plan_id=row["plan_id"],
+        title=row["title"],
+        categories=list(row.get("categories") or []),
+        scheduled_time=row.get("scheduled_time") or "09:00",
+        duration_min=int(row.get("duration_min") or 15),
+        recurrence=row.get("recurrence") or "none",
+        byweekday=list(row.get("byweekday") or []),
+        start_date=coerce_date(row["start_date"]) or dt_date.today(),
+        end_date=coerce_date(row.get("end_date")),
+        created_by=row.get("created_by") or "user",
+    )
+
+
+def _occ_from_row(row: dict) -> PlanEventOccurrence:
+    return PlanEventOccurrence(
+        id=row["id"],
+        event_id=row["event_id"],
+        user_id=row["user_id"],
+        plan_id=row["plan_id"],
+        date=coerce_date(row["date"]) or dt_date.today(),
+        status=row.get("status") or "pending",
+        completed_at=coerce_datetime(row.get("completed_at")),
+    )
 
 
 def _task_from_row(row: dict) -> Task:
@@ -626,11 +656,17 @@ class SupabaseRepository(Repository):
     def _create_thread_row(self, user_id: str) -> str:
         plan_id = self._active_plan_id(user_id)
         thread_id = str(uuid.uuid4())
-        self._db.table("chat_threads").insert({
+        payload = {
             "id": thread_id,
             "user_id": user_id,
             "plan_id": plan_id,
-        }).execute()
+            "kind": "global",
+        }
+        try:
+            self._db.table("chat_threads").insert(payload).execute()
+        except Exception:
+            payload.pop("kind", None)
+            self._db.table("chat_threads").insert(payload).execute()
         self._db.table("users").update(
             {"active_thread_id": thread_id}
         ).eq("id", user_id).execute()
@@ -699,11 +735,19 @@ class SupabaseRepository(Repository):
 
     def list_chat_threads(self, user_id: str) -> list[ChatThread]:
         active_id = self._active_thread_id(user_id)
-        rows = (
-            self._db.table("chat_threads").select("id,title,updated_at")
-            .eq("user_id", user_id).order("updated_at", desc=True).limit(50)
-            .execute().data
-        )
+        try:
+            rows = (
+                self._db.table("chat_threads").select("id,title,updated_at,kind")
+                .eq("user_id", user_id).order("updated_at", desc=True).limit(80)
+                .execute().data
+            ) or []
+            rows = [row for row in rows if row.get("kind") != "plan_agent"][:50]
+        except Exception:
+            rows = (
+                self._db.table("chat_threads").select("id,title,updated_at")
+                .eq("user_id", user_id).order("updated_at", desc=True).limit(50)
+                .execute().data
+            ) or []
         return [
             ChatThread(
                 id=row["id"],
@@ -739,10 +783,10 @@ class SupabaseRepository(Repository):
 
     def activate_chat_thread(self, user_id: str, thread_id: str) -> bool:
         row = _maybe_single(
-            self._db.table("chat_threads").select("id,plan_id")
+            self._db.table("chat_threads").select("id,plan_id,kind")
             .eq("id", thread_id).eq("user_id", user_id)
         )
-        if not row:
+        if not row or row.get("kind") == "plan_agent":
             return False
         self._db.table("users").update(
             {"active_thread_id": thread_id}
@@ -1262,6 +1306,229 @@ class SupabaseRepository(Repository):
         )
         higher = result.count if result.count is not None else len(result.data or [])
         return int(higher) + 1
+
+    def save_plan_event(self, event: PlanEvent) -> None:
+        try:
+            self._ensure_user(event.user_id)
+            self._db.table("plan_events").upsert({
+                "id": event.id,
+                "user_id": event.user_id,
+                "plan_id": event.plan_id,
+                "title": event.title,
+                "categories": event.categories,
+                "scheduled_time": event.scheduled_time,
+                "duration_min": event.duration_min,
+                "recurrence": event.recurrence,
+                "byweekday": event.byweekday,
+                "start_date": event.start_date.isoformat(),
+                "end_date": event.end_date.isoformat() if event.end_date else None,
+                "created_by": event.created_by,
+            }).execute()
+        except Exception:
+            log.warning("plan_events yazılamadı (migration?)", exc_info=True)
+
+    def get_plan_event(self, user_id: str, event_id: str) -> Optional[PlanEvent]:
+        try:
+            row = _maybe_single(
+                self._db.table("plan_events").select("*")
+                .eq("id", event_id).eq("user_id", user_id)
+            )
+        except Exception:
+            return None
+        return _event_from_row(row) if row else None
+
+    def list_plan_events(
+        self, user_id: str, plan_id: str | None = None
+    ) -> list[PlanEvent]:
+        try:
+            query = self._db.table("plan_events").select("*").eq("user_id", user_id)
+            if plan_id:
+                query = query.eq("plan_id", plan_id)
+            rows = query.execute().data or []
+        except Exception:
+            return []
+        return [_event_from_row(row) for row in rows]
+
+    def _occurrence_for(self, event_id: str, day: dt_date) -> Optional[dict]:
+        return _maybe_single(
+            self._db.table("plan_event_occurrences").select("*")
+            .eq("event_id", event_id).eq("date", day.isoformat())
+        )
+
+    def ensure_event_occurrence(
+        self, event: PlanEvent, day: dt_date
+    ) -> PlanEventOccurrence:
+        existing = self._occurrence_for(event.id, day)
+        if existing:
+            return _occ_from_row(existing)
+        occ_id = str(uuid.uuid4())
+        try:
+            self._db.table("plan_event_occurrences").insert({
+                "id": occ_id,
+                "event_id": event.id,
+                "user_id": event.user_id,
+                "plan_id": event.plan_id,
+                "date": day.isoformat(),
+                "status": "pending",
+            }).execute()
+        except Exception as exc:  # noqa: BLE001
+            # İki eşzamanlı GET /tasks/daily aynı günü açmaya çalıştı —
+            # (event_id, date) unique; kazanan satırı oku, Bugün düşmesin.
+            if not is_unique_violation(exc):
+                raise
+            existing = self._occurrence_for(event.id, day)
+            if existing:
+                return _occ_from_row(existing)
+            raise
+        return PlanEventOccurrence(
+            id=occ_id,
+            event_id=event.id,
+            user_id=event.user_id,
+            plan_id=event.plan_id,
+            date=day,
+        )
+
+    def save_event_occurrence(self, occ: PlanEventOccurrence) -> None:
+        self._db.table("plan_event_occurrences").upsert({
+            "id": occ.id,
+            "event_id": occ.event_id,
+            "user_id": occ.user_id,
+            "plan_id": occ.plan_id,
+            "date": occ.date.isoformat(),
+            "status": occ.status,
+            "completed_at": occ.completed_at.isoformat() if occ.completed_at else None,
+        }).execute()
+
+    def mark_event_occurrence_done(
+        self, user_id: str, occurrence_id: str, completed_at: datetime
+    ) -> bool:
+        # Koşullu UPDATE: yalnız pending satır done olur. Çift dokunuş /
+        # eşzamanlı istek ikinci kez puan yazamaz (etkilenen satır 0).
+        result = (
+            self._db.table("plan_event_occurrences")
+            .update({
+                "status": "done",
+                "completed_at": completed_at.isoformat(),
+            })
+            .eq("id", occurrence_id).eq("user_id", user_id).eq("status", "pending")
+            .execute()
+        )
+        return bool(result.data)
+
+    def delete_plan_event(self, user_id: str, event_id: str) -> bool:
+        # occurrences FK on delete cascade — tek DELETE yeter.
+        result = (
+            self._db.table("plan_events").delete()
+            .eq("id", event_id).eq("user_id", user_id)
+            .execute()
+        )
+        return bool(result.data)
+
+    def get_event_occurrence(
+        self, user_id: str, occurrence_id: str
+    ) -> Optional[PlanEventOccurrence]:
+        try:
+            row = _maybe_single(
+                self._db.table("plan_event_occurrences").select("*")
+                .eq("id", occurrence_id).eq("user_id", user_id)
+            )
+        except Exception:
+            return None
+        return _occ_from_row(row) if row else None
+
+    def list_event_occurrences_for_date(
+        self, user_id: str, day: dt_date
+    ) -> list[PlanEventOccurrence]:
+        try:
+            rows = (
+                self._db.table("plan_event_occurrences").select("*")
+                .eq("user_id", user_id).eq("date", day.isoformat())
+                .execute().data
+            ) or []
+        except Exception:
+            return []
+        return [_occ_from_row(row) for row in rows]
+
+    def get_or_create_plan_agent_thread(
+        self, user_id: str, plan_id: str
+    ) -> ChatThread:
+        self._ensure_user(user_id)
+        row = _maybe_single(
+            self._db.table("chat_threads").select("id,title,updated_at")
+            .eq("user_id", user_id).eq("plan_id", plan_id).eq("kind", "plan_agent")
+        )
+        if row:
+            return ChatThread(
+                id=row["id"],
+                title=row.get("title") or "",
+                is_active=False,
+                updated_at=row.get("updated_at") or datetime.now(timezone.utc),
+            )
+        thread_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
+        self._db.table("chat_threads").insert({
+            "id": thread_id,
+            "user_id": user_id,
+            "plan_id": plan_id,
+            "kind": "plan_agent",
+            "title": "",
+        }).execute()
+        return ChatThread(id=thread_id, title="", is_active=False, updated_at=now)
+
+    def append_chat_messages_to_thread(
+        self, user_id: str, thread_id: str, messages: list[ChatMessage]
+    ) -> None:
+        if not messages:
+            return
+        self._ensure_user(user_id)
+        plan_id = None
+        row = _maybe_single(
+            self._db.table("chat_threads").select("plan_id")
+            .eq("id", thread_id).eq("user_id", user_id)
+        )
+        if row:
+            plan_id = row.get("plan_id")
+        upsert_rows = []
+        for message in messages:
+            rec = {
+                "user_id": user_id,
+                "client_message_id": message.id,
+                "role": message.role,
+                "content": message.content,
+                "plan_id": plan_id,
+                "thread_id": thread_id,
+            }
+            if message.id:
+                upsert_rows.append(rec)
+        if upsert_rows:
+            self._db.table("chat_msgs").upsert(
+                upsert_rows,
+                on_conflict="user_id,client_message_id",
+                ignore_duplicates=True,
+            ).execute()
+        try:
+            first_user = next((m.content for m in messages if m.role == "user"), "")
+            self._touch_thread(user_id, thread_id, first_user)
+        except Exception:
+            log.warning("plan-agent thread başlığı güncellenemedi", exc_info=True)
+
+    def get_chat_history_for_thread(
+        self, user_id: str, thread_id: str
+    ) -> list[ChatMessage]:
+        rows = (
+            self._db.table("chat_msgs").select("id,client_message_id,role,content")
+            .eq("user_id", user_id).eq("thread_id", thread_id)
+            # Toplu upsert'te created_at eşit olabilir; id ikincil anahtar.
+            .order("created_at").order("id").limit(400).execute().data
+        ) or []
+        return [
+            ChatMessage(
+                id=row.get("client_message_id") or f"legacy-{row.get('id') or ''}",
+                role=row["role"],
+                content=row["content"],
+            )
+            for row in rows
+        ]
 
     def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
         rows = (

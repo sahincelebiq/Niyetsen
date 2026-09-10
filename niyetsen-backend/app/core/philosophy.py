@@ -34,7 +34,8 @@ TASARIM YASALARI
    üreten kod hatalıdır.
 
 4. MODEL SADECE TANIMLI ARAÇLARI KULLANIR.
-   alarm, takvim, görev, kanıt, puan, mazeret, (v2: harita, görsel).
+   alarm, takvim, görev, kanıt, puan, mazeret, etkinlik_olustur (plan-içi ajan,
+   Şahin 2026-09-10), (v2: harita, görsel).
    Bilet, ödeme, dosya işlemi YOK. Araç listesi core/tools.py'de kapalıdır.
 
 5. TERAPİST DEĞİLİZ.

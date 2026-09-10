@@ -31,7 +31,7 @@ from app.models.schemas import (
     FortuneChatRequest, FortuneChatResponse, FortuneRecord,
     FortuneRightsResponse,
     HoroscopeResponse, LeagueJoinRequest, LeagueResponse,
-    PhotoFortuneResponse, Plan, PlanGenerateRequest, PlanRenameRequest,
+    PhotoFortuneResponse, Plan, PlanEvent, PlanEventCreateRequest, PlanGenerateRequest, PlanRenameRequest,
     RecapResponse,
     PlanSummary, ProfileUpdate, ProofRecord, ProofResult, PushTokenRecord,
     PushTokenRegistration, RevenueCatWebhookPayload, StateResponse, SubscriptionInfo,
@@ -41,7 +41,7 @@ from app.models.schemas import (
 from app.services import (
     attachment_service, bonus_service, consent_service, fortune_service,
     greeting_service, intent_service, notification_service, plan_edit_service,
-    plan_service,
+    plan_service, event_service, plan_agent_service,
     profile_service, project_service, proof_service, push_service, recap_service,
     scoring_service,
     subscription_service, task_lifecycle_service, tool_service,
@@ -517,6 +517,169 @@ def rename_project(
 def daily_tasks(user_id: str = Depends(get_current_user)) -> DailyTasksResponse:
     """Bugünün görevleri. Parti gerideyse needs_extension=true → mobil /plan/ensure-today."""
     return project_service.get_daily_tasks_response(repo, user_id)
+
+
+@router.post("/plan/{plan_id}/events", response_model=PlanEvent)
+def create_plan_event(
+    plan_id: str,
+    body: PlanEventCreateRequest,
+    user_id: str = Depends(get_current_user),
+) -> PlanEvent:
+    profile = repo.get_profile(user_id)
+    today = _user_today(profile.timezone)
+    try:
+        return event_service.create_event(
+            repo,
+            user_id,
+            plan_id=plan_id,
+            title=body.title,
+            scheduled_time=body.scheduled_time,
+            start_date=body.start_date,
+            end_date=body.end_date,
+            recurrence=body.recurrence,
+            byweekday=body.byweekday,
+            categories=list(body.categories),
+            duration_min=body.duration_min,
+            created_by="user",
+            today=today,
+        )
+    except event_service.EventNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except event_service.EventError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+
+@router.get("/plan/{plan_id}/events", response_model=list[PlanEvent])
+def list_plan_events(
+    plan_id: str, user_id: str = Depends(get_current_user)
+) -> list[PlanEvent]:
+    if not repo.plan_belongs_to_user(user_id, plan_id):
+        raise HTTPException(status_code=404, detail="Plan bulunamadı.")
+    return repo.list_plan_events(user_id, plan_id)
+
+
+@router.delete("/plan/events/{event_id}")
+def delete_plan_event(
+    event_id: str, user_id: str = Depends(get_current_user)
+) -> dict:
+    """Etkinliği (ve açılmış occurrence'larını) siler; kazanılmış puan kalır."""
+    try:
+        event_service.delete_event(repo, user_id, event_id)
+    except event_service.EventNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    return {"deleted": True, "event_id": event_id}
+
+
+@router.post("/plan/events/{occurrence_id}/complete")
+def complete_plan_event(
+    occurrence_id: str, user_id: str = Depends(get_current_user)
+) -> dict:
+    profile = repo.get_profile(user_id)
+    today = _user_today(profile.timezone)
+    try:
+        events = event_service.complete_occurrence(
+            repo, user_id, occurrence_id, today=today
+        )
+    except event_service.EventNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except event_service.EventAlreadyDone as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    except event_service.EventError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    state = repo.get_state(user_id)
+    return {
+        "message": "Etkinlik tamamlandı — halka zincire işlendi.",
+        "events": [e.model_dump() for e in events],
+        "points": dict(state.points),
+        "streak_len": state.streak_len,
+    }
+
+
+@router.get("/plan/{plan_id}/chat/history", response_model=list[ChatMessage])
+def plan_agent_history(
+    plan_id: str, user_id: str = Depends(get_current_user)
+) -> list[ChatMessage]:
+    if not repo.plan_belongs_to_user(user_id, plan_id):
+        raise HTTPException(status_code=404, detail="Plan bulunamadı.")
+    try:
+        thread = repo.get_or_create_plan_agent_thread(user_id, plan_id)
+        return repo.get_chat_history_for_thread(user_id, thread.id)
+    except Exception:
+        log.warning("Plan-içi geçmiş okunamadı", exc_info=True)
+        return []
+
+
+@router.post("/plan/{plan_id}/chat", response_model=ChatResponse)
+@limiter.limit(f"{settings.CHAT_RATE_LIMIT_PER_MIN}/minute")
+async def plan_agent_chat(
+    request: Request,
+    plan_id: str,
+    req: ChatRequest,
+    user_id: str = Depends(get_current_user),
+    x_app_locale: str | None = Header(default=None, alias="X-App-Locale"),
+) -> ChatResponse:
+    _require_consent(user_id, "chat")
+    if not req.messages or not any(message.role == "user" for message in req.messages):
+        raise HTTPException(status_code=400, detail="Mesaj gerekli.")
+    if not repo.plan_belongs_to_user(user_id, plan_id):
+        raise HTTPException(status_code=404, detail="Plan bulunamadı.")
+    profile = repo.get_profile(user_id)
+    today = _user_today(profile.timezone)
+    # Bağlam HEDEF plandır — aktif plan başka olsa bile ajan bu planı konuşur.
+    try:
+        today_status, recent_tasks = event_service.describe_plan_for_agent(
+            repo, user_id, plan_id, today
+        )
+    except Exception:  # noqa: BLE001 — bağlam eksikliği sohbeti düşürmez
+        log.warning("Plan-içi bağlam kurulamadı (yoksayıldı).", exc_info=True)
+        today_status, recent_tasks = "", ""
+    from app.core.prompt_builder import normalize_app_locale
+
+    locale = (
+        normalize_app_locale(x_app_locale)
+        or normalize_app_locale(profile.preferred_language)
+        or "tr"
+    )
+    try:
+        response = await plan_agent_service.handle_plan_chat(
+            repo,
+            user_id,
+            plan_id,
+            req,
+            preferred_language=locale,
+            today_status=today_status,
+            recent_tasks=recent_tasks,
+            today=today,
+            state=repo.get_state(user_id),
+            user_name=profile.name or "",
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except GeminiUnavailable:
+        raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
+
+    to_persist: list[ChatMessage] = []
+    for index, message in enumerate(req.messages):
+        if not message.id:
+            message = message.model_copy(update={
+                "id": _legacy_message_id(
+                    user_id, index, message.role, message.content
+                )
+            })
+        to_persist.append(message)
+    assistant_id = _legacy_message_id(
+        user_id, len(req.messages), "assistant", response.reply
+    )
+    response.message_id = assistant_id
+    to_persist.append(
+        ChatMessage(id=assistant_id, role="assistant", content=response.reply)
+    )
+    try:
+        thread = repo.get_or_create_plan_agent_thread(user_id, plan_id)
+        repo.append_chat_messages_to_thread(user_id, thread.id, to_persist)
+    except Exception:
+        log.warning("Plan-içi sohbet yazılamadı (yoksayıldı).", exc_info=True)
+    return response
 
 
 @router.get("/plan", response_model=Plan)

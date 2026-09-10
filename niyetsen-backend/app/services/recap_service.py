@@ -201,14 +201,22 @@ def _build_dashboard(
         if task.date and task.date <= end  # gelecek günler sayılmaz
     ]
     done = [t for t in all_tasks if t.status == "done"]
+    event_ids = {
+        rec.task_id
+        for rec in (point_log or [])
+        if rec.task_id and rec.reason == "etkinlik tamamlandı"
+    }
     proofed = sum(1 for t in done if getattr(t, "proof_id", None))
     category_counts: dict[str, int] = {c: 0 for c in CATEGORIES}
     for task in done:
         for cat in task.categories:
             if cat in category_counts:
                 category_counts[cat] += 1
-    total = len(all_tasks)
-    rate = round(100 * len(done) / total) if total else 0
+    for rec in point_log or []:
+        if rec.reason == "etkinlik tamamlandı" and rec.category in category_counts:
+            category_counts[rec.category] += 1
+    total = len(all_tasks) + len(event_ids)
+    rate = round(100 * (len(done) + len(event_ids)) / total) if total else 0
     # Gelişim eğrisi: son 8 haftanın tamamlanan görev sayıları (eski → yeni).
     weekly: list[int] = []
     for week in range(7, -1, -1):
@@ -232,7 +240,7 @@ def _build_dashboard(
     bonus_offered, bonus_completed = bonus_counts or (0, 0)
     return RecapDashboard(
         total_tasks=total,
-        completed_tasks=len(done),
+        completed_tasks=len(done) + len(event_ids),
         proofed_tasks=proofed,
         completion_rate=rate,
         category_counts=category_counts,
@@ -297,7 +305,12 @@ def build_recap(
     days_in = (end - earliest_start).days + 1 if earliest_start else 0
 
     done_tasks = _done_tasks_in_period(all_plans, start, end)
-    completed = len(done_tasks)
+    event_ids = {
+        rec.task_id
+        for rec in (point_log or [])
+        if rec.task_id and rec.reason == "etkinlik tamamlandı"
+    }
+    completed = len(done_tasks) + len(event_ids)
     proofed = sum(1 for task in done_tasks if getattr(task, "proof_id", None))
     total_points = sum(state.points.get(c, 0) for c in CATEGORIES)
     top_cat, top_pts = _top_category(state.points)

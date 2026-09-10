@@ -89,9 +89,11 @@ def close_user_day(
         }
 
     tasks = _tasks_for_day(repository, user_id, day)
-    if not tasks:
+    event_done = repository.count_done_event_occurrences(user_id, day)
+    if not tasks and event_done == 0:
         # Görevsiz günlerde de aylık Zincir Koruma Jetonu işlensin —
         # aksi hâlde görevsiz geçen ay jeton hiç verilmiyordu.
+        # Pending etkinlik cezalandırılmaz ve zinciri kırmaz.
         if scoring_service.grant_monthly_freeze(state, day):
             repository.save_state(state)
         return {
@@ -101,7 +103,9 @@ def close_user_day(
             "penalized_tasks": 0,
         }
 
-    any_completed = any(task.status == "done" for task in tasks)
+    any_completed = (
+        any(task.status == "done" for task in tasks) or event_done > 0
+    )
     penalized = 0
     for task in tasks:
         if task.status != "pending":

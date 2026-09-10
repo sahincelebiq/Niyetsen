@@ -18,7 +18,7 @@ from app.config import BONUS_POINTS, settings
 from app.models.schemas import (
     BonusOffer, ChatMessage, ChatThread, CollectedIntent, ConsentRecord, CronUser,
     DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanDay,
-    PlanSummary,
+    PlanEvent, PlanEventOccurrence, PlanSummary,
     PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord,
     ScoreEvent, Task, UserProfile,
 )
@@ -53,6 +53,8 @@ class InMemoryRepository(Repository):
         # FAZ 7.6: sohbet oturumları — user -> thread_id -> meta
         self._threads: dict[str, dict[str, dict]] = {}
         self._active_thread: dict[str, str] = {}
+        self._plan_events: dict[str, dict[str, PlanEvent]] = {}
+        self._event_occs: dict[str, dict[str, PlanEventOccurrence]] = {}
 
     def get_state(self, user_id: str) -> GameState:
         if user_id not in self._states:
@@ -430,7 +432,8 @@ class InMemoryRepository(Repository):
         thread_id = str(uuid.uuid4())
         now = datetime.now(timezone.utc)
         self._user_threads(user_id)[thread_id] = {
-            "title": "", "plan_id": plan_id, "created_at": now, "updated_at": now,
+            "title": "", "plan_id": plan_id, "kind": "global",
+            "created_at": now, "updated_at": now,
         }
         self._active_thread[user_id] = thread_id
         return thread_id
@@ -477,6 +480,7 @@ class InMemoryRepository(Repository):
                 updated_at=meta["updated_at"],
             )
             for thread_id, meta in self._user_threads(user_id).items()
+            if meta.get("kind", "global") != "plan_agent"
         ]
         return sorted(threads, key=lambda t: t.updated_at, reverse=True)
 
@@ -493,7 +497,8 @@ class InMemoryRepository(Repository):
         self._user_threads(user_id)[thread_id]["title"] = cleaned
 
     def activate_chat_thread(self, user_id: str, thread_id: str) -> bool:
-        if thread_id not in self._user_threads(user_id):
+        meta = self._user_threads(user_id).get(thread_id)
+        if not meta or meta.get("kind") == "plan_agent":
             return False
         self._active_thread[user_id] = thread_id
         # Oturum bir plana bağlıysa o planı da aktive et (bağlam bütünlüğü).
@@ -501,6 +506,117 @@ class InMemoryRepository(Repository):
         if plan_id and plan_id in self._user_plans(user_id):
             self._active_plan_id[user_id] = plan_id
         return True
+
+    def save_plan_event(self, event: PlanEvent) -> None:
+        store = self._plan_events.setdefault(event.user_id, {})
+        store[event.id] = event.model_copy(deep=True)
+
+    def get_plan_event(self, user_id: str, event_id: str) -> Optional[PlanEvent]:
+        event = self._plan_events.get(user_id, {}).get(event_id)
+        return event.model_copy(deep=True) if event else None
+
+    def list_plan_events(
+        self, user_id: str, plan_id: str | None = None
+    ) -> list[PlanEvent]:
+        events = list(self._plan_events.get(user_id, {}).values())
+        if plan_id is not None:
+            events = [event for event in events if event.plan_id == plan_id]
+        return [event.model_copy(deep=True) for event in events]
+
+    def ensure_event_occurrence(
+        self, event: PlanEvent, day: dt_date
+    ) -> PlanEventOccurrence:
+        store = self._event_occs.setdefault(event.user_id, {})
+        for occ in store.values():
+            if occ.event_id == event.id and occ.date == day:
+                return occ.model_copy(deep=True)
+        occ = PlanEventOccurrence(
+            id=str(uuid.uuid4()),
+            event_id=event.id,
+            user_id=event.user_id,
+            plan_id=event.plan_id,
+            date=day,
+        )
+        store[occ.id] = occ
+        return occ.model_copy(deep=True)
+
+    def save_event_occurrence(self, occ: PlanEventOccurrence) -> None:
+        store = self._event_occs.setdefault(occ.user_id, {})
+        store[occ.id] = occ.model_copy(deep=True)
+
+    def mark_event_occurrence_done(
+        self, user_id: str, occurrence_id: str, completed_at: datetime
+    ) -> bool:
+        occ = self._event_occs.get(user_id, {}).get(occurrence_id)
+        if occ is None or occ.status == "done":
+            return False
+        occ.status = "done"
+        occ.completed_at = completed_at
+        return True
+
+    def delete_plan_event(self, user_id: str, event_id: str) -> bool:
+        events = self._plan_events.get(user_id, {})
+        if event_id not in events:
+            return False
+        del events[event_id]
+        occs = self._event_occs.get(user_id, {})
+        for occ_id in [k for k, v in occs.items() if v.event_id == event_id]:
+            del occs[occ_id]
+        return True
+
+    def get_event_occurrence(
+        self, user_id: str, occurrence_id: str
+    ) -> Optional[PlanEventOccurrence]:
+        occ = self._event_occs.get(user_id, {}).get(occurrence_id)
+        return occ.model_copy(deep=True) if occ else None
+
+    def list_event_occurrences_for_date(
+        self, user_id: str, day: dt_date
+    ) -> list[PlanEventOccurrence]:
+        return [
+            occ.model_copy(deep=True)
+            for occ in self._event_occs.get(user_id, {}).values()
+            if occ.date == day
+        ]
+
+    def get_or_create_plan_agent_thread(
+        self, user_id: str, plan_id: str
+    ) -> ChatThread:
+        for thread_id, meta in self._user_threads(user_id).items():
+            if meta.get("kind") == "plan_agent" and meta.get("plan_id") == plan_id:
+                return ChatThread(
+                    id=thread_id,
+                    title=meta["title"],
+                    is_active=False,
+                    updated_at=meta["updated_at"],
+                )
+        thread_id = str(uuid.uuid4())
+        now = datetime.now(timezone.utc)
+        self._user_threads(user_id)[thread_id] = {
+            "title": "",
+            "plan_id": plan_id,
+            "kind": "plan_agent",
+            "created_at": now,
+            "updated_at": now,
+        }
+        return ChatThread(id=thread_id, title="", is_active=False, updated_at=now)
+
+    def append_chat_messages_to_thread(
+        self, user_id: str, thread_id: str, messages: list[ChatMessage]
+    ) -> None:
+        history = self._chat_history.setdefault((user_id, thread_id), [])
+        for message in messages:
+            if message.id and any(existing.id == message.id for existing in history):
+                continue
+            history.append(message)
+        meta = self._user_threads(user_id).get(thread_id)
+        if meta is not None:
+            meta["updated_at"] = datetime.now(timezone.utc)
+
+    def get_chat_history_for_thread(
+        self, user_id: str, thread_id: str
+    ) -> list[ChatMessage]:
+        return list(self._chat_history.get((user_id, thread_id), []))
 
     def save_intent(
         self,
