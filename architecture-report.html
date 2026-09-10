@@ -1,0 +1,1377 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/png" href="https://agent.opsera.ai/favicon.png">
+  <title>Architecture Report - Niyetsen</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10.9.1/dist/mermaid.min.js"></script>
+  <style>
+    :root {
+      --primary: #9947EB;
+      --primary-hover: #8234d4;
+      --accent: #CF940C;
+      --bg: #ffffff;
+      --bg-secondary: #F3F3F1;
+      --card: #ffffff;
+      --card-hover: #fafafa;
+      --text: #3D3B36;
+      --text-light: #67788d;
+      --border: #E6E5E3;
+      --border-light: #f0efed;
+      --success: #00AA84;
+      --warning: #CF940C;
+      --danger: #dc3545;
+      --info: #1989F9;
+      --critical: #dc3545;
+      --high: #c05621;
+      --medium: #CF940C;
+      --low: #00AA84;
+      --code-bg: #1e1e2e;
+      --code-text: #cdd6f4;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 2px 8px rgba(0,0,0,0.06);
+      --ring: #9947EB;
+      --radius: 0.5rem;
+      --diagram-bg: #ffffff;
+      --diagram-text: #1e293b;
+      --sidebar-width: 260px;
+    }
+    [data-theme="dark"] {
+      --primary: #b87aed;
+      --primary-hover: #a05ee0;
+      --accent: #F0B324;
+      --bg: #16181d;
+      --bg-secondary: #1e2028;
+      --card: #1e2028;
+      --card-hover: #262830;
+      --text: #f2f2f2;
+      --text-light: #a6a6a6;
+      --border: #2e3038;
+      --border-light: #262830;
+      --success: #00CC9E;
+      --warning: #F0B324;
+      --danger: #f06070;
+      --info: #4da6ff;
+      --critical: #f06070;
+      --high: #e89040;
+      --medium: #F0B324;
+      --low: #00CC9E;
+      --code-bg: #11111b;
+      --code-text: #cdd6f4;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.2);
+      --shadow-md: 0 2px 8px rgba(0,0,0,0.3);
+      --ring: #b87aed;
+      --diagram-bg: #1e2028;
+      --diagram-text: #e2e8f0;
+    }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    html { font-size: 16px; scroll-behavior: smooth; }
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg); color: var(--text); line-height: 1.7;
+      -webkit-font-smoothing: antialiased; transition: background 0.3s, color 0.3s;
+    }
+    h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -0.02em; }
+    h2 { font-size: 1.35rem; font-weight: 600; letter-spacing: -0.01em; color: var(--primary); }
+    h3 { font-size: 1.1rem; font-weight: 600; color: var(--primary); margin-top: 1.25rem; margin-bottom: 0.5rem; }
+    h4 { font-size: 0.95rem; font-weight: 600; color: var(--text); margin-top: 1rem; margin-bottom: 0.4rem; }
+    p { margin-bottom: 0.75rem; }
+    a { color: var(--primary); text-decoration: none; }
+    a:hover { color: var(--primary-hover); text-decoration: underline; }
+    ul, ol { margin: 0.5rem 0 0.75rem 1.5rem; }
+    li { margin-bottom: 0.25rem; }
+
+    /* Page layout: header on top, sidebar + content below */
+    .page-wrapper { display: flex; min-height: calc(100vh - var(--header-height, 0px)); }
+    .header ~ .page-wrapper { --header-height: auto; }
+
+    /* Sidebar */
+    .sidebar {
+      position: sticky; top: 0; width: var(--sidebar-width); height: 100vh;
+      background: var(--card); border-right: 1px solid var(--border);
+      overflow-y: auto; z-index: 100; display: flex; flex-direction: column;
+      flex-shrink: 0; transition: background 0.3s, border-color 0.3s;
+    }
+    .sidebar-nav { flex: 1; overflow-y: auto; padding: 0.75rem 0; }
+    .sidebar-nav::-webkit-scrollbar { width: 3px; }
+    .sidebar-nav::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    .sidebar-group-label {
+      padding: 0.6rem 1.25rem 0.3rem; font-size: 0.65rem; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-light);
+    }
+    .sidebar-link {
+      display: block; padding: 0.35rem 1.25rem 0.35rem 1.25rem; font-size: 0.82rem;
+      color: var(--text-light); text-decoration: none; border-left: 3px solid transparent;
+      transition: all 0.15s ease; line-height: 1.4;
+    }
+    .sidebar-link:hover { color: var(--text); background: var(--bg-secondary); text-decoration: none; }
+    .sidebar-link.active {
+      color: var(--primary); border-left-color: var(--primary);
+      background: rgba(153,71,235,0.06); font-weight: 500;
+    }
+    [data-theme="dark"] .sidebar-link.active { background: rgba(184,122,237,0.08); }
+    .sidebar-link.sub { padding-left: 2rem; font-size: 0.78rem; }
+    .sidebar-footer {
+      padding: 0.75rem 1.25rem; border-top: 1px solid var(--border);
+      flex-shrink: 0; display: flex; align-items: center; gap: 0.5rem;
+    }
+    .sidebar-theme-btn {
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: 999px; padding: 0.4rem; cursor: pointer;
+      display: flex; align-items: center; transition: all 0.2s;
+    }
+    .sidebar-theme-btn:hover { background: var(--card-hover); }
+    .sidebar-theme-btn svg { width: 16px; height: 16px; }
+    .sidebar-theme-btn .sun { display: none; color: var(--accent); }
+    .sidebar-theme-btn .moon { display: block; color: var(--text-light); }
+    [data-theme="dark"] .sidebar-theme-btn .sun { display: block; }
+    [data-theme="dark"] .sidebar-theme-btn .moon { display: none; }
+    .sidebar-theme-label { font-size: 0.75rem; color: var(--text-light); }
+
+    /* Mobile hamburger */
+    .sidebar-toggle {
+      display: none; position: fixed; top: 0.75rem; left: 0.75rem; z-index: 200;
+      background: var(--card); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 0.5rem; cursor: pointer; box-shadow: var(--shadow-md);
+    }
+    .sidebar-toggle svg { width: 20px; height: 20px; color: var(--text); }
+    .sidebar-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 90;
+    }
+
+    /* Main content fills remaining width */
+    .page-main { flex: 1; min-width: 0; }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #250e3c 0%, #9947EB 60%, #CF940C 100%);
+      color: #ffffff; padding: 2.5rem 2rem; position: relative; overflow: hidden;
+    }
+    .header::after {
+      content: ''; position: absolute; inset: 0;
+      background: radial-gradient(ellipse at 70% 50%, rgba(153,71,235,0.3) 0%, transparent 70%);
+    }
+    .header-content {
+      max-width: 1100px; margin: 0 auto; display: flex;
+      align-items: center; gap: 1.5rem; position: relative; z-index: 1;
+    }
+    .header-logo { flex-shrink: 0; }
+    .header-logo img { height: 36px; width: auto; }
+    .header-text { flex: 1; }
+    .header h1 { color: #ffffff; margin-bottom: 0.4rem; }
+    .header .meta { opacity: 0.85; font-size: 0.875rem; font-weight: 400; }
+
+    /* Layout */
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+    .section {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 2rem; margin-bottom: 1.5rem;
+      box-shadow: var(--shadow-sm); transition: background 0.3s, border-color 0.3s;
+    }
+    .section h2 {
+      border-bottom: 2px solid var(--primary); padding-bottom: 0.5rem; margin-bottom: 1.25rem;
+    }
+    .section-divider {
+      text-align: center; padding: 1.5rem 0; margin: 1rem 0;
+      font-size: 0.8rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-light);
+      border-top: 2px solid var(--border);
+    }
+
+    /* Cards */
+    .strength-card {
+      border-left: 4px solid var(--success); background: var(--bg-secondary);
+      padding: 1rem 1.25rem; margin-bottom: 1rem; border-radius: var(--radius);
+    }
+    .strength-card h4 { color: var(--success); margin: 0 0 0.25rem 0; font-size: 0.95rem; }
+    .strength-card p { margin: 0; font-size: 0.9rem; }
+    .badge-noted {
+      background: var(--border); color: var(--text-light); padding: 0.15rem 0.6rem;
+      border-radius: 4px; font-size: 0.75rem; font-weight: 600;
+    }
+    .contradiction-card {
+      border-left: 4px solid var(--danger); background: var(--bg-secondary);
+      padding: 1rem 1.25rem; margin-bottom: 1rem; border-radius: var(--radius);
+    }
+    .contradiction-card h4 { color: var(--danger); margin: 0 0 0.5rem 0; font-size: 0.95rem; }
+    .contradiction-card .config-pair {
+      display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.75rem;
+      align-items: center; margin: 0.5rem 0;
+    }
+    .contradiction-card .config-val {
+      background: var(--card); border: 1px solid var(--danger); border-radius: 4px;
+      padding: 0.5rem 0.75rem; font-family: monospace; font-size: 0.85rem; color: var(--text);
+    }
+    .contradiction-card .vs { color: var(--danger); font-weight: 700; font-size: 0.8rem; }
+    .stress-card {
+      border-left: 4px solid var(--warning); background: var(--bg-secondary);
+      padding: 1rem 1.25rem; margin-bottom: 1rem; border-radius: var(--radius);
+    }
+    .stress-card h4 { color: var(--warning); margin: 0 0 0.5rem 0; font-size: 0.95rem; }
+    .stress-tiers {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+      gap: 0.5rem; margin: 0.75rem 0;
+    }
+    .stress-tier {
+      text-align: center; padding: 0.75rem 0.5rem; border-radius: var(--radius);
+      font-size: 0.8rem; font-weight: 600;
+    }
+    .stress-tier.current { background: rgba(0,170,132,0.15); color: var(--success); }
+    .stress-tier.warn { background: rgba(207,148,12,0.15); color: var(--warning); }
+    .stress-tier.danger { background: rgba(220,53,69,0.15); color: var(--danger); }
+    .stress-tier.critical { background: var(--danger); color: #fff; }
+    .stress-tier.catastrophic { background: #7f1d1d; color: #fff; }
+    .stress-tier.scaling { background: rgba(25,137,249,0.15); color: var(--info); }
+    .assumption-card {
+      border-left: 4px solid var(--primary); background: var(--bg-secondary);
+      padding: 1rem 1.25rem; margin-bottom: 1rem; border-radius: var(--radius);
+    }
+    .assumption-card h4 { color: var(--primary); margin: 0 0 0.25rem 0; font-size: 0.95rem; }
+    .assumption-card .scenario {
+      background: var(--border-light); border-radius: 4px; padding: 0.5rem 0.75rem;
+      margin-top: 0.5rem; font-size: 0.85rem; font-style: italic;
+    }
+    .coupling-card {
+      border-left: 4px solid #ec4899; background: var(--bg-secondary);
+      padding: 1rem 1.25rem; margin-bottom: 1rem; border-radius: var(--radius);
+    }
+    .coupling-card h4 { color: #ec4899; margin: 0 0 0.25rem 0; font-size: 0.95rem; }
+    .dead-path-card {
+      border-left: 4px solid var(--text-light); background: var(--bg-secondary);
+      padding: 1rem 1.25rem; margin-bottom: 1rem; border-radius: var(--radius);
+    }
+    .dead-path-card h4 { color: var(--text-light); margin: 0 0 0.25rem 0; font-size: 0.95rem; }
+
+    /* STRIDE Threat Model */
+    .stride-grid {
+      display: grid; grid-template-columns: repeat(6, 1fr);
+      gap: 0.75rem; margin-bottom: 1.5rem;
+    }
+    .stride-card {
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem 0.75rem; text-align: center;
+      position: relative; overflow: hidden;
+    }
+    .stride-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    }
+    .stride-card.spoofing::before { background: var(--info); }
+    .stride-card.tampering::before { background: var(--high); }
+    .stride-card.repudiation::before { background: var(--text-light); }
+    .stride-card.info-disclosure::before { background: var(--critical); }
+    .stride-card.denial-of-service::before { background: var(--warning); }
+    .stride-card.elevation::before { background: var(--primary); }
+    .stride-icon {
+      width: 36px; height: 36px; border-radius: 50%;
+      display: inline-flex; align-items: center; justify-content: center;
+      font-size: 1rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem;
+    }
+    .spoofing .stride-icon { background: var(--info); }
+    .tampering .stride-icon { background: var(--high); }
+    .repudiation .stride-icon { background: var(--text-light); }
+    .info-disclosure .stride-icon { background: var(--critical); }
+    .denial-of-service .stride-icon { background: var(--warning); }
+    .elevation .stride-icon { background: var(--primary); }
+    .stride-name { font-size: 0.75rem; font-weight: 600; margin-bottom: 0.15rem; }
+    .stride-count { font-size: 1.5rem; font-weight: 700; color: var(--text); }
+    .stride-desc { font-size: 0.65rem; color: var(--text-light); }
+    .stride-detail { margin-bottom: 0.75rem; }
+    .stride-detail summary { font-size: 0.9rem; }
+    .stride-threat {
+      background: var(--bg-secondary); border-radius: var(--radius);
+      padding: 0.75rem 1rem; margin-bottom: 0.5rem;
+      border-left: 3px solid var(--border);
+    }
+    .stride-threat .threat-asset { font-size: 0.8rem; color: var(--text-light); margin-bottom: 0.25rem; }
+    .stride-threat .threat-title { font-weight: 600; font-size: 0.9rem; }
+    .stride-threat .threat-controls {
+      display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.4rem;
+    }
+    .countermeasure-badge {
+      display: inline-block; padding: 0.1rem 0.45rem; border-radius: 4px;
+      font-size: 0.65rem; font-weight: 600; letter-spacing: 0.03em;
+      background: rgba(153,71,235,0.08); color: var(--primary);
+      border: 1px solid rgba(153,71,235,0.2);
+    }
+    @media (max-width: 768px) {
+      .stride-grid { grid-template-columns: repeat(3, 1fr); }
+    }
+    @media (max-width: 480px) {
+      .stride-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* Tables */
+    table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+    thead th {
+      background: var(--primary); color: #ffffff;
+      padding: 0.65rem 0.75rem; text-align: left;
+      font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.03em;
+    }
+    tbody td { padding: 0.6rem 0.75rem; border-bottom: 1px solid var(--border-light); }
+    tbody tr:nth-child(even) { background: var(--bg-secondary); }
+    tbody tr:hover { background: var(--card-hover); }
+
+    /* Badges */
+    .badge {
+      display: inline-block; padding: 0.2rem 0.65rem; border-radius: 999px;
+      font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+      letter-spacing: 0.03em; vertical-align: middle;
+    }
+    .badge-critical { background: rgba(220,53,69,0.12); color: var(--critical); }
+    .badge-important { background: rgba(207,148,12,0.12); color: var(--medium); }
+    .badge-nice { background: rgba(0,170,132,0.12); color: var(--low); }
+    .badge-info { background: rgba(25,137,249,0.12); color: var(--info); }
+
+    /* Diagrams */
+    .diagram-container {
+      background: var(--diagram-bg); border: 1px solid var(--border); border-radius: var(--radius);
+      padding: 1.5rem 2rem; margin: 1.25rem 0; text-align: center;
+      overflow-x: auto; cursor: pointer; position: relative; transition: box-shadow 0.2s ease;
+    }
+    .diagram-container:hover { box-shadow: var(--shadow-md); }
+    .diagram-container h4 { text-align: left; margin-bottom: 0.75rem; }
+    .diagram-container .zoom-hint {
+      position: absolute; top: 0.75rem; right: 0.75rem; font-size: 0.7rem;
+      color: var(--text-light); background: var(--border-light);
+      padding: 0.2rem 0.5rem; border-radius: 4px; opacity: 0; transition: opacity 0.2s ease;
+    }
+    .diagram-container:hover .zoom-hint { opacity: 1; }
+    pre.mermaid { background: var(--diagram-bg) !important; color: var(--diagram-text) !important; border: none !important; padding: 0.75rem; margin: 0.5rem 0; }
+    .mermaid svg { max-width: 100%; height: auto; min-height: 300px; background: var(--diagram-bg); }
+    .diagram-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.85); z-index: 9999;
+      justify-content: center; align-items: center; padding: 2rem; cursor: zoom-out;
+    }
+    .diagram-overlay.active { display: flex; }
+    .diagram-overlay-content {
+      background: var(--card); border-radius: 12px; padding: 2rem;
+      max-width: 95vw; max-height: 90vh; overflow: auto; position: relative;
+    }
+    .diagram-overlay-content svg { max-width: none; width: 100%; height: auto; min-height: 500px; }
+    .diagram-overlay-close {
+      position: absolute; top: 0.75rem; right: 1rem; font-size: 1.5rem;
+      color: var(--text-light); cursor: pointer; background: none; border: none; line-height: 1;
+    }
+    .diagram-overlay-close:hover { color: var(--text); }
+
+    /* Risk score ring */
+    .risk-score-container {
+      display: flex; align-items: center; justify-content: center;
+      gap: 3rem; padding: 2rem;
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); margin-bottom: 1.5rem;
+    }
+    .score-ring { position: relative; width: 180px; height: 180px; }
+    .score-ring svg { transform: rotate(-90deg); }
+    .score-ring circle { fill: none; stroke-width: 12; }
+    .score-ring .bg { stroke: var(--border); }
+    .score-ring .progress { stroke-linecap: round; transition: stroke-dashoffset 0.5s ease; }
+    .score-ring .value {
+      position: absolute; top: 50%; left: 50%;
+      transform: translate(-50%, -50%); text-align: center;
+    }
+    .score-ring .percentage { font-size: 2.5rem; font-weight: 700; }
+    .score-ring .label { color: var(--text-light); font-size: 0.875rem; }
+    .score-info-tip {
+      text-align: center; margin-top: 0.75rem; font-size: 0.8rem; color: var(--text-light);
+    }
+    .score-info-tip summary {
+      cursor: pointer; display: inline-flex; align-items: center; gap: 0.35rem;
+      font-weight: 500; color: var(--text-light); user-select: none;
+    }
+    .score-info-tip summary:hover { color: var(--text); }
+    .score-info-tip .tip-content {
+      margin-top: 0.5rem; padding: 0.75rem 1rem; background: var(--bg-secondary);
+      border: 1px solid var(--border); border-radius: var(--radius); text-align: left;
+      display: inline-block; max-width: 520px;
+    }
+    .score-info-tip .tip-content code {
+      background: var(--border-light); padding: 0.15rem 0.35rem; border-radius: 3px;
+      font-size: 0.78rem;
+    }
+    .score-info-tip .tip-content table { margin-top: 0.5rem; font-size: 0.78rem; }
+    .score-info-tip .tip-content td { padding: 0.2rem 0.6rem; }
+
+    /* Severity cards */
+    .severity-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 1rem; margin-bottom: 1.5rem;
+    }
+    .severity-card {
+      background: var(--card); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.5rem; text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+    .severity-card .count { font-size: 2.5rem; font-weight: 700; }
+    .severity-card .sev-label { color: var(--text-light); font-size: 0.8rem; margin-top: 0.25rem; }
+    .severity-card.critical .count { color: var(--critical); }
+    .severity-card.high .count { color: var(--high); }
+    .severity-card.medium .count { color: var(--medium); }
+    .severity-card.low .count { color: var(--low); }
+
+    /* Category breakdown */
+    .category-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 0.75rem; margin-bottom: 1.5rem;
+    }
+    .category-card {
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1rem; text-align: center;
+    }
+    .category-card .cat-icon { font-size: 1.5rem; margin-bottom: 0.25rem; }
+    .category-card .cat-name { font-size: 0.8rem; font-weight: 600; }
+    .category-card .cat-count { font-size: 1.75rem; font-weight: 700; color: var(--primary); margin: 0.25rem 0; }
+    .category-card .cat-breakdown { font-size: 0.7rem; color: var(--text-light); }
+
+    .attack-complexity {
+      display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px;
+      font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+      letter-spacing: 0.04em; vertical-align: middle;
+    }
+    .ac-none { background: rgba(220,53,69,0.12); color: var(--critical); }
+    .ac-low { background: rgba(207,148,12,0.12); color: var(--medium); }
+    .ac-medium { background: rgba(25,137,249,0.12); color: var(--info); }
+    .ac-high { background: rgba(0,170,132,0.12); color: var(--success); }
+
+    /* Sprint / remediation */
+    .sprint-card {
+      border: 2px solid var(--success); border-radius: var(--radius); padding: 1.5rem;
+      margin: 1rem 0; background: var(--bg-secondary);
+    }
+    .sprint-card h4 { color: var(--success); margin-top: 0; }
+    .sprint-card .sprint-meta {
+      font-size: 0.85rem; color: var(--text-light); margin-bottom: 1rem;
+      padding-bottom: 0.75rem; border-bottom: 1px solid var(--border-light);
+    }
+    .sprint-card .pr-description {
+      background: var(--code-bg); color: var(--code-text); padding: 1rem; border-radius: var(--radius);
+      font-family: 'SF Mono', 'Fira Code', Menlo, monospace; font-size: 0.8rem;
+      white-space: pre-wrap; margin-top: 1rem;
+    }
+    .inaction-cost {
+      background: var(--bg-secondary); border-left: 3px solid var(--danger); padding: 0.75rem 1rem;
+      margin: 0.5rem 0; border-radius: 0 var(--radius) var(--radius) 0; font-size: 0.9rem;
+    }
+    .inaction-cost strong { color: var(--danger); }
+    .decision-card {
+      border: 2px solid var(--primary); border-radius: var(--radius); padding: 1.5rem;
+      margin: 1rem 0; background: var(--bg-secondary);
+    }
+    .decision-card h4 { color: var(--primary); margin-top: 0; }
+    .option-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 1rem 0; }
+    .option-card {
+      border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem;
+      background: var(--card);
+    }
+    .option-card h5 { font-size: 0.9rem; margin-bottom: 0.5rem; }
+    .risk-indicator {
+      display: inline-block; width: 12px; height: 12px; border-radius: 50%;
+      margin-right: 0.4rem; vertical-align: middle;
+    }
+    .risk-critical { background: var(--danger); }
+    .risk-high { background: var(--warning); }
+    .risk-medium { background: var(--info); }
+    .risk-low { background: var(--success); }
+
+    /* Collapsible */
+    details { margin: 0.5rem 0; border: 1px solid var(--border-light); border-radius: var(--radius); }
+    details summary {
+      cursor: pointer; font-weight: 600; font-size: 0.95rem; padding: 0.65rem 1rem;
+      background: var(--bg-secondary); border-radius: var(--radius); list-style: none;
+    }
+    details summary::-webkit-details-marker { display: none; }
+    details summary::before { content: "\25B6\FE0E  "; font-size: 0.7rem; margin-right: 0.4rem; }
+    details[open] summary::before { content: "\25BC\FE0E  "; }
+    details[open] summary { border-bottom: 1px solid var(--border-light); border-radius: var(--radius) var(--radius) 0 0; }
+    details > div, details > p, details > ul, details > table { padding: 1rem; }
+
+    /* Code */
+    code {
+      background: var(--border-light); padding: 0.15rem 0.4rem; border-radius: 4px;
+      font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace; font-size: 0.85em;
+    }
+    pre {
+      background: var(--code-bg); color: var(--code-text); padding: 1rem 1.25rem;
+      border-radius: var(--radius); overflow-x: auto;
+      font-family: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+      font-size: 0.85rem; line-height: 1.5;
+    }
+    pre:not(.mermaid) { border: 1px solid var(--border); }
+
+    /* Footer */
+    .footer {
+      text-align: center; padding: 2rem 1rem; color: var(--text-light);
+      font-size: 0.8rem; border-top: 1px solid var(--border); margin-top: 1rem;
+    }
+    .footer-logo { margin-bottom: 0.5rem; }
+    .footer-logo img { height: 24px; width: auto; }
+    .footer-logo .logo-light { display: inline; }
+    .footer-logo .logo-dark { display: none; }
+    [data-theme="dark"] .footer-logo .logo-light { display: none; }
+    [data-theme="dark"] .footer-logo .logo-dark { display: inline; }
+
+    @media print {
+      .sidebar, .sidebar-toggle, .sidebar-overlay { display: none !important; }
+      .page-wrapper { display: block !important; }
+      body { background: white; }
+      .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .section { break-inside: avoid; box-shadow: none; }
+      .no-print { display: none !important; }
+    }
+    @media (max-width: 900px) {
+      .sidebar { position: fixed; top: 0; left: 0; height: 100vh; transform: translateX(-100%); box-shadow: var(--shadow-md); }
+      .sidebar.open { transform: translateX(0); }
+      .sidebar-toggle { display: flex; }
+      .sidebar-overlay.open { display: block; }
+      .page-wrapper { display: block; }
+      .container { padding: 1rem; }
+      .section { padding: 1.25rem; }
+      .option-grid { grid-template-columns: 1fr; }
+      .severity-grid { grid-template-columns: repeat(2, 1fr); }
+      table { font-size: 0.8rem; }
+      h1 { font-size: 1.4rem; }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header (full-width, above sidebar) -->
+  <div class="header">
+    <div class="header-content">
+      <div class="header-logo">
+        <img src="https://agent.opsera.ai/opsera_logo_white_horizontal.png" alt="Opsera">
+      </div>
+      <div class="header-text">
+        <h1>Architecture Report</h1>
+        <div class="meta">Project: Niyetsen | Generated: 2026-09-06 | Opsera DevOps Agent</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile toggle -->
+  <button class="sidebar-toggle" id="sidebarToggle" aria-label="Toggle navigation">
+    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/>
+    </svg>
+  </button>
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <div class="page-wrapper">
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+      <div class="sidebar-nav" id="sidebarNav">
+        <a class="sidebar-link" href="#executive-summary">Executive Summary</a>
+
+        <div class="sidebar-group-label">Architecture at a Glance</div>
+        <a class="sidebar-link sub" href="#architecture-diagrams">Architecture Diagrams</a>
+        <a class="sidebar-link sub" href="#tech-stack">Technology Stack</a>
+        <a class="sidebar-link sub" href="#quantitative">Quantitative Profile</a>
+
+        <div class="sidebar-group-label">What Works Well</div>
+        <a class="sidebar-link sub" href="#strengths">Strengths</a>
+
+        <div class="sidebar-group-label">Risk Landscape</div>
+        <a class="sidebar-link sub" href="#risk-score">Risk Score &amp; Severity</a>
+        <a class="sidebar-link sub" href="#category-breakdown">Issues by Category</a>
+        <a class="sidebar-link sub" href="#stride-threat-model">STRIDE Threat Model</a>
+        <a class="sidebar-link sub" href="#findings-basic">Basic Issues</a>
+        <a class="sidebar-link sub" href="#findings-advanced">Advanced Issues</a>
+
+        <div class="sidebar-group-label">Deep Insights</div>
+        <a class="sidebar-link sub" href="#config-contradictions">Config Contradictions</a>
+        <a class="sidebar-link sub" href="#stress-projection">Stress Projection</a>
+        <a class="sidebar-link sub" href="#implicit-contracts">Implicit Contracts</a>
+        <a class="sidebar-link sub" href="#behavioral-coupling">Behavioral Coupling</a>
+        <a class="sidebar-link sub" href="#dead-paths">Dead Paths</a>
+
+        <div class="sidebar-group-label">Remediation Roadmap</div>
+        <a class="sidebar-link sub" href="#quick-wins">Quick Wins</a>
+        <a class="sidebar-link sub" href="#fix-this-sprint">Fix This Sprint</a>
+        <a class="sidebar-link sub" href="#plan-next-quarter">Plan Next Quarter</a>
+        <a class="sidebar-link sub" href="#decisions">Decisions</a>
+        <a class="sidebar-link sub" href="#risk-mitigations">Risk Mitigations</a>
+      </div>
+      <div class="sidebar-footer">
+        <button class="sidebar-theme-btn" onclick="toggleTheme()" aria-label="Toggle theme">
+          <svg class="sun" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m8.66-13.66l-.71.71M4.05 19.95l-.71.71M21 12h-1M4 12H3m16.66 7.66l-.71-.71M4.05 4.05l-.71-.71M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+          <svg class="moon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.005 9.005 0 0012 21a9.005 9.005 0 008.354-5.646z"/>
+          </svg>
+        </button>
+        <span class="sidebar-theme-label">Toggle theme</span>
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="page-main">
+      <div class="container">
+
+      <!-- Executive Summary -->
+      <div class="section" id="executive-summary">
+        <h2>Executive Summary</h2>
+        <p>Niyetsen is a FastAPI + Expo monorepo: 53 JWT-protected API routes on Railway, Supabase Postgres, Gemini 3.1 for chat/plan/proof, RevenueCat IAP only. Auth gates are real (JWKS, prod locks, email-claim allowlist). The user-visible hole was not login crypto — it was the <strong>entry / billing UX</strong>: Settings opened an empty RevenueCat Customer Center (“Abonelik bulunamadı”) instead of the İlkbahar <code>paywall.tsx</code>.</p>
+        <p>This session patched that path and rebuilt the login screen to match İlkbahar. Remaining launch risk is Gemini preview quota (~250/day) and an offline subscription default that grants local premium. Combined risk score: <strong>53 — High Risk</strong> (0 critical, 3 high, 5 medium, 2 low).</p>
+      </div>
+
+      <!-- SECTION 1: Architecture at a Glance -->
+      <div class="section-divider" id="section1">Architecture at a Glance</div>
+      <div class="section" id="architecture-diagrams">
+        <h2>Architecture Diagrams</h2>
+        <p>Click any diagram to zoom in. Edge labels are from live config (2026-09-06).</p>
+        <div class="diagram-container">
+          <h4>1. System Architecture Overview</h4>
+          <pre class="mermaid">graph TB
+            subgraph Client["Client Expo 54 / RN 0.81.5"]
+              AuthScreen[auth-screen.tsx]
+              Tabs["tabs chat/today/plan/chain/profile"]
+              Paywall[paywall.tsx]
+            end
+            subgraph App["Railway FastAPI 1.1.1"]
+              Routes["routes.py 53 endpoints"]
+              JWT["get_current_user JWKS"]
+              Services["intent/plan/proof/subscription"]
+            end
+            subgraph Ext["External"]
+              Supa[(Supabase Postgres+Auth)]
+              Gemini["Gemini 3.1-pro 30s/90s/45s"]
+              RC[RevenueCat IAP]
+            end
+            AuthScreen -->|"Bearer JWT"| JWT
+            Tabs -->|"chat 10/min"| Routes
+            Paywall -->|"purchase + webhook"| RC
+            JWT --> Services
+            Services -->|"timeout 120s"| Supa
+            Services -->|"retries 3"| Gemini
+            RC -->|"REVENUECAT_WEBHOOK_SECRET"| Routes</pre>
+        </div>
+        <div class="diagram-container">
+          <h4>2. Auth / Security Enforcement Map</h4>
+          <pre class="mermaid">graph TD
+            Health["/health open 1"] --> OK[200 version+model]
+            Other["52 other routes"] --> JWT{Bearer JWKS RS256/ES256}
+            JWT -->|"valid email claim"| Allow[dev_accounts allowlist]
+            JWT -->|"missing/invalid"| E401[401]
+            Mobile["Expo _layout.tsx"] --> Sess{session?}
+            Sess -->|"no / recovery"| AuthUI[AuthScreen]
+            Sess -->|"yes"| Onb{onboarding_complete?}
+            Onb -->|"no"| Onboard[OnboardingScreen]
+            Onb -->|"yes"| Cons[ConsentGate + SubscriptionGate]
+            classDef ok fill:#e6f7f2,stroke:#00AA84
+            classDef bad fill:#fde8ea,stroke:#dc3545
+            class OK,Allow,AuthUI,Cons ok
+            class E401 bad</pre>
+        </div>
+        <div class="diagram-container">
+          <h4>3. Data / State Flow</h4>
+          <pre class="mermaid">graph TB
+            AuthP[AuthProvider] -->|"session"| ProfileP[ProfileProvider]
+            ProfileP -->|"profile"| SubP[SubscriptionProvider]
+            SubP -->|"boot-cache + /me/subscription"| Status[SubscriptionInfo]
+            Status -->|"show_paywall"| Pay[paywall.tsx]
+            Status -->|"hasStoreEntitlement false"| Pay
+            Status -->|"store entitlement"| CC[Customer Center]
+            Chat[index.tsx] -->|"ChatTimeoutMs 75s"| API["lib/api.ts"]
+            Daily[daily.tsx] -->|"boot then extend"| API
+            API -->|"Bearer"| Routes</pre>
+        </div>
+        <div class="diagram-container">
+          <h4>4. Failure Mode Map</h4>
+          <pre class="mermaid">graph TD
+            subgraph Fail["What dies"]
+              G[Gemini quota/key]
+              R[Railway API]
+              S[Supabase]
+              RC2[RevenueCat catalog empty]
+            end
+            subgraph Effect["Blast radius"]
+              G --> Chat500["chat/plan/proof 500"]
+              R --> AppDown[all tabs fail]
+              S --> AuthLoad[Auth + profile spinner]
+              RC2 --> OldUI["was empty CC — now /paywall"]
+            end
+            G -.->|"fallback 2.5 after 3 retries"| Degrade[still 500 if both down]
+            S -.->|"DEFAULT_SUBSCRIPTION"| LocalPro[local premium grant]</pre>
+        </div>
+        <div class="diagram-container">
+          <h4>5. Security Defense-in-Depth</h4>
+          <pre class="mermaid">graph TB
+            P[Perimeter HTTPS + HSTS prod] --> N[Network CORS list / native no CORS]
+            N --> A[App 10MB body + nosniff]
+            A --> Auth[JWKS JWT audience authenticated]
+            Auth --> Az[email-claim allowlist not user_metadata]
+            Az --> D[(service_role bypasses RLS — server only)]
+            D --> M[Sentry + sanitized 500]
+            classDef ok fill:#e6f7f2,stroke:#00AA84
+            class P,N,A,Auth,Az,D,M ok</pre>
+        </div>
+        <div class="diagram-container">
+          <h4>6. CI/CD &amp; Deployment</h4>
+          <pre class="mermaid">graph LR
+            Git["GitHub sahincelebiq/Niyetsen"] -->|"push main"| RW[Railway api + cron]
+            GitM["Niyetsen-mobile"] -->|"EAS"| Store[Play AAB / TestFlight]
+            RW -->|"pytest ~40 files"| Gate[manual KAPI]
+            Store -->|"RevenueCat products"| IAP[IAP catalog]
+            Gate -->|"no auto migrate"| SQL[Sahin SQL Editor VERIFY]</pre>
+        </div>
+        <div class="diagram-container">
+          <h4>7. Request Lifecycle</h4>
+          <pre class="mermaid">sequenceDiagram
+            participant U as User
+            participant M as Expo
+            participant J as get_current_user
+            participant S as Service
+            participant DB as Supabase 120s
+            participant G as Gemini 30/90/45s
+            U->>M: action
+            M->>J: Authorization Bearer
+            J->>J: JWKS RS256/ES256
+            J->>S: user_id
+            S->>DB: query
+            S->>G: generate
+            G-->>M: JSON or 500
+            Note over M: ChatTimeoutMs 75s / Proof 90s</pre>
+        </div>
+        <div class="diagram-container">
+          <h4>8. Module Dependency Graph</h4>
+          <pre class="mermaid">graph TD
+            Routes["routes.py 1558 LOC"] --> Intent
+            Routes --> Plan
+            Routes --> Proof
+            Routes --> Sub[subscription_service]
+            Routes --> Repo["supabase_repository 1280 LOC"]
+            MobileAPI["mobile lib/api.ts 969 LOC"] --> Routes
+            Settings["settings.tsx 922"] --> MobileAPI
+            Settings --> Purchases
+            AuthUI[auth-screen] --> AuthProv
+            Daily["daily.tsx 947"] --> MobileAPI</pre>
+        </div>
+      </div>
+      <div class="section" id="tech-stack">
+        <h2>Technology Stack</h2>
+        <table>
+          <thead><tr><th>Component</th><th>Version / note</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr><td>FastAPI</td><td>Python 3.11+</td><td>niyetsen-backend/README_BACKEND.md</td></tr>
+            <tr><td>Expo / RN</td><td>Expo 54 / RN 0.81.5</td><td>mobile/package.json</td></tr>
+            <tr><td>TypeScript</td><td>~5.9.2</td><td>mobile/package.json</td></tr>
+            <tr><td>Supabase</td><td>Postgres + Auth + Storage</td><td>supabase_repository.py</td></tr>
+            <tr><td>Gemini</td><td>3.1-pro-preview, fallback 2.5</td><td>config.py:33-44</td></tr>
+            <tr><td>RevenueCat</td><td>RN Purchases 10.4 / UI 10.6</td><td>mobile/package.json</td></tr>
+            <tr><td>Railway</td><td>api + cron toml</td><td>railway.toml / railway.cron.toml</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="section" id="quantitative">
+        <h2>Quantitative Profile</h2>
+        <table>
+          <thead><tr><th>Metric</th><th>Value</th><th>Source</th></tr></thead>
+          <tbody>
+            <tr><td>Total Files</td><td>1047 (ex node_modules/.venv)</td><td>find</td></tr>
+            <tr><td>Total Directories</td><td>139</td><td>find</td></tr>
+            <tr><td>Routes / Endpoints</td><td>53</td><td>routes.py @router</td></tr>
+            <tr><td>Auth Coverage</td><td>52/53 JWT (98%) — /health open</td><td>get_current_user</td></tr>
+            <tr><td>Error Boundaries</td><td>1 global FastAPI + mobile ErrorBanner</td><td>main.py / error-banner.tsx</td></tr>
+            <tr><td>Test Files</td><td>40 pytest</td><td>niyetsen-backend/tests/</td></tr>
+            <tr><td>HTTP Timeout</td><td>Gemini 30s / plan 90s / proof 45s</td><td>config.py:45-48</td></tr>
+            <tr><td>DB Pool Size</td><td>Supabase client timeout 120s</td><td>config.py:76</td></tr>
+            <tr><td>Cache TTL</td><td>boot-cache subscription (session)</td><td>boot-cache.ts</td></tr>
+            <tr><td>Rate Limit</td><td>chat 10/min, proof 12/min</td><td>config.py:99-100</td></tr>
+            <tr><td>Top Coupling Hotspot</td><td>routes.py (all HTTP) / api.ts</td><td>import analysis</td></tr>
+            <tr><td>God file</td><td>routes.py 1558 LOC</td><td>wc -l</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- SECTION 2: What Works Well -->
+      <div class="section-divider" id="section2">What Works Well</div>
+      <div class="section" id="strengths">
+        <h2>What Works Well</h2>
+        <div class="strength-card">
+          <h4>Prod cannot boot with auth or DB disabled</h4>
+          <p><code>main.py:23-46</code> hard-fails if <code>ENV=prod</code> and <code>AUTH_DISABLED</code>, in-memory DB, empty <code>CRON_SECRET</code>, or empty RevenueCat webhook secret. This is a real launch lock, not a comment.</p>
+        </div>
+        <div class="strength-card">
+          <h4>JWT allowlist ignores user_metadata.email</h4>
+          <p><code>routes.py:187-190</code> + <code>dev_accounts.py</code> only trust the signed email claim. Testers cannot self-promote via metadata.</p>
+        </div>
+        <div class="strength-card">
+          <h4>40 pytest files, scoring engine is pure</h4>
+          <p>Game rules live in <code>scoring_service.py</code> without HTTP/AI. Tests force <code>USE_SUPABASE_DB=false</code>. Chat is free; premium is server 402.</p>
+        </div>
+        <div class="strength-card">
+          <h4>IAP-only paywall does not invent prices</h4>
+          <p><code>paywall.tsx</code> waits for store strings; App Store 3.1.2 / Play honesty is coded, not documented only.</p>
+        </div>
+      </div>
+
+      <!-- SECTION 3: Risk Landscape -->
+      <div class="section-divider" id="section3">Risk Landscape</div>
+
+      <!-- Risk Score & Severity Breakdown -->
+      <div class="section" id="risk-score">
+        <h2>Risk Score &amp; Severity Breakdown</h2>
+        <div class="risk-score-container">
+          <div class="score-ring">
+            <svg width="180" height="180">
+              <circle class="bg" cx="90" cy="90" r="78"/>
+              <circle class="progress" cx="90" cy="90" r="78"
+                      stroke="#c05621"
+                      stroke-dasharray="490"
+                      stroke-dashoffset="230"/>
+            </svg>
+            <div class="value">
+              <div class="percentage" style="color: #c05621;">53</div>
+              <div class="label" style="color: #c05621; font-weight: 600;">High Risk</div>
+            </div>
+          </div>
+        </div>
+        <div class="severity-grid">
+          <div class="severity-card critical">
+            <div class="count">0</div>
+            <div class="sev-label">Critical</div>
+          </div>
+          <div class="severity-card high">
+            <div class="count">3</div>
+            <div class="sev-label">High</div>
+          </div>
+          <div class="severity-card medium">
+            <div class="count">5</div>
+            <div class="sev-label">Medium</div>
+          </div>
+          <div class="severity-card low">
+            <div class="count">2</div>
+            <div class="sev-label">Low</div>
+          </div>
+        </div>
+        <div class="score-info-tip">
+          <details>
+            <summary>&#9432; How is this score calculated?</summary>
+            <div class="tip-content">
+              <p style="margin:0 0 0.4rem;"><strong>Formula:</strong> <code>min(100, round(log&#8321;&#8320;(C&#215;100 + H&#215;30 + M&#215;10 + L&#215;3 + 1) &#215; 25))</code></p>
+              <p style="margin:0 0 0.4rem;">Logarithmic scaling — the first critical finding has high impact, each additional one adds progressively less.</p>
+              <table>
+                <tr><td><strong>0</strong></td><td>No Risk</td></tr>
+                <tr><td><strong>1 – 25</strong></td><td>Low Risk</td></tr>
+                <tr><td><strong>26 – 50</strong></td><td>Moderate Risk</td></tr>
+                <tr><td><strong>51 – 75</strong></td><td>High Risk</td></tr>
+                <tr><td><strong>76 – 100</strong></td><td>Critical Risk</td></tr>
+              </table>
+            </div>
+          </details>
+        </div>
+      </div>
+
+      <!-- Category Breakdown -->
+      <div class="section" id="category-breakdown">
+        <h2>Issues by Category</h2>
+        <div class="category-grid">
+          <div class="category-card">
+            <div class="cat-icon">💥</div>
+            <div class="cat-name">Failure Cascades</div>
+            <div class="cat-count">1</div>
+            <div class="cat-breakdown">0 C · 1 H · 0 M · 0 L</div>
+          </div>
+          <div class="category-card">
+            <div class="cat-icon">🔄</div>
+            <div class="cat-name">State Incoherence</div>
+            <div class="cat-count">2</div>
+            <div class="cat-breakdown">0 C · 1 H · 1 M · 0 L</div>
+          </div>
+          <div class="category-card">
+            <div class="cat-icon">🔐</div>
+            <div class="cat-name">Authentication Gaps</div>
+            <div class="cat-count">1</div>
+            <div class="cat-breakdown">0 C · 0 H · 1 M · 0 L</div>
+          </div>
+          <div class="category-card">
+            <div class="cat-icon">⚙️</div>
+            <div class="cat-name">Operability</div>
+            <div class="cat-count">2</div>
+            <div class="cat-breakdown">0 C · 0 H · 2 M · 0 L</div>
+          </div>
+          <div class="category-card">
+            <div class="cat-icon">🔗</div>
+            <div class="cat-name">Coupling Traps</div>
+            <div class="cat-count">1</div>
+            <div class="cat-breakdown">0 C · 0 H · 1 M · 0 L</div>
+          </div>
+          <div class="category-card">
+            <div class="cat-icon">🔧</div>
+            <div class="cat-name">Maintainability</div>
+            <div class="cat-count">2</div>
+            <div class="cat-breakdown">0 C · 0 H · 1 M · 1 L</div>
+          </div>
+          <div class="category-card">
+            <div class="cat-icon">🛡️</div>
+            <div class="cat-name">Security Surface</div>
+            <div class="cat-count">1</div>
+            <div class="cat-breakdown">0 C · 1 H · 0 M · 0 L</div>
+          </div>
+        </div>
+        <p>Formula: <code>min(100, round(log10(0×100 + 3×30 + 5×10 + 2×3 + 1) × 25))</code> = <code>min(100, round(log10(137)×25))</code> = <strong>53</strong>.</p>
+      </div>
+
+      <!-- STRIDE Threat Model -->
+      <div class="section" id="stride-threat-model">
+        <h2>STRIDE Threat Model</h2>
+        <p style="font-size:0.9rem;color:var(--text-light);margin-bottom:1.25rem;">Threats classified using Microsoft's STRIDE framework — Spoofing, Tampering, Repudiation, Information Disclosure, Denial of Service, Elevation of Privilege.</p>
+        <div class="stride-grid">
+          <div class="stride-card spoofing">
+            <div class="stride-icon">S</div>
+            <div class="stride-name">Spoofing</div>
+            <div class="stride-count">2</div>
+            <div class="stride-desc">Authentication threats</div>
+          </div>
+          <div class="stride-card tampering">
+            <div class="stride-icon">T</div>
+            <div class="stride-name">Tampering</div>
+            <div class="stride-count">1</div>
+            <div class="stride-desc">Integrity threats</div>
+          </div>
+          <div class="stride-card repudiation">
+            <div class="stride-icon">R</div>
+            <div class="stride-name">Repudiation</div>
+            <div class="stride-count">1</div>
+            <div class="stride-desc">Non-repudiation threats</div>
+          </div>
+          <div class="stride-card info-disclosure">
+            <div class="stride-icon">I</div>
+            <div class="stride-name">Information Disclosure</div>
+            <div class="stride-count">1</div>
+            <div class="stride-desc">Confidentiality threats</div>
+          </div>
+          <div class="stride-card denial-of-service">
+            <div class="stride-icon">D</div>
+            <div class="stride-name">Denial of Service</div>
+            <div class="stride-count">2</div>
+            <div class="stride-desc">Availability threats</div>
+          </div>
+          <div class="stride-card elevation">
+            <div class="stride-icon">E</div>
+            <div class="stride-name">Elevation of Privilege</div>
+            <div class="stride-count">2</div>
+            <div class="stride-desc">Authorization threats</div>
+          </div>
+        </div>
+        <div class="diagram-container">
+          <h4>Trust Boundary &amp; Data Flow Diagram</h4>
+          <pre class="mermaid">graph TB
+            subgraph External["External"]
+              Phone[Expo app]
+              Play[Play / App Store]
+            end
+            subgraph AppZone["Application Railway"]
+              API[FastAPI JWKS]
+              Svc[services]
+            end
+            subgraph Data["Data"]
+              SB[(Supabase service_role)]
+            end
+            Phone -->|"HTTPS Bearer JWT"| API
+            Play -->|"RC webhook secret"| API
+            API -->|"user_id"| Svc
+            Svc -->|"120s"| SB</pre>
+        </div>
+        <details class="stride-detail" open>
+          <summary>S — Spoofing (2 threats)</summary>
+          <div>
+            <div class="stride-threat">
+              <div class="threat-asset">Asset: AUTH_DISABLED + X-User-Id</div>
+              <div class="threat-title">Dev header identity if ENV leftover as dev</div>
+              <p>Prod lock prevents boot; a mis-set ENV=dev on Railway would accept X-User-Id.</p>
+              <div class="threat-controls">
+                <span class="severity severity-high">high</span>
+                <span class="countermeasure-badge">Existing: main.py ENV=prod lock</span>
+                <span class="countermeasure-badge">Recommended: alert if AUTH_DISABLED true in Railway</span>
+              </div>
+            </div>
+          </div>
+        </details>
+        <details class="stride-detail">
+          <summary>D — Denial of Service (2 threats)</summary>
+          <div>
+            <div class="stride-threat">
+              <div class="threat-asset">Asset: Gemini 3.1 preview</div>
+              <div class="threat-title">~250 req/day hard cap</div>
+              <p>Any closed-test traffic spike exhausts chat/plan/proof.</p>
+              <div class="threat-controls">
+                <span class="severity severity-high">high</span>
+                <span class="countermeasure-badge">Existing: 3 retries + 2.5 fallback</span>
+                <span class="countermeasure-badge">Recommended: paid Gemini quota</span>
+              </div>
+            </div>
+          </div>
+        </details>
+        <details class="stride-detail">
+          <summary>E — Elevation of Privilege (2 threats)</summary>
+          <div>
+            <div class="stride-threat">
+              <div class="threat-asset">Asset: DEFAULT_SUBSCRIPTION</div>
+              <div class="threat-title">Offline first-fail grants local premium</div>
+              <p>Server still 402s writes; UI looks PRO. FAZ 8.11.0 choice.</p>
+              <div class="threat-controls">
+                <span class="severity severity-medium">medium</span>
+                <span class="countermeasure-badge">Existing: boot-cache if prior status exists</span>
+                <span class="countermeasure-badge">Recommended: default has_premium_access false</span>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
+
+      <div class="section" id="findings-basic">
+        <h2>Basic Issues</h2>
+        <table>
+          <thead><tr><th>ID</th><th>Title</th><th>File</th><th>Complexity</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>B1</td><td>Customer Center empty catalog</td><td>settings.tsx</td><td><span class="attack-complexity ac-none">none</span></td><td>Fixed this session — hasStoreEntitlement → /paywall</td></tr>
+            <tr><td>B2</td><td>League CTA 0.4 opacity</td><td>arkadaslar.tsx</td><td><span class="attack-complexity ac-none">none</span></td><td>Fixed — muted surface when alias &lt; 2</td></tr>
+            <tr><td>—</td><td>AUTH_DISABLED default true</td><td>config.py:69</td><td><span class="attack-complexity ac-high">high</span></td><td><span class="badge-noted">noted</span> prod lock holds</td></tr>
+          </tbody>
+        </table>
+        <pre>--- a/mobile/src/app/(tabs)/settings.tsx
++++ b/mobile/src/app/(tabs)/settings.tsx
+ const storeEntitled = await hasStoreEntitlement();
+ if (!storeEntitled) { router.push('/paywall'); return; }</pre>
+      </div>
+      <div class="section" id="findings-advanced">
+        <h2>Advanced Issues</h2>
+        <details open>
+          <summary>A2 Gemini SPOF <span class="badge-important">high</span> <span class="attack-complexity ac-none">none</span></summary>
+          <p>No circuit breaker. Preview ~250/day. Chat/plan/proof all die together.</p>
+          <pre>Add paid-tier quota + degrade greeting when model down</pre>
+        </details>
+        <details>
+          <summary>A1 Offline subscription grants premium <span class="badge-important">medium</span> <span class="attack-complexity ac-low">low</span></summary>
+          <p>api.ts:300 DEFAULT_SUBSCRIPTION.has_premium_access = true. Intentional FAZ 8.11.0 vs store honesty.</p>
+        </details>
+        <details>
+          <summary>A3 Proof timeout inversion <span class="badge-nice">medium</span> <span class="attack-complexity ac-none">none</span></summary>
+          <p>Client 90s vs server 45s — spinner after Gemini already failed.</p>
+        </details>
+        <details>
+          <summary>God modules <span class="badge-noted">noted</span></summary>
+          <p>routes.py 1558, supabase_repository 1280, api.ts 969 — review density, not an exploit.</p>
+        </details>
+      </div>
+
+      <!-- SECTION 4: Deep Insights -->
+      <div class="section-divider" id="section4">Deep Insights — Cross-Cutting Patterns Across the Codebase</div>
+      <div class="section" id="config-contradictions">
+        <h2>Configuration Contradictions</h2>
+        <div class="contradiction-card">
+          <h4>Proof timeout inversion</h4>
+          <div class="config-pair">
+            <div class="config-val">Client ProofTimeoutMs = 90s (mobile lib/api.ts)</div>
+            <div class="vs">VS</div>
+            <div class="config-val">GEMINI_PROOF_TIMEOUT_SEC = 45 (backend config.py)</div>
+          </div>
+          <p>User watches a spinner 45s after Gemini already failed. Same family: ChatTimeoutMs 75s vs GEMINI_CHAT_TIMEOUT_SEC 30s.</p>
+        </div>
+        <div class="contradiction-card">
+          <h4>Offline premium vs store honesty</h4>
+          <div class="config-pair">
+            <div class="config-val">DEFAULT_SUBSCRIPTION.has_premium_access = true (api.ts:300, FAZ 8.11.0)</div>
+            <div class="vs">VS</div>
+            <div class="config-val">Server 402 on plan/proof writes; Play IAP-only</div>
+          </div>
+          <p>First-fail / no cache looks PRO locally. Writes still fail. Store review can see unlocked UI without a purchase.</p>
+        </div>
+        <div class="contradiction-card">
+          <h4>Customer Center vs branded paywall</h4>
+          <div class="config-pair">
+            <div class="config-val">RevenueCatUI.presentCustomerCenter empty catalog → “Abonelik bulunamadı”</div>
+            <div class="vs">VS</div>
+            <div class="config-val">app/paywall.tsx İlkbahar restore + IAP</div>
+          </div>
+          <p>This session: settings routes to /paywall unless hasStoreEntitlement().</p>
+        </div>
+      </div>
+      <div class="section" id="stress-projection">
+        <h2>Stress Projection — What Breaks at Scale</h2>
+        <div class="stress-card">
+          <h4>Load Capacity Analysis</h4>
+          <div class="stress-tiers">
+            <div class="stress-tier current">Current<br/>Closed testers; Gemini preview ~250/day</div>
+            <div class="stress-tier warn">2x Load<br/>Preview quota first — chat/plan/proof 429/500</div>
+            <div class="stress-tier danger">5x Load<br/>Gemini + Railway CPU; no circuit breaker</div>
+            <div class="stress-tier critical">10x Load<br/>service_role 120s pool + cron overlap</div>
+            <div class="stress-tier catastrophic">100x Burst<br/>Rate limit 10 chat/min/user; Gemini dies first</div>
+            <div class="stress-tier scaling">Horizontal<br/>Blocked by paid Gemini + stateless API (OK) + SQL Editor migrations</div>
+          </div>
+        </div>
+      </div>
+      <div class="section" id="implicit-contracts">
+        <h2>Implicit Contracts — Hidden Assumptions</h2>
+        <div class="assumption-card">
+          <h4>plans.id is TEXT, not uuid</h4>
+          <p>MASTER_PLAN + chat_threads migration 42804. supabase_repository FK writers.</p>
+          <div class="scenario">"A developer adds plan_id uuid references plans(id) → migration fails 42804 because this unwritten TEXT rule"</div>
+        </div>
+        <div class="assumption-card">
+          <h4>Gemini 3 thinking_budget=0 is invalid</h4>
+          <p>gemini_client._build_config uses thinking_level=low; fallback rebuilds config.</p>
+          <div class="scenario">"A developer copies Gemini 2.5 thinking_budget=0 onto 3.1-pro → every chat 400 because the client contract is unwritten in the model docs the team remembers"</div>
+        </div>
+        <div class="assumption-card">
+          <h4>chat_threads degrade must never fail the chat</h4>
+          <p>thread ops are try/except. Demo outage if removed.</p>
+          <div class="scenario">"A developer lets thread insert raise → /chat 500 while Gemini succeeded because history is not on the critical path"</div>
+        </div>
+      </div>
+      <div class="section" id="behavioral-coupling">
+        <h2>Behavioral Coupling — Invisibly Connected Modules</h2>
+        <div class="coupling-card">
+          <h4>subscription_service ↔ mobile SubscriptionProvider</h4>
+          <p>status==active (not DB free) opens second plan. Dev/tester emails stay free in DB. Change either side and the 2nd-plan gate or paywall CTA desyncs.</p>
+        </div>
+        <div class="coupling-card">
+          <h4>RevenueCat webhook ↔ scoring / premium writes</h4>
+          <p>Webhook secret is prod-boot-required. Missed webhook + RC SDK delay = server 402 while store receipt is valid.</p>
+        </div>
+        <div class="coupling-card">
+          <h4>CLOSED_TEST_EMAILS env ↔ JWT email claim</h4>
+          <p>Empty env = no short-circuit. Metadata email ignored. Change allowlist source without touching JWT parser and testers lose access.</p>
+        </div>
+      </div>
+      <div class="section" id="dead-paths">
+        <h2>Dead Paths — Code That Can Never Run</h2>
+        <div class="dead-path-card">
+          <h4>AUTH_DISABLED + X-User-Id in prod</h4>
+          <p>main.py refuses boot. Path exists only if ENV leftover as dev. Keep; alert on Railway AUTH_DISABLED.</p>
+        </div>
+        <div class="dead-path-card">
+          <h4>Apple Sign-In button on Android</h4>
+          <p>AuthScreen now hides Apple when Platform.OS !== ios. Dead store path if re-shown.</p>
+        </div>
+        <div class="dead-path-card">
+          <h4>Leaderboard / regional league</h4>
+          <p>2026-09-06 lock: Grok sprint league/Realtime/unlimited AI paywall must not ship. Code stubs must stay dark.</p>
+        </div>
+      </div>
+
+      <!-- SECTION 5: Remediation Roadmap -->
+      <div class="section-divider" id="section5">Remediation Roadmap</div>
+      <div class="section" id="quick-wins">
+        <h2>Quick Wins — Fix Today</h2>
+        <div class="sprint-card">
+          <h4>Sprint: 3 fixes, ~40 minutes (done this session)</h4>
+          <div class="sprint-meta">AuthScreen İlkbahar, Customer Center → paywall, league CTA contrast. Estimated 40 minutes; shipped in mobile/.</div>
+          <pre>--- a/mobile/src/app/(tabs)/settings.tsx
++++ b/mobile/src/app/(tabs)/settings.tsx
+ const storeEntitled = await hasStoreEntitlement();
+-await presentCustomerCenter();
++if (!storeEntitled) { router.push('/paywall'); return; }
++await presentCustomerCenter();</pre>
+          <div class="pr-description">faz8-ui: giriş + boş Customer Center paywall’a düşer
+
+Settings “Aboneliği Yönet” no longer opens empty RC UI when Play products are unbound. Login matches İlkbahar tokens; league join CTA readable when disabled.</div>
+        </div>
+      </div>
+      <div class="section" id="fix-this-sprint">
+        <h2>Fix This Sprint</h2>
+        <ul>
+          <li>Paid Gemini quota before closed-test scale (P0, Şahin / Play).</li>
+          <li>Align ProofTimeoutMs with GEMINI_PROOF_TIMEOUT_SEC (or show server error at 45s).</li>
+          <li>Bugün: never full-screen spinner on needs_extension (card + “uzatılıyor”).</li>
+          <li>Do not change DEFAULT_SUBSCRIPTION without Şahin (D1).</li>
+        </ul>
+      </div>
+      <div class="section" id="plan-next-quarter">
+        <h2>Plan For Next Quarter</h2>
+        <ul>
+          <li>Split routes.py / supabase_repository / api.ts (bus factor + review).</li>
+          <li>Circuit breaker + degrade greeting when Gemini down.</li>
+          <li>Auto-apply migrations only after SQL Editor VERIFY remains the human gate.</li>
+        </ul>
+      </div>
+      <div class="section" id="decisions">
+        <h2>Decisions to Make</h2>
+        <div class="decision-card">
+          <h4>Decision: D1 — Offline first-fail grants local premium?</h4>
+          <p>DEFAULT_SUBSCRIPTION.has_premium_access = true is FAZ 8.11.0. UI looks PRO; writes 402.</p>
+          <div class="inaction-cost"><strong>Cost of inaction:</strong> Store review / first-open offline users see unlocked PRO chrome.</div>
+          <div class="option-grid">
+            <div class="option-card"><h5>A: Keep grant (current)</h5><p>Offline testers keep working. Risk: dishonest UI.</p></div>
+            <div class="option-card"><h5>B: Cache-last + default lock</h5><p>has_premium_access false until last known /me/subscription. Safer for Play.</p></div>
+          </div>
+          <p><strong>Recommendation:</strong> B before public Play; do not flip without Şahin.</p>
+        </div>
+        <div class="decision-card">
+          <h4>Decision: D2 — Paid Gemini before Play scale?</h4>
+          <p>Preview ~250/day. Closed testers already share one key.</p>
+          <div class="inaction-cost"><strong>Cost of inaction:</strong> Chat/plan/proof all 500 the same afternoon.</div>
+          <div class="option-grid">
+            <div class="option-card"><h5>A: Stay on preview</h5></div>
+            <div class="option-card"><h5>B: Paid tier now (recommended)</h5></div>
+          </div>
+          <p><strong>Recommendation:</strong> B. Model stays gemini-3.1-pro-preview; only billing changes.</p>
+        </div>
+      </div>
+      <div class="section" id="risk-mitigations">
+        <h2>Risk Mitigations</h2>
+        <table>
+          <thead><tr><th>Risk</th><th>Mitigation now</th><th>Owner</th></tr></thead>
+          <tbody>
+            <tr><td>Empty Customer Center</td><td>hasStoreEntitlement → /paywall</td><td>mobile — done</td></tr>
+            <tr><td>Gemini SPOF</td><td>3 retries + 2.5 fallback; paid quota pending</td><td>Şahin + Railway</td></tr>
+            <tr><td>JWT spoof via metadata</td><td>email claim only</td><td>backend — done</td></tr>
+            <tr><td>Offline premium grant</td><td>Await D1</td><td>Şahin</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <div class="footer">
+      <div class="footer-logo">
+        <img class="logo-light" src="https://agent.opsera.ai/opsera_logo_transparent.png" alt="Opsera">
+        <img class="logo-dark" src="https://agent.opsera.ai/opsera_logo_white_horizontal.png" alt="Opsera">
+      </div>
+      Generated by Opsera DevOps Agent | Architecture Analysis
+    </div>
+    </div>
+  </div>
+
+  <div class="diagram-overlay" id="diagramOverlay">
+    <div class="diagram-overlay-content" id="diagramOverlayContent">
+      <button class="diagram-overlay-close" id="diagramOverlayClose">&times;</button>
+    </div>
+  </div>
+
+  <script>
+    function toggleTheme() {
+      var html = document.documentElement;
+      var current = html.getAttribute('data-theme');
+      var next = current === 'dark' ? 'light' : 'dark';
+      html.setAttribute('data-theme', next);
+      try { localStorage.setItem('opsera-report-theme', next); } catch(e) {}
+      updateMermaidTheme(next);
+    }
+    function updateMermaidTheme(theme) {
+      if (typeof mermaid === 'undefined') return;
+      var isDark = theme === 'dark';
+      mermaid.initialize({
+        startOnLoad: false, theme: isDark ? 'dark' : 'neutral', securityLevel: 'loose',
+        flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis', padding: 20, nodeSpacing: 50, rankSpacing: 60 },
+        sequence: { useMaxWidth: false, actorMargin: 80, messageFontSize: 14, noteFontSize: 13, width: 200 },
+        er: { useMaxWidth: false, fontSize: 14 },
+        themeVariables: isDark ? {
+          fontSize: '15px', fontFamily: 'Inter, sans-serif',
+          background: '#1e2028', primaryColor: '#3b2e5a', primaryTextColor: '#e2e8f0',
+          primaryBorderColor: '#9947EB', secondaryColor: '#1a3a2a', secondaryTextColor: '#e2e8f0',
+          secondaryBorderColor: '#00AA84', tertiaryColor: '#3a3020', tertiaryTextColor: '#e2e8f0',
+          tertiaryBorderColor: '#CF940C', lineColor: '#8888aa', textColor: '#e2e8f0',
+          mainBkg: '#1e2028', nodeBorder: '#9947EB', clusterBkg: '#262830', clusterBorder: '#3e4050',
+          titleColor: '#e2e8f0',
+          actorBkg: '#3b2e5a', actorBorder: '#9947EB', actorTextColor: '#e2e8f0', actorLineColor: '#8888aa',
+          signalColor: '#8888aa', signalTextColor: '#e2e8f0',
+          noteBkgColor: '#3a3020', noteTextColor: '#e2e8f0', noteBorderColor: '#CF940C'
+        } : {
+          fontSize: '15px', fontFamily: 'Inter, sans-serif',
+          background: '#ffffff', primaryColor: '#ede5f7', primaryTextColor: '#3D3B36',
+          primaryBorderColor: '#9947EB', secondaryColor: '#e6f7f2', secondaryTextColor: '#3D3B36',
+          secondaryBorderColor: '#00AA84', tertiaryColor: '#fdf4e0', tertiaryTextColor: '#3D3B36',
+          tertiaryBorderColor: '#CF940C', lineColor: '#67788d', textColor: '#3D3B36',
+          mainBkg: '#ffffff', nodeBorder: '#9947EB', clusterBkg: '#F3F3F1', clusterBorder: '#E6E5E3',
+          titleColor: '#3D3B36',
+          actorBkg: '#ede5f7', actorBorder: '#9947EB', actorTextColor: '#3D3B36', actorLineColor: '#67788d',
+          signalColor: '#67788d', signalTextColor: '#3D3B36',
+          noteBkgColor: '#fdf4e0', noteTextColor: '#3D3B36', noteBorderColor: '#CF940C'
+        }
+      });
+    }
+    (function() {
+      try {
+        var saved = localStorage.getItem('opsera-report-theme');
+        if (saved) document.documentElement.setAttribute('data-theme', saved);
+      } catch(e) {}
+    })();
+    mermaid.initialize({
+      startOnLoad: true, theme: 'neutral', securityLevel: 'loose',
+      flowchart: { useMaxWidth: false, htmlLabels: true, curve: 'basis', padding: 20, nodeSpacing: 50, rankSpacing: 60 },
+      sequence: { useMaxWidth: false, actorMargin: 80, messageFontSize: 14, noteFontSize: 13, width: 200 },
+      er: { useMaxWidth: false, fontSize: 14 },
+      themeVariables: {
+        fontSize: '15px', fontFamily: 'Inter, sans-serif',
+        background: '#ffffff', primaryColor: '#ede5f7', primaryTextColor: '#3D3B36',
+        primaryBorderColor: '#9947EB', secondaryColor: '#e6f7f2', secondaryTextColor: '#3D3B36',
+        secondaryBorderColor: '#00AA84', tertiaryColor: '#fdf4e0', tertiaryTextColor: '#3D3B36',
+        tertiaryBorderColor: '#CF940C', lineColor: '#67788d', textColor: '#3D3B36',
+        mainBkg: '#ffffff', nodeBorder: '#9947EB', clusterBkg: '#F3F3F1', clusterBorder: '#E6E5E3',
+        titleColor: '#3D3B36',
+        actorBkg: '#ede5f7', actorBorder: '#9947EB', actorTextColor: '#3D3B36', actorLineColor: '#67788d',
+        signalColor: '#67788d', signalTextColor: '#3D3B36',
+        noteBkgColor: '#fdf4e0', noteTextColor: '#3D3B36', noteBorderColor: '#CF940C'
+      }
+    });
+    document.addEventListener('DOMContentLoaded', function() {
+      // Diagram zoom
+      document.querySelectorAll('.diagram-container').forEach(function(container) {
+        var hint = document.createElement('span');
+        hint.className = 'zoom-hint'; hint.textContent = 'Click to zoom';
+        container.appendChild(hint);
+        container.addEventListener('click', function(e) {
+          if (e.target.closest('.diagram-overlay')) return;
+          var svg = container.querySelector('.mermaid svg');
+          if (!svg) return;
+          var overlay = document.getElementById('diagramOverlay');
+          var content = document.getElementById('diagramOverlayContent');
+          var existingSvg = content.querySelector('svg');
+          if (existingSvg) existingSvg.remove();
+          var clone = svg.cloneNode(true);
+          clone.style.minHeight = '600px'; clone.style.width = '100%';
+          content.appendChild(clone);
+          overlay.classList.add('active');
+        });
+      });
+      document.getElementById('diagramOverlay').addEventListener('click', function(e) {
+        if (e.target === this || e.target.id === 'diagramOverlayClose') this.classList.remove('active');
+      });
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') document.getElementById('diagramOverlay').classList.remove('active');
+      });
+
+      // Sidebar: active section tracking
+      var links = document.querySelectorAll('.sidebar-link[href^="#"]');
+      var sections = [];
+      links.forEach(function(link) {
+        var id = link.getAttribute('href').slice(1);
+        var el = document.getElementById(id);
+        if (el) sections.push({ id: id, el: el, link: link });
+      });
+      var observer = new IntersectionObserver(function(entries) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            links.forEach(function(l) { l.classList.remove('active'); });
+            var match = sections.find(function(s) { return s.el === entry.target; });
+            if (match) {
+              match.link.classList.add('active');
+              match.link.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+            }
+          }
+        });
+      }, { rootMargin: '-10% 0px -80% 0px', threshold: 0 });
+      sections.forEach(function(s) { observer.observe(s.el); });
+
+      // Mobile sidebar toggle
+      var sidebar = document.getElementById('sidebar');
+      var toggle = document.getElementById('sidebarToggle');
+      var overlay = document.getElementById('sidebarOverlay');
+      function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('open'); }
+      toggle.addEventListener('click', function() {
+        sidebar.classList.toggle('open');
+        overlay.classList.toggle('open');
+      });
+      overlay.addEventListener('click', closeSidebar);
+      links.forEach(function(link) {
+        link.addEventListener('click', function() {
+          if (window.innerWidth <= 900) closeSidebar();
+        });
+      });
+    });
+  </script>
+</body>
+</html>
