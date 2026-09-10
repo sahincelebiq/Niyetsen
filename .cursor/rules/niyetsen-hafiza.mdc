@@ -83,6 +83,18 @@ canlıda yaşanmış bir hatanın veya Şahin'in verdiği bir kararın izidir.
 9. **Kullanıcı mesajı system rolüne karışmaz**; RAG içeriği etiketli CONTEXT
    bloğunda (injection önlemi). /chat sırası: SYSTEM → CONTEXT → USER, tek yer:
    core/prompt_builder.py.
+10. **Railway deploy (2026-09-10)**: GitHub push canlıda deploy TETİKLEMİYOR
+   (branch tetikleyicisi kapalı). `api` rootDirectory=`niyetsen-backend` →
+   `railway up` REPO KÖKÜNDEN, ID flag'leriyle (`--project … --environment …
+   --service api --ci`); `niyetsen-backend/` içinden çalıştırılırsa yol ikiye
+   katlanır, build başlamadan FAILED. `cron` ise `niyetsen-backend/` içinden
+   `railway up --service cron --ci` (configFile `/railway.cron.toml` orada).
+   Doğrulama: `/health` 200 + yeni uçlar JWT'siz 401 + cron log "exit 0".
+   **Production'da bekleyen staged patch (d259d2e7…) api/cron/MySQL'in TÜM
+   env'lerini ve api domain'ini siler — `accept-deploy` ASLA; dashboard'dan
+   discard edilmeli.**
+11. **zsh'ta `path` değişkeni PATH'e bağlıdır** — script'te `path=…` yazma
+   (komutlar "command not found" olur); `route`/`p` kullan.
 
 ## Dosya haritası (nereye bakılır)
 
@@ -120,6 +132,21 @@ canlıda yaşanmış bir hatanın veya Şahin'in verdiği bir kararın izidir.
   mobile/ AYRI git deposudur (`Niyetsen-mobile`).
 - Kararsızlıkta: MASTER_PLAN §1 → bu dosya → playstore-cikis-hafiza →
   yoksa Şahin'e sor. UYDURMA.
+
+## 2026-09-10 anlık (plan etkinlikleri + plan-içi ajan)
+
+- Backend `c29014e`: `plan_events` / `plan_event_occurrences`, `chat_threads.kind`;
+  uçlar `POST/GET /plan/{id}/events`, `DELETE /plan/events/{id}`,
+  `POST /plan/events/{occ}/complete` (409 çift dokunuş), `POST /plan/{id}/chat`,
+  `GET /plan/{id}/chat/history`, `/tasks/daily.events`. Etkinlik = fotosuz
+  "Yaptım" +50, kaçırınca ceza YOK, gün kapanışında zinciri korur. Ajan araç
+  listesi `PLAN_AGENT_TOOL_DECLARATIONS` (etkinlik_olustur yalnız orada);
+  araç yanıt ÜRETİLMEDEN önce sunucuda çalışır. pytest 341.
+- Mobil `4b71bc2..cfb94cf`: klavye telafisi ölçüme dayalı tek katman
+  (`KeyboardAwareView` + `useKeyboardLift`; Dimensions tahmini YASAK — Android
+  edge-to-edge'de pencere küçülmez), Bugün etkinlik kartı, Planım
+  `PlanEventsSection` (+ editör, asistan sheet). i18n `events` bloğu 6 dil.
+- Railway api `4d1f12f0` + cron `4ecacf51` canlı (bkz. Tuzak #10).
 
 ## 2026-09-06 anlık (API 1.1.1)
 
