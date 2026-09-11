@@ -11,6 +11,7 @@ MCP ile canlı proje tarandı. API key chat’e gerekmedi (Supabase MCP bağlı)
 | gender / chat_threads / fortune / idol | ✅ |
 | Proof RPC’ler | ✅ claim/finish/abort + complete_bonus_offer |
 | Storage | ✅ `proofs` private; `plan-images` public |
+| proofs write (H-06) | ✅ authenticated INSERT/UPDATE/DELETE yok; yalnız `proofs_select_own`. Yazma FastAPI `service_role` (`POST /task/{id}/proof`). Repo: `20260906140000_h06_drop_proofs_authenticated_writes.sql`. Prod doğrulandı 2026-09-06. |
 | plan-images listing policy | ✅ kaldırıldı (2026-08-02) |
 | FK covering indexes | ✅ eklendi |
 | Migration history (Supabase) | Kısmi — çoğu SQL Editor’dan; yeni normalize migration kayıtlı |
