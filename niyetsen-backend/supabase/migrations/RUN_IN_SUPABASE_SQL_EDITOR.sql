@@ -1,4 +1,4 @@
--- Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (35 başlık, 2026-09-06)
+-- Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (38 başlık, 2026-09-13)
 --
 -- AMAÇ: Dashboard Private'daki eski Untitled / DDL snippet'lerini
 -- TEKRAR ÇALIŞTIRMA. Bu dosya salt DOĞRULAMA'dır.
@@ -7,7 +7,7 @@
 --   Toplu CREATE, idol seed, chat_threads backfill, Untitled fortune_log,
 --   last_tarot_push_date ALTER, rastgele policy ekleme.
 --
--- Kullanım: 01–35'i tek tek Run. Beklenen: eksik satır yok, rls_off=0.
+-- Kullanım: 01–38'i tek tek Run. Beklenen: eksik satır yok, rls_off=0.
 -- Nested /* */ yorum YASAK (42601). Başlık = çift tire.
 
 -- ============================================================
@@ -398,3 +398,90 @@ select
   (select public from storage.buckets where id = 'plan-images') as plan_images_public;
 -- BEKLENEN: rls_off=0, leftover_grants=0, idol_rows=10 (DB tohumu),
 --           proofs_public=false, plan_images_public=true
+
+-- ============================================================
+-- 36) plan_step_events evrimi (2026-09-13 — prod drift kapatma)
+-- ============================================================
+select t.col
+from (
+  values
+    ('plan_events','task_id'),
+    ('plan_events','note'),
+    ('plan_events','remind_offset_min'),
+    ('plan_events','reminder_priority'),
+    ('plan_events','updated_at'),
+    ('plan_events','deleted_at'),
+    ('plan_event_occurrences','points_source'),
+    ('plan_step_notes','user_id'),
+    ('plan_step_notes','task_id'),
+    ('plan_step_notes','body'),
+    ('plan_step_notes','updated_at')
+) as t(table_name, col)
+where not exists (
+  select 1 from information_schema.columns c
+  where c.table_schema = 'public'
+    and c.table_name = t.table_name
+    and c.column_name = t.col
+);
+-- BEKLENEN: 0 satır
+
+-- ============================================================
+-- 37) occurrence zaman çizelgesi + doldurma (2026-09-13)
+-- ============================================================
+select t.col
+from (
+  values
+    ('plan_event_occurrences','scheduled_at'),
+    ('plan_event_occurrences','remind_at'),
+    ('plan_event_occurrences','reminded_at'),
+    ('plan_event_occurrences','snoozed_until')
+) as t(table_name, col)
+where not exists (
+  select 1 from information_schema.columns c
+  where c.table_schema = 'public'
+    and c.table_name = t.table_name
+    and c.column_name = t.col
+);
+-- BEKLENEN: 0 satır
+
+select proname
+from pg_proc pr
+join pg_namespace n on n.oid = pr.pronamespace
+where n.nspname = 'public' and pr.proname = 'plan_event_occurrences_fill';
+-- BEKLENEN: 1 satır
+
+select tgname
+from pg_trigger
+where tgrelid = 'public.plan_event_occurrences'::regclass
+  and tgname = 'plan_event_occurrences_fill_trg';
+-- BEKLENEN: 1 satır
+
+select t.idx
+from (
+  values
+    ('plan_events_task_id_idx'),
+    ('plan_events_user_active_idx'),
+    ('plan_events_task_active_uniq'),
+    ('plan_event_occurrences_remind_due_idx'),
+    ('plan_event_occurrences_user_status_date_idx'),
+    ('plan_step_notes_task_id_idx')
+) as t(idx)
+where not exists (
+  select 1 from pg_indexes i
+  where i.schemaname = 'public' and i.indexname = t.idx
+);
+-- BEKLENEN: 0 satır
+
+-- ============================================================
+-- 38) plan_step_notes RLS + users.timezone (fill fonksiyonu bağımlılığı)
+-- ============================================================
+select relname, relrowsecurity
+from pg_class
+where relnamespace = 'public'::regnamespace and relname = 'plan_step_notes';
+-- BEKLENEN: 1 satır, relrowsecurity = true
+
+select column_name
+from information_schema.columns
+where table_schema = 'public' and table_name = 'users'
+  and column_name = 'timezone';
+-- BEKLENEN: 1 satır
