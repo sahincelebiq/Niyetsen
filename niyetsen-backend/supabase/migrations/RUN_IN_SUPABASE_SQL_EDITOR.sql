@@ -1,4 +1,4 @@
--- Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (35 başlık, 2026-09-06)
+-- Niyetsen — SQL Editor TEK DOĞRULAMA PAKETİ (36 başlık, 2026-09-13)
 --
 -- AMAÇ: Dashboard Private'daki eski Untitled / DDL snippet'lerini
 -- TEKRAR ÇALIŞTIRMA. Bu dosya salt DOĞRULAMA'dır.
@@ -7,7 +7,7 @@
 --   Toplu CREATE, idol seed, chat_threads backfill, Untitled fortune_log,
 --   last_tarot_push_date ALTER, rastgele policy ekleme.
 --
--- Kullanım: 01–35'i tek tek Run. Beklenen: eksik satır yok, rls_off=0.
+-- Kullanım: 01–36'yı tek tek Run. Beklenen: eksik satır yok, rls_off=0.
 -- Nested /* */ yorum YASAK (42601). Başlık = çift tire.
 
 -- ============================================================
@@ -51,7 +51,17 @@ from (
     ('tasks','tiny_version'),
     ('chat_threads','kind'),
     ('plan_events','plan_id'),
-    ('plan_event_occurrences','event_id')
+    ('plan_events','task_id'),
+    ('plan_events','deleted_at'),
+    ('plan_events','remind_offset_min'),
+    ('plan_event_occurrences','event_id'),
+    ('plan_event_occurrences','scheduled_at'),
+    ('plan_event_occurrences','remind_at'),
+    ('plan_event_occurrences','points_source'),
+    ('point_log','kind'),
+    ('point_log','source_kind'),
+    ('point_log','source_id'),
+    ('plan_step_notes','body')
 ) as t(table_name, col)
 where not exists (
   select 1 from information_schema.columns c
@@ -77,7 +87,8 @@ from (
     ('push_tokens'),
     ('league_members'),
     ('plan_events'),
-    ('plan_event_occurrences')
+    ('plan_event_occurrences'),
+    ('plan_step_notes')
 ) as t(tbl)
 where not exists (
   select 1 from information_schema.tables x
@@ -372,7 +383,9 @@ select version, name
 from supabase_migrations.schema_migrations
 order by version;
 -- BEKLENEN: gender, recap, normalize, preferred_language,
---           revoke grants, fortune_log chat type
+--           revoke grants, fortune_log chat type,
+--           plan_events_agent, plan_events_point_log_fk,
+--           plan_step_events, plan_event_occurrences_fill_schedule
 
 -- ============================================================
 -- 34) plans.id TEXT (uuid değil — 42804 tuzağı)
@@ -398,3 +411,48 @@ select
   (select public from storage.buckets where id = 'plan-images') as plan_images_public;
 -- BEKLENEN: rls_off=0, leftover_grants=0, idol_rows=10 (DB tohumu),
 --           proofs_public=false, plan_images_public=true
+
+-- ============================================================
+-- 36) Plan → Etkinlik → Puan hattı (2026-09-13, migration plan_step_events)
+-- ============================================================
+-- 36a) İndeksler + tetikleyiciler (eksik satır = sorun)
+select need.obj
+from (
+  values
+    ('idx:plan_events_task_active_uniq'),
+    ('idx:plan_events_task_id_idx'),
+    ('idx:plan_events_user_active_idx'),
+    ('idx:plan_event_occurrences_remind_due_idx'),
+    ('idx:plan_event_occurrences_user_status_date_idx'),
+    ('idx:point_log_complete_once_uniq'),
+    ('idx:point_log_source_idx'),
+    ('idx:plan_step_notes_task_id_idx'),
+    ('trg:point_log_fill_source_trg'),
+    ('trg:plan_event_occurrences_fill_trg')
+) as need(obj)
+where not exists (
+  select 1 from pg_indexes i
+  where i.schemaname = 'public' and 'idx:' || i.indexname = need.obj
+)
+and not exists (
+  select 1 from pg_trigger t
+  where not t.tgisinternal and 'trg:' || t.tgname = need.obj
+);
+-- BEKLENEN: 0 satır
+
+-- 36b) Puan defteri sınıflandırması + çift tamamlama yok
+select
+  (select count(*) from public.point_log where kind is null or source_kind is null) as unfilled_rows,
+  (select count(*) from (
+     select source_kind, source_id, category
+     from public.point_log where kind = 'complete'
+     group by 1, 2, 3 having count(*) > 1
+   ) d) as duplicate_completions,
+  (select count(*) from public.plan_event_occurrences where scheduled_at is null) as occ_without_utc,
+  (select count(*) from public.plan_events where task_id is not null and deleted_at is null) as step_linked_active_events;
+-- BEKLENEN: unfilled_rows=0, duplicate_completions=0, occ_without_utc=0
+
+-- 36c) Olay durumu 4 değer
+select pg_get_constraintdef(oid)
+from pg_constraint where conname = 'plan_event_occurrences_status_check';
+-- BEKLENEN: pending, done, skipped, missed
