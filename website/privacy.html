@@ -2,9 +2,11 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <script>document.documentElement.classList.add('js');</script>
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Privacy Policy — Niyetsen</title>
-  <meta name="description" content="How Niyetsen collects, uses, shares and deletes personal data. For Google Play, the App Store, KVKK, GDPR and CCPA.">
+  <title>Privacy Policy — Niyetsen | Google Play Data Safety</title>
+  <meta name="description" content="How Niyetsen collects, uses, shares and deletes personal data. Public privacy policy for Google Play, the App Store, KVKK, GDPR and CCPA. Package com.niyetsenai.">
   <meta name="robots" content="index, follow">
   <meta name="theme-color" content="#d89b7c">
   <link rel="canonical" href="https://niyetsen.com/privacy.html">
@@ -14,69 +16,144 @@
   <link rel="alternate" hreflang="fr" href="https://niyetsen.com/confidentialite.html">
   <link rel="alternate" hreflang="ar" href="https://niyetsen.com/privacy-ar.html">
   <link rel="alternate" hreflang="x-default" href="https://niyetsen.com/privacy.html">
-  <link rel="icon" href="https://niyetsen.com/favicon-48x48.png?v=20260726-7" type="image/png" sizes="48x48">
-  <link rel="stylesheet" href="/css/fonts.css?v=20260906">
-  <link rel="stylesheet" href="/css/style.css?v=20260906">
+  <link rel="icon" href="https://niyetsen.com/favicon-48x48.png?v=20260920-1" type="image/png" sizes="48x48">
+  <link rel="apple-touch-icon" sizes="180x180" href="https://niyetsen.com/apple-touch-icon.png?v=20260920-1">
+  <link rel="manifest" href="/site.webmanifest">
+  <link rel="preload" href="/fonts/source-sans-latin.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/css/style.css?v=20260920-1" as="style">
+  <link rel="stylesheet" href="/css/style.css?v=20260920-1">
   <meta property="og:title" content="Privacy Policy — Niyetsen">
-  <meta property="og:description" content="How Niyetsen collects, uses, shares and deletes personal data. For Google Play, the App Store, KVKK, GDPR and CCPA.">
+  <meta property="og:description" content="Public privacy policy for Google Play Data Safety, App Store and KVKK/GDPR.">
   <meta property="og:url" content="https://niyetsen.com/privacy.html">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="en_US">
+  <meta property="og:image" content="https://niyetsen.com/images/og/default.jpg">
   <script type="application/ld+json">
-  {"@context":"https://schema.org","@type":"WebPage","name":"Privacy Policy — Niyetsen","description":"How Niyetsen collects, uses, shares and deletes personal data. For Google Play, the App Store, KVKK, GDPR and CCPA.","url":"https://niyetsen.com/privacy.html","inLanguage":"en","isPartOf":{"@type":"WebSite","name":"Niyetsen","url":"https://niyetsen.com/"}}
+  {"@context":"https://schema.org","@graph":[{"@type":"WebPage","name":"Privacy Policy — Niyetsen","url":"https://niyetsen.com/privacy.html","description":"How Niyetsen collects, uses, shares and deletes personal data.","inLanguage":"en","dateModified":"2026-09-20","isPartOf":{"@type":"WebSite","name":"Niyetsen","url":"https://niyetsen.com/"}},{"@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://niyetsen.com/"},{"@type":"ListItem","position":2,"name":"Privacy","item":"https://niyetsen.com/privacy.html"}]}]}
   </script>
-  <script src="/js/site-config.js?v=20260726-7" defer></script>
-  <script src="/js/marketing.js?v=20260726-7" defer></script>
+  <script src="/js/nav-prefetch.js?v=20260920-1" defer></script>
+  <script src="/js/site-config.js?v=20260920-1" defer></script>
+  <script src="/js/marketing.js?v=20260920-1" defer></script>
 </head>
 <body>
   <header>
     <nav class="nav" aria-label="Menu">
-      <a class="logo" href="/" aria-label="Niyetsen"><img class="logo-mark" src="https://niyetsen.com/images/logo-mark.png?v=20260726-7" srcset="https://niyetsen.com/images/logo-mark.png?v=20260726-7 1x, https://niyetsen.com/images/logo-mark-2x.png?v=20260726-7 2x" width="40" height="40" alt="Niyetsen" loading="eager">Niyetsen</a>
-      <div class="nav-links"><a href="/">Home</a><a href="/blog/">Blog</a><a href="mailto:ai@niyetsen.com">Contact</a></div>
+      <a class="logo" href="/" aria-label="Niyetsen"><img class="logo-mark" src="/images/logo-mark.png?v=20260920-1" srcset="/images/logo-mark.png?v=20260920-1 1x, /images/logo-mark-2x.png?v=20260920-1 2x" width="40" height="40" alt="Niyetsen" loading="eager" decoding="async">Niyetsen</a>
+      <button type="button" class="nav-toggle" aria-label="Open menu" aria-expanded="false" aria-controls="primary-nav"><span></span><span></span><span></span></button>
+      <div class="nav-links" id="primary-nav">
+        <a href="/">Home</a>
+        <a href="/blog/">Blog</a>
+        <a href="/account-deletion.html">Delete account</a>
+        <a href="/terms.html">Terms</a>
+        <a href="mailto:ai@niyetsen.com">Contact</a>
+      </div>
     </nav>
   </header>
   <main>
-        <article class="legal">
-      <nav class="legal-langs" aria-label="Language"><a href="/gizlilik.html" hreflang="tr">TR</a> · <a href="/privacy.html" hreflang="en" aria-current="page">EN</a> · <a href="/datenschutz.html" hreflang="de">DE</a> · <a href="/confidentialite.html" hreflang="fr">FR</a> · <a href="/privacy-ar.html" hreflang="ar">AR</a></nav>
+    <div class="breadcrumb" aria-label="Breadcrumb"><a href="/">Home</a><span>›</span>Privacy</div>
+    <article class="legal">
+      <nav class="legal-langs" aria-label="Language">
+        <a href="/gizlilik.html" hreflang="tr">TR</a> ·
+        <a href="/privacy.html" hreflang="en" aria-current="page">EN</a> ·
+        <a href="/datenschutz.html" hreflang="de">DE</a> ·
+        <a href="/confidentialite.html" hreflang="fr">FR</a> ·
+        <a href="/privacy-ar.html" hreflang="ar">AR</a>
+      </nav>
       <h1>Privacy Policy</h1>
-      <p>Effective date and last update: 6 September 2026</p>
-      
-      <p class="disclaimer">This policy covers niyetsen.com and the Niyetsen iOS/Android apps (com.niyetsenai / com.niyetsen.app). Controller: Şahin Çelebi. Requests: <a href="mailto:ai@niyetsen.com">ai@niyetsen.com</a>. Written for Google Play, the App Store, KVKK, GDPR/UK GDPR and CCPA.</p>
+      <p>Effective date and last update: 20 September 2026</p>
+      <p class="disclaimer">
+        This policy covers niyetsen.com and the Niyetsen iOS/Android apps (package
+        <strong>com.niyetsenai</strong> / com.niyetsen.app). No login is required to read it.
+        Controller: Şahin Çelebi. Requests: <a href="mailto:ai@niyetsen.com">ai@niyetsen.com</a>.
+        Written for Google Play Data Safety, the App Store, KVKK, GDPR/UK GDPR and CCPA.
+      </p>
+
+      <div class="play-urls">
+        <h2>Google Play Console URLs</h2>
+        <p>Paste these public links. They do not require sign-in.</p>
+        <code>Privacy: https://niyetsen.com/privacy.html</code>
+        <code>Account deletion: https://niyetsen.com/account-deletion.html</code>
+        <code>Turkish: https://niyetsen.com/gizlilik.html</code>
+        <code>Turkish deletion: https://niyetsen.com/hesap-silme</code>
+      </div>
+
       <h2>1. Data we process</h2>
       <ul>
-        <li>Account: name, email, Apple/Google ids, Supabase user id.</li>
-        <li>Profile: date of birth, zodiac, timezone, language, optional gender for address only.</li>
-        <li>Content: chat, plans, tasks, mystic guide.</li>
-        <li>Proof/fortune photos: in-app camera only. No gallery. No biometrics.</li>
-        <li>Gameplay, optional nickname league (alias only), subscription status (no card numbers).</li>
-        <li>Technical logs. Website early-access form only if you submit it.</li>
+        <li><strong>Account:</strong> name, email, Apple/Google identifiers, Supabase user id.</li>
+        <li><strong>Profile:</strong> date of birth, zodiac, timezone, language, optional gender for address only (“kadın” / “erkek” / “belirtmek istemiyorum”).</li>
+        <li><strong>Content:</strong> chat, plans, tasks, mystic guide.</li>
+        <li><strong>Photos:</strong> in-app camera only for task proof or fortune. No gallery access. No biometrics or face identification.</li>
+        <li><strong>Gameplay:</strong> points, streak, category progress, excuses, optional nickname league (alias only).</li>
+        <li><strong>Subscription:</strong> plan status and store transaction ids. No card numbers on Niyetsen servers.</li>
+        <li><strong>Technical logs:</strong> session, security, crash. Website early-access form only if you submit it.</li>
       </ul>
-      <p>We do not collect location, do not use an advertising id, do not sell data, and do not share it for cross-context ads.</p>
-      <h2>2. Purposes and legal bases</h2>
+      <p>We do not collect precise location, do not use an advertising id, do not sell data, and do not share it for cross-context ads.</p>
+
+      <h2>2. Google Play Data Safety (aligned)</h2>
+      <table class="play-safety">
+        <thead>
+          <tr><th>Play category</th><th>Collected?</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Location</td><td>No</td><td>—</td></tr>
+          <tr><td>Personal info (name, email, user IDs)</td><td>Yes</td><td>App functionality, account</td></tr>
+          <tr><td>Financial info</td><td>Purchase history via Google Play / RevenueCat only</td><td>App functionality; we never store card numbers</td></tr>
+          <tr><td>Photos and videos</td><td>Yes — proof / fortune photos</td><td>App functionality</td></tr>
+          <tr><td>Messages / in-app chat</td><td>Yes</td><td>App functionality (AI guide)</td></tr>
+          <tr><td>App activity</td><td>Yes</td><td>App functionality, optional analytics if configured</td></tr>
+          <tr><td>Device or other IDs</td><td>Limited technical ids</td><td>Security / crash diagnostics</td></tr>
+          <tr><td>Advertising ID</td><td>No</td><td>—</td></tr>
+          <tr><td>Health and fitness</td><td>Not requested</td><td>Free-text chat is not a health service</td></tr>
+          <tr><td>Contacts / calendar</td><td>Calendar only if you add a task</td><td>App functionality</td></tr>
+        </tbody>
+      </table>
+      <p>Data is encrypted in transit. Photos stay on private storage. We do not sell personal information. Optional analytics (PostHog/Sentry) run only if configured; they are not required to use the app.</p>
+
+      <h2>3. Purposes and legal bases</h2>
       <ul>
         <li>Account, tasks, points: contract (KVKK 5/2-c; GDPR 6/1-b).</li>
         <li>AI chat, plans, fortune, proof photos: consent (KVKK 5/1 / 6; GDPR 6/1-a / 9).</li>
         <li>Security and debugging: legitimate interests (GDPR 6/1-f).</li>
         <li>Store billing records: legal obligation (GDPR 6/1-c).</li>
       </ul>
-      <h2>3. Recipients</h2>
-      <p>Google Gemini (replies; we do not train our own model on your data), Supabase, Railway, Apple / Google Play / RevenueCat (they control payments), Unsplash (images only), PostHog/Sentry if configured, authorities if required. Transfers may leave the EEA under GDPR Arts. 44–49.</p>
-      <h2>4. Retention</h2>
+
+      <h2>4. Recipients</h2>
+      <p>Google Gemini (replies; we do not train our own model on your data), Supabase, Railway, Apple / Google Play / RevenueCat (they control payments), Unsplash (plan images only), FormSubmit if you send a web form, PostHog/Sentry if configured, authorities if required. Transfers may leave the EEA under GDPR Arts. 44–49.</p>
+
+      <h2>5. Retention</h2>
       <ul>
-        <li>Account: membership + up to 3 years after deletion request.</li>
+        <li>Account: membership + up to 3 years after a deletion request.</li>
         <li>Chat, plans, fortune: + up to 1 year after deletion.</li>
         <li>Proof photos: up to 1 year or until account deletion.</li>
         <li>Points / league alias: + up to 2 years.</li>
         <li>Invoices: as tax law requires (often up to 10 years, usually at the store).</li>
         <li>Security logs: up to 6 months.</li>
       </ul>
-      <h2>5. Your rights</h2>
+
+      <h2>6. Your rights</h2>
       <p>KVKK Art. 11; GDPR / UK GDPR Arts. 15–21; CCPA know/delete/correct. Email <a href="mailto:ai@niyetsen.com">ai@niyetsen.com</a> (subject “Privacy Request”). Reply within 30 days. Complaints: KVKK Board, CNIL, BfDI, ICO as applicable. We do not sell California personal information.</p>
-      <h2>6. Fortune and children</h2>
-      <p>Tarot, coffee, palm and horoscope are entertainment — not medical, legal or financial advice. The service is 18+ only. Under-18 data is deleted if discovered.</p>
-      <h2>7. Account deletion</h2>
-      <p>In-app: Profile → Delete my account. Or <a href="/account-deletion.html">account-deletion.html</a>.</p>
-    
+
+      <h2>7. Fortune, children, permissions</h2>
+      <p>Tarot, coffee, palm and horoscope are entertainment — not medical, legal or financial advice. The service is 18+ only. Under-18 data is deleted if discovered. Camera is used only when you take a proof or fortune photo. Notifications are optional. Location is not requested.</p>
+
+      <h2>8. Account deletion</h2>
+      <p>In the app: Profile → Delete my account. Or the public page <a href="/account-deletion.html">account-deletion.html</a> (no login). Deletion is free. Web requests complete within 30 days after we can verify the email.</p>
+      <div class="shot-grid">
+        <figure class="shot-card">
+          <picture>
+            <source srcset="/images/app/profil.webp" type="image/webp">
+            <img src="/images/app/profil.jpg" alt="Niyetsen Profile tab — account and streak" width="576" height="1024" loading="lazy" decoding="async">
+          </picture>
+          <figcaption><strong>1. Profile</strong><span>Open the Profile tab while signed in.</span></figcaption>
+        </figure>
+        <figure class="shot-card">
+          <picture>
+            <source srcset="/images/app/gizlilik.webp" type="image/webp">
+            <img src="/images/app/gizlilik.jpg" alt="Niyetsen privacy and consent settings" width="576" height="1024" loading="lazy" decoding="async">
+          </picture>
+          <figcaption><strong>2. Settings</strong><span>Privacy, consent, then Delete my account.</span></figcaption>
+        </figure>
+      </div>
     </article>
   </main>
   <footer>
