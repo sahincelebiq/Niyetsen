@@ -34,6 +34,9 @@ EVENT_INTENT_MARKERS = (
     "su iç", "yürüyüş", "yuruyus", "planla", "koy", "kur", ":",
     "pazartesi", "salı", "sali", "çarşamba", "carsamba", "perşembe", "persembe",
     "cuma", "cumartesi", "pazar", "yarın", "yarin", "bugün", "bugun",
+    "add", "remind", "every day", "every morning", "weekday", "sleep", "walk",
+    "workout", "push-up", "hinzufügen", "erinner", "jeden tag", "ajouter",
+    "rappelle", "chaque jour",
 )
 
 
