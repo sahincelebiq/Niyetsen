@@ -26,4 +26,7 @@ Allow: /
 # https://niyetsen.com/favicon-48x48.png
 # https://niyetsen.com/images/logo.jpg
 
+# LLM / AEO
+# https://niyetsen.com/llms.txt
+
 Sitemap: https://niyetsen.com/sitemap.xml

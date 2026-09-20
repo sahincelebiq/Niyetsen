@@ -1,4 +1,6 @@
 # niyetsen.com — hız + güvenlik + Safari/Chrome uyumu
+# Kök hız kuralı: Hostinger CDN yalnız sade Cache-Control tanır.
+# stale-while-revalidate / must-revalidate / no-cache → x-hcdn-cache-status: BYPASS
 RewriteEngine On
 
 RewriteCond %{HTTPS} off
@@ -11,13 +13,20 @@ DirectoryIndex index.html
 Options -Indexes
 FileETag MTime Size
 
-# Temiz URL: /erkenerisim → erkenerisim.html
+# Temiz URL'ler — Play Console ve paylaşım linkleri
 RewriteRule ^erkenerisim/?$ /erkenerisim.html [L]
 RewriteRule ^erken-erisim/?$ /erkenerisim.html [L,R=301]
 RewriteRule ^hesap-silme/?$ /hesap-silme.html [L]
+RewriteRule ^account-deletion/?$ /account-deletion.html [L]
+RewriteRule ^gizlilik/?$ /gizlilik.html [L]
+RewriteRule ^privacy/?$ /privacy.html [L]
+RewriteRule ^kullanim-kosullari/?$ /kullanim-kosullari.html [L]
+RewriteRule ^terms/?$ /terms.html [L]
+RewriteRule ^gelistirme/?$ /gelistirme.html [L]
+RewriteRule ^blog$ /blog/ [L,R=301]
 
 <IfModule mod_deflate.c>
-  AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml application/manifest+json application/xml
+  AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml application/manifest+json application/xml application/xml+rss
 </IfModule>
 
 # Şifre sıfırlama / e-posta dönüşü — Google OAuth callback değil
@@ -25,23 +34,27 @@ RewriteRule ^auth/callback/?$ /auth-callback.html [L]
 RewriteRule ^sifre-sifirla/?$ /auth-callback.html [L]
 RewriteRule ^reset-password/?$ /auth-callback.html [L]
 
+<IfModule LiteSpeed>
+  CacheLookup on
+</IfModule>
+
 <IfModule mod_headers.c>
   Header set X-Content-Type-Options "nosniff"
   Header set Referrer-Policy "strict-origin-when-cross-origin"
   Header set X-Frame-Options "SAMEORIGIN"
   Header set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
   Header set Cross-Origin-Opener-Policy "same-origin-allow-popups"
-  # Hostinger zaten upgrade-insecure-requests ekliyor; CSP'yi sıkı tutuyoruz
   Header always set Content-Security-Policy "upgrade-insecure-requests; base-uri 'self'; form-action 'self' https://formsubmit.co; object-src 'none'; frame-ancestors 'self'"
 
   <FilesMatch "\.(html|htm)$">
-    # must-revalidate Hostinger CDN'i BYPASS ettiriyordu
-    Header set Cache-Control "public, max-age=300, stale-while-revalidate=86400"
-    Header set Vary "Accept-Encoding"
     Header unset Pragma
+    Header unset Expires
+    Header set Cache-Control "public, max-age=600"
+    Header set Vary "Accept-Encoding"
   </FilesMatch>
 
   <FilesMatch "\.(css|js|png|jpg|jpeg|webp|svg|ico|woff2|woff|webmanifest|txt|xml)$">
+    Header unset Pragma
     Header set Cache-Control "public, max-age=31536000, immutable"
     Header set Vary "Accept-Encoding"
   </FilesMatch>
@@ -49,7 +62,7 @@ RewriteRule ^reset-password/?$ /auth-callback.html [L]
 
 <IfModule mod_expires.c>
   ExpiresActive On
-  ExpiresByType text/html "access plus 5 minutes"
+  ExpiresByType text/html "access plus 10 minutes"
   ExpiresByType text/css "access plus 1 year"
   ExpiresByType application/javascript "access plus 1 year"
   ExpiresByType image/png "access plus 1 year"
@@ -57,6 +70,7 @@ RewriteRule ^reset-password/?$ /auth-callback.html [L]
   ExpiresByType image/webp "access plus 1 year"
   ExpiresByType image/svg+xml "access plus 1 year"
   ExpiresByType font/woff2 "access plus 1 year"
+  ExpiresByType application/manifest+json "access plus 1 year"
 </IfModule>
 
 <IfModule mod_mime.c>

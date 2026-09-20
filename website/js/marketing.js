@@ -21,13 +21,12 @@
       var stored = localStorage.getItem(storageKey);
       if (stored) return stored;
     } catch (e) {}
-    var match = document.cookie.match(new RegExp('(?:^|; )' + storageKey + '=([^;]*)'));
-    return match ? decodeURIComponent(match[1]) : null;
+    return null;
   }
 
   function writeConsent(value) {
     try { localStorage.setItem(storageKey, value); } catch (e) {}
-    document.cookie = storageKey + '=' + encodeURIComponent(value) + ';path=/;max-age=31536000;SameSite=Lax';
+    // Çerez YOK — Cookie başlığı Hostinger CDN'i HTML'de BYPASS ettirir.
   }
 
   function grantConsent() {

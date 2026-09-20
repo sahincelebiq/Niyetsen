@@ -2209,3 +2209,44 @@ html.js .hero-below.reveal {
   .ea-hero { padding-top: 3.25rem; }
   .shot-card img { aspect-ratio: 3 / 4; object-fit: contain; background: var(--bg-soft); }
 }
+
+.play-urls {
+  margin: 1.5rem 0;
+  padding: 1.1rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface-tint);
+}
+.play-urls h2,
+.play-urls h3 { margin-top: 0; }
+.play-urls code {
+  display: block;
+  margin: 0.35rem 0;
+  word-break: break-all;
+  font-size: 0.88rem;
+}
+.play-safety {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.25rem 0 1.75rem;
+  font-size: 0.9rem;
+}
+.play-safety th,
+.play-safety td {
+  border: 1px solid var(--border);
+  padding: 0.6rem 0.7rem;
+  text-align: left;
+  vertical-align: top;
+}
+.play-safety th { background: var(--surface-tint); color: var(--text); }
+.play-safety td { color: var(--text-soft); }
+.legal .shot-grid { margin: 1.25rem 0 1.75rem; }
+.faq-block { margin: 2rem 0; }
+.faq-block article {
+  margin: 0 0 1rem;
+  padding: 1rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+.faq-block h3 { margin: 0 0 0.45rem; font-size: 1.15rem; }
