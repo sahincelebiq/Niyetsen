@@ -12,7 +12,7 @@ Birincil (TR): niyet, niyet belirleme, yaşam asistanı, 365 günlük plan, alı
 
 Psikoloji: ertelemek, erteleme psikolojisi, procrastination, potansiyel, potansiyelini ortaya çıkarmak, self-efficacy, özgüven, özsaygı
 
-Yeni içerik (2026-08): yapay zeka alışkanlık, sürdürülebilir alışkanlık, dijital sürdürülebilirlik, dikkat ekonomisi, sürdürülebilir niyet, Google Play kapalı test, erken erişim
+Yeni içerik (2026-09): özsaygı kanıtla inşa edilir, kaçırılan gün istikrarı bozmaz; (2026-08): yapay zeka alışkanlık, sürdürülebilir alışkanlık, dijital sürdürülebilirlik, dikkat ekonomisi, sürdürülebilir niyet, Google Play kapalı test, erken erişim
 
 EN eşdeğer: intention, habit tracker, goal tracker, daily plan, AI life coach, sustainable habits, digital sustainability, attention economy, closed testing, streak, consistency
 
@@ -37,9 +37,13 @@ Anahtarlar: niyet, yaşam asistanı, alışkanlık takibi, hedef takibi, kişise
 - [Ertelemek psikolojisi](https://niyetsen.com/blog/ertelemek-psikolojisi.html)
 - [Potansiyel psikolojisi](https://niyetsen.com/blog/potansiyelini-cikaramamak-psikolojisi.html)
 - [Niyet nedir?](https://niyetsen.com/blog/niyet-nedir-nasil-hayata-gecirilir.html)
+- [Özsaygı kanıtla inşa edilir](https://niyetsen.com/blog/ozsaygi-kanitla-insa-edilir.html)
+- [Kaçırılan gün istikrarı bozmaz](https://niyetsen.com/blog/istikrar-kacirilan-gun.html)
 - [Blog](https://niyetsen.com/blog/)
-- [Gizlilik](https://niyetsen.com/gizlilik.html)
+- [Gizlilik / Play Data Safety](https://niyetsen.com/gizlilik.html)
+- [Privacy EN](https://niyetsen.com/privacy.html)
 - [Hesap silme](https://niyetsen.com/hesap-silme)
+- [Account deletion EN](https://niyetsen.com/account-deletion.html)
 - [Kullanım koşulları](https://niyetsen.com/kullanim-kosullari.html)
 
 ## İletişim
