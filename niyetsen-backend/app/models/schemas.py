@@ -10,16 +10,39 @@ from typing import Literal, Optional
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 from app.config import CATEGORIES
+from app.core.datetimes import coerce_datetime
 
 Category = Literal["İrade", "İstikrar", "Disiplin", "Özgüven", "Sosyallik", "Özsaygı"]
 TaskStatus = Literal["pending", "done", "missed_silent", "missed_excused"]
+TaskType = Literal["yer", "alışkanlık", "sosyal", "kişisel_gelişim"]
+GenderOption = Literal["kadın", "erkek", "belirtmek istemiyorum"]
+CHAT_CONTENT_MAX = 4000
+_KNOWN_CATEGORIES = set(CATEGORIES)
+_TASK_TYPES = {"yer", "alışkanlık", "sosyal", "kişisel_gelişim"}
+_TASK_STATUSES = {"pending", "done", "missed_silent", "missed_excused"}
+_GENDERS = {"kadın", "erkek", "belirtmek istemiyorum"}
+
+
+def clip_chat_content(value: str | None) -> str:
+    """Persist/yanıt gövdesi ChatMessage.max_length'i aşmasın (tool notu eklenince)."""
+    return str(value or "")[:CHAT_CONTENT_MAX]
+
+
+def coerce_categories(value: object) -> list[str]:
+    picked: list[str] = []
+    for item in value or []:
+        name = str(item)
+        if name in _KNOWN_CATEGORIES and name not in picked:
+            picked.append(name)
+    return picked or ["İstikrar"]
 
 
 # ---------- Sohbet / Niyet ----------
 class ChatMessage(BaseModel):
     id: Optional[str] = None
     role: Literal["user", "assistant"]
-    content: str = Field(min_length=1, max_length=4000)
+    # İstek gövdesi hâlâ 422 (mobil sözleşmesi). Persist/DB okuma clip_chat_content kullanır.
+    content: str = Field(min_length=1, max_length=CHAT_CONTENT_MAX)
 
 
 class CollectedIntent(BaseModel):
@@ -81,7 +104,7 @@ class Task(BaseModel):
     id: str
     day: int
     title: str
-    task_type: Literal["yer", "alışkanlık", "sosyal", "kişisel_gelişim"] = "alışkanlık"
+    task_type: TaskType = "alışkanlık"
     categories: list[Category]
     image_keyword: str = ""
     image_url: str = ""
@@ -93,6 +116,21 @@ class Task(BaseModel):
     status: TaskStatus = "pending"
     date: Optional[dt_date] = None
     proof_id: Optional[str] = None
+
+    @field_validator("task_type", mode="before")
+    @classmethod
+    def _task_type(cls, value: object) -> object:
+        return value if value in _TASK_TYPES else "alışkanlık"
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def _task_status(cls, value: object) -> object:
+        return value if value in _TASK_STATUSES else "pending"
+
+    @field_validator("categories", mode="before")
+    @classmethod
+    def _task_categories(cls, value: object) -> list[str]:
+        return coerce_categories(value)
 
 
 class PlanDay(BaseModel):
@@ -186,6 +224,11 @@ class PlanEventOccurrence(BaseModel):
     status: Literal["pending", "done"] = "pending"
     completed_at: Optional[datetime] = None
 
+    @field_validator("status", mode="before")
+    @classmethod
+    def _occ_status(cls, value: object) -> object:
+        return value if value in {"pending", "done"} else "pending"
+
 
 class PlanEvent(BaseModel):
     id: str
@@ -201,6 +244,22 @@ class PlanEvent(BaseModel):
     end_date: Optional[dt_date] = None
     created_by: Literal["user", "agent"] = "user"
     occurrences: list[PlanEventOccurrence] = Field(default_factory=list)
+
+    @field_validator("recurrence", mode="before")
+    @classmethod
+    def _recurrence(cls, value: object) -> object:
+        return value if value in {"none", "daily", "weekdays", "weekly"} else "none"
+
+    @field_validator("created_by", mode="before")
+    @classmethod
+    def _created_by(cls, value: object) -> object:
+        return value if value in {"user", "agent"} else "user"
+
+    @field_validator("categories", mode="before")
+    @classmethod
+    def _event_categories(cls, value: object) -> list[str]:
+        picked = [c for c in (value or []) if str(c) in _KNOWN_CATEGORIES]
+        return picked
 
 
 def is_valid_clock(value: str) -> bool:
@@ -293,6 +352,12 @@ class ScoreEvent(BaseModel):
     reason: str
 
 
+class ExcuseResponse(BaseModel):
+    """POST /task/{id}/excuse — mobil ExcuseResponse ile birebir."""
+    message: str
+    events: list[ScoreEvent]
+
+
 class PointLogRecord(ScoreEvent):
     id: Optional[str] = None
     user_id: str
@@ -315,6 +380,7 @@ class StateResponse(BaseModel):
     excuse_count: int
     silent_miss_streak: int
     yesterday_silent_misses: int = 0
+    last_active_day: Optional[dt_date] = None
 
 
 # ---------- Niyetsen Raporu / "Wrapped" (FAZ 8.8) ----------
@@ -373,7 +439,7 @@ class UserProfile(BaseModel):
     zodiac_sign: Optional[str] = None
     # FAZ 8: sohbet kişiselleştirmesi için İSTEĞE BAĞLI cinsiyet (KVKK: zorunlu
     # değil, sadece hitap/örnek uyarlaması için; klişe üretimi prompt'ta yasak).
-    gender: Optional[Literal["kadın", "erkek", "belirtmek istemiyorum"]] = None
+    gender: Optional[GenderOption] = None
     timezone: str = "Europe/Istanbul"
     # Play Store çok dilli: tr | en-US | en-GB | de | fr | ar
     preferred_language: Optional[str] = None
@@ -383,11 +449,18 @@ class UserProfile(BaseModel):
     kvkk_consent_at: Optional[datetime] = None
     onboarding_complete: bool = False
 
+    @field_validator("gender", mode="before")
+    @classmethod
+    def _gender(cls, value: object) -> object:
+        if value in _GENDERS:
+            return value
+        return None
+
 
 class ProfileUpdate(BaseModel):
     name: str = Field(min_length=1, max_length=80)
     birth_date: dt_date
-    gender: Optional[Literal["kadın", "erkek", "belirtmek istemiyorum"]] = None
+    gender: Optional[GenderOption] = None
     timezone: str = Field(default="Europe/Istanbul", min_length=1, max_length=80)
     preferred_language: Optional[str] = Field(default=None, max_length=16)
     notif_hour: int = Field(default=8, ge=0, le=23)
@@ -622,3 +695,9 @@ class ChatThread(BaseModel):
     title: str = ""                    # boşsa istemci "Yeni sohbet" gösterir
     is_active: bool = False
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+    @field_validator("updated_at", mode="before")
+    @classmethod
+    def _updated_at(cls, value: object) -> object:
+        parsed = coerce_datetime(value)
+        return parsed if parsed is not None else value

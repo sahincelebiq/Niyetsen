@@ -40,3 +40,8 @@ def parse_json_object(value: Any) -> dict:
             return {}
         return parsed if isinstance(parsed, dict) else {}
     return {}
+
+
+def visible_event_rows(rows: list[dict] | None) -> list[dict]:
+    """Soft-delete (`deleted_at`) satırları listeden çıkar — kolon yoksa hepsi kalır."""
+    return [row for row in (rows or []) if not row.get("deleted_at")]
