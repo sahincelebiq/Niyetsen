@@ -21,11 +21,11 @@ from app.models.schemas import (
     DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanDay,
     PlanEvent, PlanEventOccurrence, PlanSummary, PointLogRecord, ProofAttemptClaim,
     ProofRecord, ProofResult,
-    PushTokenRecord, ScoreEvent, Task, UserProfile,
+    PushTokenRecord, ScoreEvent, Task, UserProfile, clip_chat_content,
 )
 from app.core.datetimes import coerce_date, coerce_datetime
 from app.storage.base import Repository
-from app.storage.db_coerce import is_unique_violation, parse_json_object
+from app.storage.db_coerce import is_unique_violation, parse_json_object, visible_event_rows
 
 log = logging.getLogger("niyetsen.storage")
 
@@ -734,7 +734,11 @@ class SupabaseRepository(Repository):
                 log.warning("Thread başlığı güncellenemedi: %s", exc)
 
     def list_chat_threads(self, user_id: str) -> list[ChatThread]:
-        active_id = self._active_thread_id(user_id)
+        try:
+            active_id = self._active_thread_id(user_id)
+        except Exception:  # noqa: BLE001 — thread degrade
+            log.warning("Aktif oturum okunamadı (yoksayıldı).", exc_info=True)
+            active_id = None
         try:
             rows = (
                 self._db.table("chat_threads").select("id,title,updated_at,kind")
@@ -743,20 +747,28 @@ class SupabaseRepository(Repository):
             ) or []
             rows = [row for row in rows if row.get("kind") != "plan_agent"][:50]
         except Exception:
-            rows = (
-                self._db.table("chat_threads").select("id,title,updated_at")
-                .eq("user_id", user_id).order("updated_at", desc=True).limit(50)
-                .execute().data
-            ) or []
-        return [
-            ChatThread(
-                id=row["id"],
-                title=row.get("title") or "",
-                is_active=row["id"] == active_id,
-                updated_at=row.get("updated_at") or datetime.now(timezone.utc),
-            )
-            for row in rows
-        ]
+            try:
+                rows = (
+                    self._db.table("chat_threads").select("id,title,updated_at")
+                    .eq("user_id", user_id).order("updated_at", desc=True).limit(50)
+                    .execute().data
+                ) or []
+            except Exception:  # noqa: BLE001 — thread degrade
+                log.warning("Sohbet oturumları okunamadı (yoksayıldı).", exc_info=True)
+                return []
+        threads: list[ChatThread] = []
+        active_key = str(active_id or "")
+        for row in rows:
+            try:
+                threads.append(ChatThread(
+                    id=str(row["id"]),
+                    title=row.get("title") or "",
+                    is_active=str(row["id"]) == active_key,
+                    updated_at=row.get("updated_at") or datetime.now(timezone.utc),
+                ))
+            except Exception:  # noqa: BLE001 — bozuk satır paneli düşürmez
+                continue
+        return threads
 
     def set_active_thread_title(self, user_id: str, title: str) -> None:
         # faz8.13/1b degrade modu: başlık güncellemesi sohbeti asla düşürmez.
@@ -782,10 +794,14 @@ class SupabaseRepository(Repository):
         )
 
     def activate_chat_thread(self, user_id: str, thread_id: str) -> bool:
-        row = _maybe_single(
-            self._db.table("chat_threads").select("id,plan_id,kind")
-            .eq("id", thread_id).eq("user_id", user_id)
-        )
+        try:
+            row = _maybe_single(
+                self._db.table("chat_threads").select("id,plan_id,kind")
+                .eq("id", thread_id).eq("user_id", user_id)
+            )
+        except Exception:  # noqa: BLE001 — kind kolonu/okuma hatası sohbeti düşürmez
+            log.warning("Sohbet oturumu okunamadı (yoksayıldı).", exc_info=True)
+            return False
         if not row or row.get("kind") == "plan_agent":
             return False
         self._db.table("users").update(
@@ -823,14 +839,23 @@ class SupabaseRepository(Repository):
             # sıralamayı deterministik yapar.
             query.order("created_at").order("id").execute().data
         )
-        return [
-            ChatMessage(
-                id=row.get("client_message_id") or f"legacy-{row['id']}",
-                role=row["role"],
-                content=row["content"],
-            )
-            for row in rows
-        ]
+        messages: list[ChatMessage] = []
+        for row in rows:
+            content = clip_chat_content(str(row.get("content") or "")).strip()
+            if not content:
+                continue
+            role = row.get("role")
+            if role not in ("user", "assistant"):
+                continue
+            try:
+                messages.append(ChatMessage(
+                    id=row.get("client_message_id") or f"legacy-{row['id']}",
+                    role=role,
+                    content=content,
+                ))
+            except Exception:  # noqa: BLE001 — bozuk satır geçmişi düşürmez
+                continue
+        return messages
 
     def clear_chat_history(self, user_id: str) -> int:
         """Aktif OTURUMUN mesajlarını sil (diğer oturumlar/plan/puan korunur)."""
@@ -1308,24 +1333,21 @@ class SupabaseRepository(Repository):
         return int(higher) + 1
 
     def save_plan_event(self, event: PlanEvent) -> None:
-        try:
-            self._ensure_user(event.user_id)
-            self._db.table("plan_events").upsert({
-                "id": event.id,
-                "user_id": event.user_id,
-                "plan_id": event.plan_id,
-                "title": event.title,
-                "categories": event.categories,
-                "scheduled_time": event.scheduled_time,
-                "duration_min": event.duration_min,
-                "recurrence": event.recurrence,
-                "byweekday": event.byweekday,
-                "start_date": event.start_date.isoformat(),
-                "end_date": event.end_date.isoformat() if event.end_date else None,
-                "created_by": event.created_by,
-            }).execute()
-        except Exception:
-            log.warning("plan_events yazılamadı (migration?)", exc_info=True)
+        self._ensure_user(event.user_id)
+        self._db.table("plan_events").upsert({
+            "id": event.id,
+            "user_id": event.user_id,
+            "plan_id": event.plan_id,
+            "title": event.title,
+            "categories": event.categories,
+            "scheduled_time": event.scheduled_time,
+            "duration_min": event.duration_min,
+            "recurrence": event.recurrence,
+            "byweekday": event.byweekday,
+            "start_date": event.start_date.isoformat(),
+            "end_date": event.end_date.isoformat() if event.end_date else None,
+            "created_by": event.created_by,
+        }).execute()
 
     def get_plan_event(self, user_id: str, event_id: str) -> Optional[PlanEvent]:
         try:
@@ -1335,7 +1357,12 @@ class SupabaseRepository(Repository):
             )
         except Exception:
             return None
-        return _event_from_row(row) if row else None
+        if not row or row.get("deleted_at"):
+            return None
+        try:
+            return _event_from_row(row)
+        except Exception:
+            return None
 
     def list_plan_events(
         self, user_id: str, plan_id: str | None = None
@@ -1347,7 +1374,13 @@ class SupabaseRepository(Repository):
             rows = query.execute().data or []
         except Exception:
             return []
-        return [_event_from_row(row) for row in rows]
+        events: list[PlanEvent] = []
+        for row in visible_event_rows(rows):
+            try:
+                events.append(_event_from_row(row))
+            except Exception:  # noqa: BLE001 — bozuk satır listeyi düşürmez
+                continue
+        return events
 
     def _occurrence_for(self, event_id: str, day: dt_date) -> Optional[dict]:
         return _maybe_single(
@@ -1521,14 +1554,23 @@ class SupabaseRepository(Repository):
             # Toplu upsert'te created_at eşit olabilir; id ikincil anahtar.
             .order("created_at").order("id").limit(400).execute().data
         ) or []
-        return [
-            ChatMessage(
-                id=row.get("client_message_id") or f"legacy-{row.get('id') or ''}",
-                role=row["role"],
-                content=row["content"],
-            )
-            for row in rows
-        ]
+        messages: list[ChatMessage] = []
+        for row in rows:
+            content = clip_chat_content(str(row.get("content") or "")).strip()
+            if not content:
+                continue
+            role = row.get("role")
+            if role not in ("user", "assistant"):
+                continue
+            try:
+                messages.append(ChatMessage(
+                    id=row.get("client_message_id") or f"legacy-{row.get('id') or ''}",
+                    role=role,
+                    content=content,
+                ))
+            except Exception:  # noqa: BLE001
+                continue
+        return messages
 
     def list_fortunes(self, user_id: str, limit: int = 50) -> list[FortuneRecord]:
         rows = (

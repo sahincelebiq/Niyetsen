@@ -28,7 +28,7 @@ from app.models.schemas import (
     AttachmentIngestResponse, BonusCompletionRequest, BonusOfferResponse, ChatMessage,
     ChatGreetingResponse, ChatRequest, ChatResponse, ChatSessionResponse, CollectedIntent,
     ChatThread, ConsentStatus, ConsentUpdate, DailyTaskItem, DailyTasksResponse,
-    FortuneChatRequest, FortuneChatResponse, FortuneRecord,
+    ExcuseResponse, FortuneChatRequest, FortuneChatResponse, FortuneRecord,
     FortuneRightsResponse,
     HoroscopeResponse, LeagueJoinRequest, LeagueResponse,
     PhotoFortuneResponse, Plan, PlanEvent, PlanEventCreateRequest, PlanGenerateRequest, PlanRenameRequest,
@@ -36,7 +36,7 @@ from app.models.schemas import (
     PlanSummary, ProfileUpdate, ProofRecord, ProofResult, PushTokenRecord,
     PushTokenRegistration, RevenueCatWebhookPayload, StateResponse, SubscriptionInfo,
     TarotDrawRequest, TarotDrawResponse, Task, TaskCreateRequest, TaskEditRequest,
-    UserProfile,
+    UserProfile, clip_chat_content,
 )
 from app.services import (
     attachment_service, bonus_service, consent_service, fortune_service,
@@ -230,7 +230,11 @@ async def chat(
         active[0].model_dump_json(exclude_none=True)
         if active else ""
     )
-    today_status, recent_tasks = _task_memory(user_id, profile.timezone)
+    try:
+        today_status, recent_tasks = _task_memory(user_id, profile.timezone)
+    except Exception:  # noqa: BLE001 — bellek eksikliği sohbeti düşürmez
+        log.warning("Bugün bellek özeti okunamadı (yoksayıldı).", exc_info=True)
+        today_status, recent_tasks = "", ""
     summaries = repo.list_plan_summaries(user_id)
     active_summary = next((item for item in summaries if item.is_active), None)
     plan_has_content = bool(active_summary and active_summary.has_content)
@@ -310,6 +314,9 @@ async def chat(
         user_id, len(req.messages), "assistant", response.reply
     )
     response.message_id = assistant_id
+    response.reply = clip_chat_content(response.reply) or (
+        "Niyetini biraz daha anlat: bu yıl hayatında neyin değişmesini istiyorsun? ✨"
+    )
     to_persist.append(
         ChatMessage(id=assistant_id, role="assistant", content=response.reply)
     )
@@ -331,20 +338,27 @@ async def chat(
             except Exception:  # noqa: BLE001
                 log.warning("Oturum başlığı güncellenemedi (yoksayıldı).", exc_info=True)
 
-    repo.save_intent(
-        user_id,
-        response.collected,
-        response.collected.duration_days or 365,
-        response.ready_for_plan,
-    )
+    try:
+        repo.save_intent(
+            user_id,
+            response.collected,
+            response.collected.duration_days or 365,
+            response.ready_for_plan,
+        )
+    except Exception:  # noqa: BLE001 — niyet yazılamazsa yanıt yine dönsün
+        log.warning("Niyet kaydedilemedi (yoksayıldı).", exc_info=True)
 
     return response
 
 
 @router.get("/chat/history", response_model=list[ChatMessage])
 def chat_history(user_id: str = Depends(get_current_user)) -> list[ChatMessage]:
-    """Uygulama yeniden açılınca / yeni cihazda sohbeti kaldığı yerden göstermek için."""
-    return repo.get_chat_history(user_id)
+    """Aktif oturumun mesajları. Sorgu parametresi yok; boş oturum [] (404 değil)."""
+    try:
+        return repo.get_chat_history(user_id)
+    except Exception:  # noqa: BLE001 — thread/geçmiş degrade
+        log.warning("Sohbet geçmişi okunamadı (yoksayıldı).", exc_info=True)
+        return []
 
 
 @router.post("/chat/reset", response_model=ChatGreetingResponse)
@@ -358,15 +372,22 @@ def chat_reset(
     (retention/pazarlama verisi korunur — Şahin'in kararı). Plan, niyet,
     görevler ve puanlara dokunulmaz. Dönen değer: taze karşılama mesajı.
     """
-    thread = repo.create_chat_thread(user_id)
-    log.info("Yeni sohbet oturumu (user=%s, thread=%s)", user_id, thread.id)
+    try:
+        thread = repo.create_chat_thread(user_id)
+        log.info("Yeni sohbet oturumu (user=%s, thread=%s)", user_id, thread.id)
+    except Exception:  # noqa: BLE001 — thread degrade; karşılama yine dönsün
+        log.warning("Yeni sohbet oturumu açılamadı (yoksayıldı).", exc_info=True)
     return _compose_chat_greeting(user_id, x_app_locale)
 
 
 @router.get("/chat/threads", response_model=list[ChatThread])
 def list_chat_threads(user_id: str = Depends(get_current_user)) -> list[ChatThread]:
     """Geçmiş sohbet oturumları — başlıklarıyla, en yeniden eskiye."""
-    return repo.list_chat_threads(user_id)
+    try:
+        return repo.list_chat_threads(user_id)
+    except Exception:  # noqa: BLE001 — thread degrade
+        log.warning("Sohbet oturumları okunamadı (yoksayıldı).", exc_info=True)
+        return []
 
 
 @router.post("/chat/threads/{thread_id}/activate", response_model=list[ChatMessage])
@@ -374,9 +395,18 @@ def activate_chat_thread(
     thread_id: str, user_id: str = Depends(get_current_user)
 ) -> list[ChatMessage]:
     """Geçmiş bir sohbete dön; o oturumun mesajları döner."""
-    if not repo.activate_chat_thread(user_id, thread_id):
+    try:
+        activated = repo.activate_chat_thread(user_id, thread_id)
+    except Exception:  # noqa: BLE001 — thread degrade
+        log.warning("Sohbet oturumu açılamadı (yoksayıldı).", exc_info=True)
+        activated = False
+    if not activated:
         raise HTTPException(status_code=404, detail="Sohbet bulunamadı.")
-    return repo.get_chat_history(user_id)
+    try:
+        return repo.get_chat_history(user_id)
+    except Exception:  # noqa: BLE001
+        log.warning("Aktif sohbet geçmişi okunamadı (yoksayıldı).", exc_info=True)
+        return []
 
 
 def _compose_chat_greeting(user_id: str, locale_raw: str | None = None) -> ChatGreetingResponse:
@@ -387,7 +417,11 @@ def _compose_chat_greeting(user_id: str, locale_raw: str | None = None) -> ChatG
     summaries = repo.list_plan_summaries(user_id)
     active_summary = next((item for item in summaries if item.is_active), None)
     has_plan = bool(active_summary and active_summary.has_content)
-    today = project_service.get_daily_tasks_response(repo, user_id)
+    try:
+        today = project_service.get_daily_tasks_response(repo, user_id)
+    except Exception:  # noqa: BLE001 — karşılama sohbeti düşürmez
+        log.warning("Karşılama için bugün özeti okunamadı (yoksayıldı).", exc_info=True)
+        today = DailyTasksResponse()
     pending_today = sum(1 for item in today.items if item.task.status == "pending")
     completed_today = sum(1 for item in today.items if item.task.status == "done")
     locale = (
@@ -428,8 +462,13 @@ def chat_session(user_id: str = Depends(get_current_user)) -> ChatSessionRespons
     collected, ready = active or (None, False)
     collected_intent = collected or CollectedIntent()
     can_generate = not plan_has_content and ready and collected_intent.is_ready()
+    try:
+        messages = repo.get_chat_history(user_id)
+    except Exception:  # noqa: BLE001 — thread degrade
+        log.warning("Oturum geçmişi okunamadı (yoksayıldı).", exc_info=True)
+        messages = []
     return ChatSessionResponse(
-        messages=repo.get_chat_history(user_id),
+        messages=messages,
         collected=collected_intent,
         ready_for_plan=can_generate,
         plan_has_content=plan_has_content,
@@ -516,7 +555,11 @@ def rename_project(
 @router.get("/tasks/daily", response_model=DailyTasksResponse)
 def daily_tasks(user_id: str = Depends(get_current_user)) -> DailyTasksResponse:
     """Bugünün görevleri. Parti gerideyse needs_extension=true → mobil /plan/ensure-today."""
-    return project_service.get_daily_tasks_response(repo, user_id)
+    try:
+        return project_service.get_daily_tasks_response(repo, user_id)
+    except Exception:  # noqa: BLE001 — boş gün hata değil
+        log.warning("Bugün görevleri okunamadı (yoksayıldı).", exc_info=True)
+        return DailyTasksResponse()
 
 
 @router.post("/plan/{plan_id}/events", response_model=PlanEvent)
@@ -671,6 +714,9 @@ async def plan_agent_chat(
         user_id, len(req.messages), "assistant", response.reply
     )
     response.message_id = assistant_id
+    response.reply = clip_chat_content(response.reply) or (
+        "Niyetini biraz daha anlat: bu yıl hayatında neyin değişmesini istiyorsun? ✨"
+    )
     to_persist.append(
         ChatMessage(id=assistant_id, role="assistant", content=response.reply)
     )
@@ -1050,8 +1096,8 @@ async def upload_proof(
     return result
 
 
-@router.post("/task/{task_id}/excuse")
-def excuse_task(task_id: str, user_id: str = Depends(get_current_user)) -> dict:
+@router.post("/task/{task_id}/excuse", response_model=ExcuseResponse)
+def excuse_task(task_id: str, user_id: str = Depends(get_current_user)) -> ExcuseResponse:
     """Mazeret yolu: chat'teki gorev_ertele_mazeretli aracı da buraya düşer."""
     _require_premium(user_id)
     try:
@@ -1060,11 +1106,13 @@ def excuse_task(task_id: str, user_id: str = Depends(get_current_user)) -> dict:
         raise HTTPException(status_code=404, detail=str(exc))
     except task_lifecycle_service.TaskAlreadyResolved as exc:
         raise HTTPException(status_code=409, detail=str(exc))
-    return {
-        "message": "Dürüstlüğün için teşekkürler — ceza sabit kaldı, katlanma sıfırlandı. "
-                   "İstersen bugünün en küçük halkasını yine de koyabilirsin. 🌙",
-        "events": [e.model_dump() for e in events],
-    }
+    return ExcuseResponse(
+        message=(
+            "Dürüstlüğün için teşekkürler — ceza sabit kaldı, katlanma sıfırlandı. "
+            "İstersen bugünün en küçük halkasını yine de koyabilirsin. 🌙"
+        ),
+        events=events,
+    )
 
 
 def require_cron_secret(
@@ -1215,6 +1263,7 @@ def my_state(user_id: str = Depends(get_current_user)) -> StateResponse:
         excuse_count=s.excuse_count,
         silent_miss_streak=s.silent_miss_streak,
         yesterday_silent_misses=yesterday_silent_misses,
+        last_active_day=s.last_active_date,
     )
 
 
@@ -1421,35 +1470,46 @@ def _fortune_context(
         or normalize_app_locale(profile.preferred_language)
         or "tr"
     )
-    active = repo.get_active_intent(user_id)
-    today_status, recent_tasks = _task_memory(user_id, profile.timezone)
-    plan = repo.get_plan(user_id)
-    plan_day = None
-    duration_days = None
-    if plan is not None:
-        today = _user_today(profile.timezone)
-        plan_day = (today - plan.start_date).days + 1
-        duration_days = plan.duration_days
-    interest_pool = list(active[0].interests) if active else []
-    philosophy_paths = persona_service.paths_in_interests(interest_pool)
-    memory = build_memory_block(
-        state=state,
-        name=profile.name or "",
-        birth_date=profile.birth_date.isoformat() if profile.birth_date else "",
-        zodiac=profile.zodiac_sign or "",
-        gender=profile.gender or "",
-        preferred_language=preferred,
-        active_intent=_compact_intent_for_mystic(active),
-        today_status=today_status,
-        recent_tasks=recent_tasks,
-        plan_day=plan_day,
-        duration_days=duration_days,
-        philosophy_paths=philosophy_paths,
-    )
+    try:
+        active = repo.get_active_intent(user_id)
+        today_status, recent_tasks = _task_memory(user_id, profile.timezone)
+        plan = repo.get_plan(user_id)
+        plan_day = None
+        duration_days = None
+        if plan is not None:
+            today = _user_today(profile.timezone)
+            plan_day = (today - plan.start_date).days + 1
+            duration_days = plan.duration_days
+        interest_pool = list(active[0].interests) if active else []
+        philosophy_paths = persona_service.paths_in_interests(interest_pool)
+        memory = build_memory_block(
+            state=state,
+            name=profile.name or "",
+            birth_date=profile.birth_date.isoformat() if profile.birth_date else "",
+            zodiac=profile.zodiac_sign or "",
+            gender=profile.gender or "",
+            preferred_language=preferred,
+            active_intent=_compact_intent_for_mystic(active),
+            today_status=today_status,
+            recent_tasks=recent_tasks,
+            plan_day=plan_day,
+            duration_days=duration_days,
+            philosophy_paths=philosophy_paths,
+        )
+    except Exception:  # noqa: BLE001 — fal bellek eksikliği yorumu düşürmez
+        log.warning("Mistik bellek kurulamadı (yoksayıldı).", exc_info=True)
+        memory = build_memory_block(
+            state=state,
+            name=profile.name or "",
+            preferred_language=preferred,
+        )
     # faz8.13/2c: mistik hafıza — geçmiş fallar rehber bağlamına girer.
-    mystic_memory = fortune_service.build_mystic_memory(repo, user_id)
-    if mystic_memory:
-        memory = f"{memory}\n\n{mystic_memory}"
+    try:
+        mystic_memory = fortune_service.build_mystic_memory(repo, user_id)
+        if mystic_memory:
+            memory = f"{memory}\n\n{mystic_memory}"
+    except Exception:  # noqa: BLE001
+        log.warning("Fal geçmişi belleğe alınamadı (yoksayıldı).", exc_info=True)
     return profile, info.status == "active", wrap_mystic_niyetsen_context(memory)
 
 
@@ -1630,7 +1690,11 @@ def league_board(user_id: str = Depends(get_current_user)) -> LeagueResponse:
     istemcide). KVKK: yalnız rumuz + puan + zincir döner."""
     from app.services import league_service
 
-    return league_service.get_board(repo, user_id)
+    try:
+        return league_service.get_board(repo, user_id)
+    except Exception:  # noqa: BLE001 — lig okunamazsa boş pano (opt-in CTA)
+        log.warning("Lig panosu okunamadı (yoksayıldı).", exc_info=True)
+        return LeagueResponse()
 
 
 @router.post("/league/join", response_model=LeagueResponse)
