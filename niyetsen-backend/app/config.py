@@ -2,10 +2,19 @@
 Niyetsen — Yapılandırma
 Tüm ayarlar tek yerden okunur. Sırlar YALNIZ .env'de yaşar (asla commit edilmez).
 """
+import logging
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
+
+
+def _env(*names: str) -> str:
+    for name in names:
+        value = os.environ.get(name, "").strip()
+        if value:
+            return value
+    return ""
 
 
 def _bool(name: str, default: str = "false") -> bool:
@@ -25,7 +34,7 @@ class Settings:
     API_VERSION: str = os.environ.get("API_VERSION", "1.1.1")
 
     # --- AI ---
-    GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "")
+    GEMINI_API_KEY: str = os.environ.get("GEMINI_API_KEY", "").strip()
     # FAZ 8 (2026-07-29, Şahin kararı): sohbet + plan artık Gemini 3.1 Pro.
     # Model kimliği ai.google.dev/gemini-api/docs/models/gemini-3.1-pro-preview
     # sayfasından DOĞRULANDI. DİKKAT: Railway'de GEMINI_MODEL* env'leri set
@@ -61,17 +70,19 @@ class Settings:
     IMAGE_GEMINI_RATIO: float = float(os.environ.get("IMAGE_GEMINI_RATIO", "0.15"))
 
     # --- Görsel ---
-    UNSPLASH_ACCESS_KEY: str = os.environ.get("UNSPLASH_ACCESS_KEY", "")
+    UNSPLASH_ACCESS_KEY: str = os.environ.get("UNSPLASH_ACCESS_KEY", "").strip()
 
     # --- Ortam ---
     ENV: str = os.environ.get("ENV", "dev")  # dev | prod
     # Dev'de auth kapalı çalışabilir; PROD'DA ASLA. main.py bunu zorlar.
     AUTH_DISABLED: bool = _bool("AUTH_DISABLED", "true")
-    SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "")
+    SUPABASE_URL: str = os.environ.get("SUPABASE_URL", "").strip()
     # service_role anahtarı — SADECE backend'de yaşar, RLS'i bypass eder, .env dışına çıkmaz.
-    SUPABASE_SERVICE_KEY: str = (
-        os.environ.get("SUPABASE_SERVICE_KEY", "")
-        or os.environ.get("SUPABASE_SECRET_KEY", "")
+    # Resmi Supabase adı SUPABASE_SERVICE_ROLE_KEY; eski iki ad geriye dönük durur.
+    SUPABASE_SERVICE_KEY: str = _env(
+        "SUPABASE_SERVICE_KEY",
+        "SUPABASE_SERVICE_ROLE_KEY",
+        "SUPABASE_SECRET_KEY",
     )
     SUPABASE_TIMEOUT_SEC: int = int(os.environ.get("SUPABASE_TIMEOUT_SEC", "120"))
     # false: InMemoryRepository (MVP varsayılanı, testler bunu kullanır).
@@ -124,9 +135,10 @@ class Settings:
     )
 
     # --- Abonelik (FAZ 5) ---
-    REVENUECAT_WEBHOOK_SECRET: str = os.environ.get("REVENUECAT_WEBHOOK_SECRET", "")
+    REVENUECAT_WEBHOOK_SECRET: str = os.environ.get("REVENUECAT_WEBHOOK_SECRET", "").strip()
     # Secret API key (dashboard) — /me/subscription/sync için; yalnız backend'de.
-    REVENUECAT_API_KEY: str = os.environ.get("REVENUECAT_API_KEY", "")
+    # REVENUECAT_SECRET_KEY resmi dashboard adı; REVENUECAT_API_KEY geriye dönük.
+    REVENUECAT_API_KEY: str = _env("REVENUECAT_API_KEY", "REVENUECAT_SECRET_KEY")
     REVENUECAT_ENTITLEMENT_ID: str = os.environ.get("REVENUECAT_ENTITLEMENT_ID", "premium")
 
     # --- Gözlemlenebilirlik (FAZ 6) ---
@@ -152,12 +164,61 @@ class Settings:
     DEV_ACCOUNT_EMAILS: list[str] = _csv("DEV_ACCOUNT_EMAILS") or [
         "kutluadalarr7@gmail.com"
     ]
-    # Kapalı test e-postaları: yalnız env. Boş / tanımsız = kimseye kısa devre yok.
-    # Lansman sonrası CLOSED_TEST_EMAILS'i boş bırak — kod fallback'i YOK.
+    # Artık premium kısa devresi DEĞİL (1.2.3). Alan durur ki eski env boot'u
+    # kırmasın; allowlist yalnız DEV_ACCOUNT_EMAILS.
     CLOSED_TEST_EMAILS: list[str] = _csv("CLOSED_TEST_EMAILS")
 
 
 settings = Settings()
+
+
+def _secret_usable(value: str, *, min_len: int = 16) -> bool:
+    """Boş, boşluklu veya yer tutucu sırları reddet. Değerin kendisi loglanmaz."""
+    text = (value or "").strip()
+    if len(text) < min_len or any(ch.isspace() for ch in text):
+        return False
+    if text.startswith("$") or "${" in text:
+        return False
+    lowered = text.lower()
+    return not any(
+        mark in lowered
+        for mark in ("changeme", "placeholder", "your-api", "your_api", "example_key")
+    )
+
+
+def validate_prod_secrets() -> None:
+    """ENV=prod ise çekirdek sırlar yoksa süreç açılmasın.
+
+    Unsplash ve RevenueCat secret API anahtarı eksikse servis ayakta kalır:
+    görsel yer tutucuya, abonelik webhook kaydına düşer. İkisi de uyarı loglanır.
+    """
+    if settings.ENV != "prod":
+        return
+    if not _secret_usable(settings.GEMINI_API_KEY):
+        raise RuntimeError(
+            "ENV=prod iken GEMINI_API_KEY eksik veya geçersiz. "
+            "Railway api servisinde gerçek anahtarı tanımla."
+        )
+    url = settings.SUPABASE_URL
+    if not url.startswith("https://") or len(url) < 16:
+        raise RuntimeError(
+            "ENV=prod iken SUPABASE_URL https ile başlamalı ve dolu olmalı."
+        )
+    if not _secret_usable(settings.SUPABASE_SERVICE_KEY, min_len=20):
+        raise RuntimeError(
+            "ENV=prod iken SUPABASE_SERVICE_KEY (veya SUPABASE_SERVICE_ROLE_KEY) "
+            "eksik veya geçersiz."
+        )
+    log = logging.getLogger("niyetsen.app")
+    if not _secret_usable(settings.UNSPLASH_ACCESS_KEY, min_len=8):
+        log.warning(
+            "UNSPLASH_ACCESS_KEY boş — plan görselleri yer tutucuya düşer, istek 500 olmaz."
+        )
+    if not _secret_usable(settings.REVENUECAT_API_KEY, min_len=8):
+        log.warning(
+            "REVENUECAT_API_KEY boş — webhook aboneliği yazar; "
+            "/me/subscription/sync yedeği çalışmaz."
+        )
 
 
 # ============================================================

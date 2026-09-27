@@ -124,6 +124,30 @@ class PlanRenameRequest(BaseModel):
     name: str = Field(min_length=1, max_length=48)
 
 
+class TaskStep(BaseModel):
+    """Görsel plan kartının alt adımı. Puan yazmaz; kartın ilerlemesidir."""
+    id: str
+    title: str
+    done: bool = False
+    order: int = 0
+
+
+class TaskStepIn(BaseModel):
+    id: str = ""
+    title: str = Field(min_length=1, max_length=80)
+    done: bool = False
+    order: int = 0
+
+
+class TaskStepsReplace(BaseModel):
+    steps: list[TaskStepIn] = Field(default_factory=list, max_length=12)
+
+
+class TaskStepsResponse(BaseModel):
+    task_id: str
+    steps: list[TaskStep]
+
+
 class TaskEditRequest(BaseModel):
     """FAZ 8.3 — title/date düzenleme. Şemada time alanı yok (MASTER_PLAN §2)."""
     title: Optional[str] = Field(default=None, min_length=1, max_length=200)
@@ -142,6 +166,8 @@ class DailyTaskItem(BaseModel):
     plan_id: str
     plan_name: str
     task: Task
+    # Alt adımlar puan yazmaz. Boş liste = bu kartta adım yok.
+    steps: list[TaskStep] = Field(default_factory=list)
 
 
 class PlanGenerateRequest(BaseModel):
@@ -171,6 +197,7 @@ class DailyTasksResponse(BaseModel):
     plan_day: Optional[int] = None
     batch_generated_until: Optional[int] = None
     active_plan_name: str = ""
+    active_plan_id: str = ""
     has_active_plan: bool = False
 
 
@@ -315,6 +342,7 @@ class StateResponse(BaseModel):
     excuse_count: int
     silent_miss_streak: int
     yesterday_silent_misses: int = 0
+    last_active_day: dt_date | None = None
 
 
 # ---------- Niyetsen Raporu / "Wrapped" (FAZ 8.8) ----------

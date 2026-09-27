@@ -20,7 +20,7 @@ from app.models.schemas import (
     DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanDay,
     PlanEvent, PlanEventOccurrence, PlanSummary,
     PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord,
-    ScoreEvent, Task, UserProfile,
+    ScoreEvent, Task, TaskStep, UserProfile,
 )
 from app.storage.base import Repository
 
@@ -48,6 +48,7 @@ class InMemoryRepository(Repository):
         self._bonus_offers: dict[str, BonusOffer] = {}
         self._subscriptions: dict[str, dict] = {}
         self._fortunes: dict[str, list[FortuneRecord]] = {}
+        self._task_steps: dict[tuple[str, str], list[TaskStep]] = {}
         # faz8.13/4: lig üyelikleri — user_id -> {alias, score, streak}
         self._league: dict[str, dict] = {}
         # FAZ 7.6: sohbet oturumları — user -> thread_id -> meta
@@ -207,6 +208,12 @@ class InMemoryRepository(Repository):
                     if task.id == task_id:
                         return task
         return None
+
+    def get_task_steps(self, user_id: str, task_id: str) -> list[TaskStep]:
+        return list(self._task_steps.get((user_id, task_id), []))
+
+    def save_task_steps(self, user_id: str, task_id: str, steps: list[TaskStep]) -> None:
+        self._task_steps[(user_id, task_id)] = list(steps)
 
     def list_tasks_for_date(self, user_id: str, day: dt_date) -> list[Task]:
         tasks: list[Task] = []

@@ -116,7 +116,7 @@ def test_jwt_email_claim_registers_closed_tester(monkeypatch):
         assert client.get(
             "/me/state", headers={"Authorization": f"Bearer {token}"}
         ).status_code == 200
-        assert dev_accounts.is_dev("closed-jwt") is True
+        assert dev_accounts.is_dev("closed-jwt") is False
     finally:
         dev_accounts.reset()
 

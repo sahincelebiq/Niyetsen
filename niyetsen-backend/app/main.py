@@ -12,7 +12,7 @@ from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from app.api.routes import router
-from app.config import settings
+from app.config import settings, validate_prod_secrets
 from app.core.observability import init_observability
 from app.core.rate_limit import limiter
 
@@ -44,6 +44,8 @@ if settings.ENV == "prod" and not settings.REVENUECAT_WEBHOOK_SECRET:
         "ENV=prod iken REVENUECAT_WEBHOOK_SECRET boş olamaz. RevenueCat webhook "
         "doğrulaması zorunludur."
     )
+
+validate_prod_secrets()
 
 # Boot tanısı: Railway'de "Deploy Crashed" görülürse logdaki İLK satırlardan
 # hangi konfigürasyonla açıldığı okunur (sır YAZILMAZ). Bu satır görünmüyorsa

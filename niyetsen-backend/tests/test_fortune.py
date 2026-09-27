@@ -83,6 +83,14 @@ def test_tarot_requires_consent():
     assert resp.status_code == 403
 
 
+def test_crisis_signal_catches_turkish_capital_i():
+    from app.core import prompts
+
+    assert prompts.contains_crisis_signal("İntihar etmek istiyorum")
+    assert prompts.contains_crisis_signal("intihar")
+    assert not prompts.contains_crisis_signal("bugün yürüyüş yaptım")
+
+
 def test_tarot_crisis_signal_stops_reading():
     user = "crisis_user"
     grant_chat_consent(user, client)

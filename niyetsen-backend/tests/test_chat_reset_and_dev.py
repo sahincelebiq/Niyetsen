@@ -77,13 +77,12 @@ def test_closed_test_email_gets_premium_without_purchase(
 
     monkeypatch.setattr(settings, "CLOSED_TEST_EMAILS", ["tester@example.com"])
     dev_accounts.register_if_dev("closed-tester", "tester@example.com")
-    assert dev_accounts.is_dev("closed-tester") is True
+    assert dev_accounts.is_dev("closed-tester") is False
     info = subscription_service.get_subscription(
         isolated_in_memory_repo, "closed-tester"
     )
-    assert info.has_premium_access is True
-    assert info.show_paywall is False
-    assert info.status == "active"
+    assert info.status == "free"
+    assert info.status != "active"
 
 
 def test_empty_closed_test_env_does_not_grant_hardcoded_emails(

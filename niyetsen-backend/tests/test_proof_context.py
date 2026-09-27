@@ -43,3 +43,24 @@ def test_evaluate_proof_prompt_includes_personal_context(monkeypatch):
     assert "Akşam meyve tabağı hazırla" in prompt
     assert "{plan_name}" not in prompt
     assert prompts.PROOF_VALIDATION_PROMPT.count("{plan_name}") == 1
+
+
+def test_matches_false_rejects_despite_confidence_and_location(monkeypatch):
+    async def fake_generate_json_with_image(*, prompt, image_bytes, mime_type, **kwargs):
+        return {"matches": False, "confidence": 90, "reason": "Su bardağı, meyve değil."}
+
+    monkeypatch.setattr(
+        proof_service, "generate_json_with_image", fake_generate_json_with_image
+    )
+    jpeg = b"\xff\xd8\xff" + b"\x00" * 200
+    result = asyncio.run(
+        proof_service.evaluate_proof(
+            task_title="Akşam meyve tabağı hazırla",
+            image_bytes=jpeg,
+            mime_type="image/jpeg",
+            attempt_no=1,
+            has_location=True,
+        )
+    )
+    assert result.approved is False
+    assert result.confidence == 90

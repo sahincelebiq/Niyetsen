@@ -1,9 +1,9 @@
 """
 Geliştirici hesabı ayrımı (FAZ 7.5).
 =====================================
-Şahin'in geliştirici hesabı (DEV_ACCOUNT_EMAILS) ve kapalı test e-postaları
-(CLOSED_TEST_EMAILS) mağaza satın alması olmadan tam erişim alır; diğer
-kullanıcılar standart deneme → paywall akışında kalır. Eşleşme JWT'deki
+Yalnız geliştirici hesabı (DEV_ACCOUNT_EMAILS) mağaza satın alması olmadan
+tam erişim alır. Kapalı test e-postaları (CLOSED_TEST_EMAILS) Play'den
+indirmiş kullanıcıdır: ücretsiz sürüm, PRO için mağaza. Eşleşme JWT'deki
 doğrulanmış e-posta claim'iyle yapılır (kullanıcı kendi e-postasını taklit
 edemez; Supabase imzalı token).
 
@@ -21,7 +21,8 @@ _lock = Lock()
 
 
 def _normalized_allowlist() -> set[str]:
-    emails = list(settings.DEV_ACCOUNT_EMAILS) + list(settings.CLOSED_TEST_EMAILS)
+    # CLOSED_TEST_EMAILS kısa devre değil. Kapalı test = mağaza kullanıcısı.
+    emails = list(settings.DEV_ACCOUNT_EMAILS)
     return {email.strip().lower() for email in emails if email.strip()}
 
 

@@ -65,44 +65,26 @@ def _mirror_line(
     start: date,
     end: date,
 ) -> str:
-    """Dürüst ayna: en güçlü/zayıf yön + erteleme örüntüsü. Sayıyla utandırma yok."""
+    """Yalnız kazanım. Sessiz kaçırma ve mazeret cümlesi raporda yok."""
     ranked = sorted(CATEGORIES, key=lambda c: state.points.get(c, 0))
     weak, strong = ranked[0], ranked[-1]
-    period_tasks = [
-        task
+    done = sum(
+        1
         for plan in all_plans
         for day in plan.days
         for task in day.tasks
-        if task.date and start <= task.date <= end
-    ]
-    silent = sum(1 for t in period_tasks if t.status == "missed_silent")
-    excused = sum(1 for t in period_tasks if t.status == "missed_excused")
-    done = sum(1 for t in period_tasks if t.status == "done")
-    if done == 0 and silent == 0 and excused == 0:
+        if task.date and start <= task.date <= end and task.status == "done"
+    )
+    if done == 0:
         return "Henüz yeterli iz yok. Birkaç kanıtlı gün sonra ayna netleşir."
 
     strong_pts = state.points.get(strong, 0)
     weak_pts = state.points.get(weak, 0)
     if strong_pts == weak_pts:
-        trait = "Yönlerin henüz dengede"
+        trait = "Yönlerin birlikte ilerliyor"
     else:
         trait = f"{strong} büyüyor; {weak} daha ince kalmış"
-
-    if silent > excused and silent > 0:
-        habit = (
-            "Takıldığın günlerde çoğu zaman sessizce geçtin — "
-            "yüzleşme, zinciri korur."
-        )
-    elif excused > silent and excused > 0:
-        habit = (
-            "Takılınca haber veriyorsun; bu dürüstlük. "
-            "Şimdi aynı dürüstlüğü göreve çevir."
-        )
-    elif done:
-        habit = "Bu dönemde iz bıraktın — ritmi korumak özgüveni büyütür."
-    else:
-        habit = ""
-    return f"{trait}. {habit}".strip()
+    return f"{trait}. Bu dönemde iz bıraktın — ritmi korumak özgüveni büyütür."
 
 
 def _hour_done_from_log(
@@ -133,25 +115,18 @@ def _hour_done_from_log(
 def _build_insights(
     *,
     weekday_done: list[int],
-    weekday_missed: list[int],
     hour_done: list[int],
     bonus_offered: int,
     bonus_completed: int,
     state: GameState,
 ) -> list[str]:
-    """Dürüst, utandırmayan içgörü cümleleri (T8) — panel aynası, story değil.
+    """Dürüst, utandırmayan içgörü cümleleri — panel aynası, story değil.
 
-    Öncelik sırası bilinçli: kaçan gün → üretken/sessiz saat → bonus →
-    zayıf kategori → güçlü gün. En fazla 5 satır (panel şişmesin).
+    Kaçırılan gün listelenmez (Wrapped kilidi). Üretken saat, bonus,
+    zayıf kategori, güçlü gün. En fazla 5 satır.
     """
     insights: list[str] = []
 
-    if weekday_missed and max(weekday_missed) > 0:
-        worst = weekday_missed.index(max(weekday_missed))
-        insights.append(
-            f"{_WEEKDAY_NAMES[worst]} günleri görev daha sık kaçıyor — "
-            "o güne 2 dakikalık mini görev koy, zincir kopmasın."
-        )
     if hour_done and sum(hour_done) >= 3:
         peak = hour_done.index(max(hour_done))
         insights.append(
@@ -259,7 +234,6 @@ def _build_dashboard(
         bonus_completed=bonus_completed,
         insights=_build_insights(
             weekday_done=weekday_done,
-            weekday_missed=weekday_missed,
             hour_done=hour_done,
             bonus_offered=bonus_offered,
             bonus_completed=bonus_completed,

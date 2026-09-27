@@ -123,7 +123,8 @@ def test_mirror_line_is_honest_not_shaming():
     line = recap.dashboard.mirror_line if recap.dashboard else ""
     assert "Disiplin" in line
     assert "Özsaygı" in line
-    assert "sessiz" in line.lower()
+    assert "sessiz" not in line.lower()
+    assert "takıl" not in line.lower()
     assert "kaçırdın" not in line.lower()
     assert "ceza" not in line.lower()
 
@@ -224,6 +225,7 @@ def test_dashboard_patterns_hours_and_bonus_insights():
     assert any("üretken saat" in line for line in dash.insights)
     # Utandırma yasak + Wrapped kilidi: story kartlarında kaçırılan geçmez.
     assert all("yine yapmadın" not in line for line in dash.insights)
+    assert all("kaçıyor" not in line for line in dash.insights)
     for card in recap.cards:
         assert "kaçır" not in card.subtitle.lower()
         assert "ceza" not in card.subtitle.lower()

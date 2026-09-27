@@ -1,7 +1,7 @@
 """Çoklu plan ve timezone günlük görev kuralları."""
 from datetime import date, timedelta
 
-from app.models.schemas import ChatMessage, Plan, PlanDay, Task, UserProfile
+from app.models.schemas import ChatMessage, Plan, PlanDay, PlanEvent, Task, TaskStep, UserProfile
 from app.services import project_service, task_lifecycle_service
 from app.storage.repository import InMemoryRepository
 
@@ -143,3 +143,55 @@ def test_daily_tasks_response_flags_extension_when_batch_lags() -> None:
     assert resp.plan_day == 11
     assert resp.batch_generated_until == 7
     assert resp.items == []
+    assert resp.active_plan_id == "lag-plan"
+
+
+def test_day_73_still_lists_tasks_steps_and_events() -> None:
+    """7. günden sonra tarih filtresi yok; süre bitmişse uzatma bayrağı yanar."""
+    repo = InMemoryRepository()
+    user_id = "day-73"
+    start = date(2026, 1, 1)
+    day73 = start + timedelta(days=72)
+    task = Task(
+        id="t73",
+        day=73,
+        title="Kitap",
+        categories=["İstikrar"],
+        date=day73,
+    )
+    repo.save_plan(
+        user_id,
+        Plan(
+            id="p73",
+            duration_days=7,
+            batch_generated_until=7,
+            start_date=start,
+            days=[PlanDay(day=73, tasks=[task])],
+            name="Yol",
+        ),
+    )
+    repo.save_task_steps(
+        user_id,
+        "t73",
+        [TaskStep(id="s1", title="10 sayfa", done=False, order=0)],
+    )
+    repo.save_plan_event(
+        PlanEvent(
+            id="ev73",
+            user_id=user_id,
+            plan_id="p73",
+            title="Akşam okuma",
+            categories=["İstikrar"],
+            scheduled_time="21:00",
+            start_date=day73,
+            recurrence="none",
+            created_by="agent",
+        )
+    )
+    resp = project_service.get_daily_tasks_response(repo, user_id, today=day73)
+    assert resp.plan_day == 73
+    assert resp.needs_extension is True
+    assert resp.active_plan_id == "p73"
+    assert [item.task.id for item in resp.items] == ["t73"]
+    assert resp.items[0].steps[0].title == "10 sayfa"
+    assert [event.title for event in resp.events] == ["Akşam okuma"]

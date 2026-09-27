@@ -16,7 +16,7 @@ from app.models.schemas import (
     DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanEvent,
     PlanEventOccurrence, PlanSummary,
     PointLogRecord, ProofAttemptClaim, ProofRecord, ProofResult, PushTokenRecord,
-    ScoreEvent, Task, UserProfile,
+    ScoreEvent, Task, TaskStep, UserProfile,
 )
 
 
@@ -61,6 +61,10 @@ class Repository(ABC):
 
     @abstractmethod
     def get_task(self, user_id: str, task_id: str) -> Optional[Task]: ...
+
+    def get_task_steps(self, user_id: str, task_id: str) -> list[TaskStep]: ...
+
+    def save_task_steps(self, user_id: str, task_id: str, steps: list[TaskStep]) -> None: ...
 
     @abstractmethod
     def list_tasks_for_date(self, user_id: str, day: dt_date) -> list[Task]: ...

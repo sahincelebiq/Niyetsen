@@ -195,3 +195,69 @@ def test_daily_prefetch_flag_on_penultimate_day() -> None:
     resp = project_service.get_daily_tasks_response(repo, user_id, today=today)
     assert resp.needs_extension is True
     assert resp.plan_day == 6
+
+
+def test_horizon_extension_start_day_jumps_to_today() -> None:
+    assert plan_service.horizon_extension_start_day(duration_days=7, plan_day=73) == 73
+    assert plan_service.horizon_extension_start_day(duration_days=7, plan_day=7) is None
+    assert plan_service.horizon_extension_start_day(duration_days=365, plan_day=73) is None
+
+
+def test_ensure_today_refuses_horizon_without_paid(monkeypatch) -> None:
+    async def fake_generate_json(*args, **kwargs):
+        return FAKE_PLAN_JSON
+
+    monkeypatch.setattr(plan_service, "generate_json", fake_generate_json)
+    user_id = "horizon-free"
+    today = date(2026, 8, 30)
+    start = today - timedelta(days=72)  # plan günü 73, süre 7
+    repo.save_profile(user_id, UserProfile(timezone="Europe/Istanbul"))
+    repo.update_subscription(
+        user_id,
+        subscription_status="expired",
+        trial_started_at=datetime(2026, 6, 1, tzinfo=timezone.utc),
+    )
+    repo.save_plan(
+        user_id,
+        Plan(
+            id="week1",
+            duration_days=7,
+            batch_generated_until=7,
+            start_date=start,
+            days=[PlanDay(day=1, tasks=[])],
+        ),
+    )
+    monkeypatch.setattr("app.api.routes._user_today", lambda _tz: today)
+    resp = client.post("/plan/ensure-today", headers={"X-User-Id": user_id})
+    assert resp.status_code == 402
+    assert repo.get_plan(user_id).duration_days == 7
+
+
+def test_ensure_today_extends_horizon_for_paid(monkeypatch) -> None:
+    async def fake_generate_json(*args, **kwargs):
+        return FAKE_PLAN_JSON
+
+    monkeypatch.setattr(plan_service, "generate_json", fake_generate_json)
+    user_id = "horizon-paid"
+    today = date(2026, 8, 30)
+    start = today - timedelta(days=72)
+    repo.save_profile(user_id, UserProfile(timezone="Europe/Istanbul"))
+    repo.update_subscription(user_id, subscription_status="active")
+    repo.save_plan(
+        user_id,
+        Plan(
+            id="week1-paid",
+            duration_days=7,
+            batch_generated_until=7,
+            start_date=start,
+            days=[PlanDay(day=1, theme="İlk", tasks=[])],
+            name="7 gün",
+        ),
+    )
+    monkeypatch.setattr("app.api.routes._user_today", lambda _tz: today)
+    resp = client.post("/plan/ensure-today", headers={"X-User-Id": user_id})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["duration_days"] == 365
+    assert body["batch_generated_until"] >= 73
+    assert not any(8 <= day["day"] <= 72 for day in body["days"])

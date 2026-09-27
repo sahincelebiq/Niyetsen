@@ -75,16 +75,34 @@ def get_today_tasks(repo: Repository, user_id: str, *, today: date | None = None
     return repo.list_daily_tasks_for_date(user_id, current)
 
 
+def _with_today_steps(
+    repo: Repository, user_id: str, items: list[DailyTaskItem]
+) -> list[DailyTaskItem]:
+    """Bugünün kartlarına alt adımları bağlar. Adım okunamazsa kart düşmez."""
+    enriched: list[DailyTaskItem] = []
+    for item in items:
+        try:
+            steps = repo.get_task_steps(user_id, item.task.id)
+        except Exception:  # noqa: BLE001 — adım hatası Bugün listesini düşürmez
+            steps = []
+        enriched.append(item.model_copy(update={"steps": steps}))
+    return enriched
+
+
 def get_daily_tasks_response(
     repo: Repository, user_id: str, *, today: date | None = None
 ) -> DailyTasksResponse:
-    """Bugünün görevleri + parti geride kaldıysa needs_extension=True."""
+    """Bugünün görevleri + parti geride kaldıysa needs_extension=True.
+
+    Gün numarası 7'yi geçse de tarih eşleşen görev ve etkinlik gelir.
+    Kayıtlı süre bitip takvim ilerdeyse needs_extension ufuk uzatmasını da yakalar.
+    """
     if today is None:
         profile = repo.get_profile(user_id)
         current = _user_local_today(profile.timezone)
     else:
         current = today
-    items = repo.list_daily_tasks_for_date(user_id, current)
+    items = _with_today_steps(repo, user_id, repo.list_daily_tasks_for_date(user_id, current))
     from app.services import event_service
 
     event_items = event_service.list_daily_events(repo, user_id, current)
@@ -106,6 +124,7 @@ def get_daily_tasks_response(
         plan_day=max(plan_day, 0),
         batch_generated_until=plan.batch_generated_until,
         active_plan_name=plan.name or "Planım",
+        active_plan_id=plan.id,
         has_active_plan=True,
     )
 

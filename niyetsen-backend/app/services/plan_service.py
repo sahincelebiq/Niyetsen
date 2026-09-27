@@ -22,6 +22,10 @@ from app.services.image_service import category_fallback_query, enrich_image_key
 
 log = logging.getLogger("niyetsen.plan")
 
+# 365 günlük halka. Kayıtlı süre 7'de kalmış eski planlar, takvim günü
+# süreyi geçince buraya kadar (bugünden, geçmişi doldurmadan) uzar.
+PLAN_HORIZON_DAYS = 365
+
 # İdol Modu (Dalga 4): ilgi alanlarında bir Felsefe Yolu varsa plan üretimine
 # o yolun felsefe + pratik katmanı bağlam olarak enjekte edilir.
 _PATH_MARKER = "yolu"
@@ -100,15 +104,36 @@ def next_generation_start_day(
     return None
 
 
+def horizon_extension_start_day(*, duration_days: int, plan_day: int) -> int | None:
+    """Süre dolmuş (ör. 7) ama takvim günü ilerdeyse 365 ufkuna bugünden devam.
+
+    Geçmiş boş haftalar doldurulmaz. Ufuk zaten 365 ise None.
+    Ücret kapısı çağıran rotadadır (status=active); bu fonksiyon yalnız günü seçer.
+    """
+    if duration_days >= PLAN_HORIZON_DAYS or plan_day <= duration_days or plan_day < 1:
+        return None
+    return min(plan_day, PLAN_HORIZON_DAYS)
+
+
 def needs_plan_extension(
     *,
     duration_days: int,
     batch_generated_until: int,
     plan_day: int,
 ) -> bool:
-    return next_generation_start_day(
+    """Parti gerideyse veya kayıtlı süre (ör. 7) bitip takvim günü ilerdeyse True.
+
+    İkinci durum 365 ufkuna bugünden devamdır; geçmiş haftalar doldurulmaz.
+    Ücret kapısı rotadadır — bu fonksiyon yalnız bayrağı yakar.
+    """
+    if next_generation_start_day(
         duration_days=duration_days,
         batch_generated_until=batch_generated_until,
+        plan_day=plan_day,
+    ) is not None:
+        return True
+    return horizon_extension_start_day(
+        duration_days=duration_days,
         plan_day=plan_day,
     ) is not None
 

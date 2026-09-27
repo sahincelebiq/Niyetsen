@@ -139,10 +139,12 @@ async def evaluate_proof(
         confidence = max(0, min(100, int(data.get("confidence") or 0)))
     except (TypeError, ValueError):
         confidence = 0
-    if has_location:
+    # Şemadaki matches yoksa onay yok. Konum bonusu yanlış kareyi eşiğin üstüne çıkaramaz.
+    matches = data.get("matches") is True
+    if has_location and matches:
         confidence = min(100, confidence + 10)
 
-    approved = confidence >= settings.PROOF_MIN_CONFIDENCE
+    approved = matches and confidence >= settings.PROOF_MIN_CONFIDENCE
     reason = str(data.get("reason") or "")
     if not approved:
         reason = "Tam emin olamadım, bir kare daha dener misin? " + reason

@@ -3,6 +3,7 @@ Niyetsen — Prompt Deposu
 chat_system_prompt.md + uygulama-promt.md §14 TEK kimlikte birleştirildi.
 Buradaki metinler modele giden ham malzemedir; ton değişiklikleri SADECE burada yapılır.
 """
+import unicodedata
 
 ASSISTANT_NAME = "Niyet Rehberi"  # Cursor notu: marka adı netleşince tek yerden değişir.
 
@@ -330,7 +331,7 @@ SADECE şu JSON'u döndür:
 # bedeli büyük. Cursor notu: v1.1'de sınıflandırıcıya yükseltilebilir.
 CRISIS_KEYWORDS = (
     "intihar", "kendime zarar", "canıma kıy", "yaşamak istemiyorum",
-    "ölmek istiyorum", "kendimi öldür", "hayata son",
+    "ölmek istiyorum", "kendimi öldür", "hayata son", "olmasam da olur",
 )
 
 CRISIS_RESPONSE = (
@@ -343,9 +344,16 @@ CRISIS_RESPONSE = (
 )
 
 
+def fold_match_text(text: str) -> str:
+    """Türkçe İ (U+0130) .lower() sonrası birleşik nokta bırakır; 'intihar' kaçmasın."""
+    decomposed = unicodedata.normalize("NFKD", text or "")
+    stripped = "".join(ch for ch in decomposed if unicodedata.category(ch) != "Mn")
+    return stripped.casefold()
+
+
 def contains_crisis_signal(text: str) -> bool:
-    t = (text or "").lower()
-    return any(k in t for k in CRISIS_KEYWORDS)
+    folded = fold_match_text(text)
+    return any(fold_match_text(keyword) in folded for keyword in CRISIS_KEYWORDS)
 
 
 OUT_OF_SCOPE_MARKERS = (

@@ -180,11 +180,7 @@ def get_rights(
 
 
 def _crisis_signal(text: str) -> bool:
-    t = (text or "").casefold()
-    return any(m in t for m in (
-        "intihar", "kendime zarar", "yaşamak istemiyorum", "olmasam da olur",
-        "kendimi öldür",
-    ))
+    return prompts.contains_crisis_signal(text)
 
 
 # ------------------------------------------------------------------

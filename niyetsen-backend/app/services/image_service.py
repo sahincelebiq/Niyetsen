@@ -11,6 +11,7 @@ import asyncio
 import hashlib
 import logging
 import re
+import time
 import unicodedata
 import uuid
 from dataclasses import dataclass
@@ -241,23 +242,66 @@ async def enrich_image_keywords_batch(
         return fallbacks
 
 
+def _retry_after_seconds(resp: object) -> float | None:
+    headers = getattr(resp, "headers", None)
+    raw = headers.get("Retry-After") if headers is not None and hasattr(headers, "get") else None
+    if raw is None:
+        return None
+    try:
+        return max(0.0, float(raw))
+    except (TypeError, ValueError):
+        return None
+
+
 def _search(query: str) -> list[dict]:
-    if not settings.UNSPLASH_ACCESS_KEY:
+    """Unsplash araması. 429/5xx ve ağ hatasında kısa backoff; yine olmazsa [].
+
+    İstisna fırlatmaz: çağıran kategori yedeğine ve yer tutucuya düşebilsin.
+    """
+    if not settings.UNSPLASH_ACCESS_KEY or not (query or "").strip():
         return []
-    resp = httpx.get(
-        _UNSPLASH_SEARCH,
-        params={
-            "query": query,
-            "per_page": 10,
-            "orientation": "landscape",
-            "order_by": "relevant",
-            "content_filter": "high",
-        },
-        headers={"Authorization": f"Client-ID {settings.UNSPLASH_ACCESS_KEY}"},
-        timeout=10,
-    )
-    resp.raise_for_status()
-    return resp.json().get("results", [])
+    delay = 0.4
+    for attempt in range(3):
+        try:
+            resp = httpx.get(
+                _UNSPLASH_SEARCH,
+                params={
+                    "query": query,
+                    "per_page": 10,
+                    "orientation": "landscape",
+                    "order_by": "relevant",
+                    "content_filter": "high",
+                },
+                headers={"Authorization": f"Client-ID {settings.UNSPLASH_ACCESS_KEY}"},
+                timeout=10,
+            )
+        except httpx.HTTPError as exc:
+            log.warning("Unsplash ağ hatası (%s, deneme %s): %s", query, attempt + 1, exc)
+            if attempt >= 2:
+                return []
+            time.sleep(delay)
+            delay = min(delay * 2, 2.0)
+            continue
+        status = int(getattr(resp, "status_code", 200) or 200)
+        if status == 429 or status >= 500:
+            log.warning("Unsplash HTTP %s (%s, deneme %s)", status, query, attempt + 1)
+            if attempt >= 2:
+                return []
+            wait = _retry_after_seconds(resp)
+            time.sleep(min(wait if wait is not None else delay, 2.0))
+            delay = min(delay * 2, 2.0)
+            continue
+        try:
+            resp.raise_for_status()
+            payload = resp.json() or {}
+        except Exception as exc:  # noqa: BLE001 — bozuk gövde aramayı düşürmesin
+            log.warning("Unsplash gövdesi okunamadı (%s): %s", query, exc)
+            return []
+        results = payload.get("results") if isinstance(payload, dict) else None
+        if not isinstance(results, list):
+            return []
+        return [item for item in results if isinstance(item, dict)]
+    return []
 
 
 def _pick_result(results: list[dict], keyword: str) -> dict:
@@ -292,7 +336,11 @@ def _get_unsplash_image(
             used_query = fallback_query
         if results:
             result = _pick_result(results, used_query)
-            base_url = result["urls"]["regular"]
+            urls = result.get("urls") if isinstance(result.get("urls"), dict) else {}
+            base_url = urls.get("regular")
+            if not isinstance(base_url, str) or not base_url.startswith("https://"):
+                log.warning("Unsplash sonucu URL'siz (%s)", used_query)
+                return None
             separator = "&" if "?" in base_url else "?"
             user = result.get("user") or {}
             links = result.get("links") or {}

@@ -182,7 +182,7 @@ def test_require_paid_subscription_uses_allowlist_status_not_db_row(
     from app.config import settings
     from app.core import dev_accounts
 
-    monkeypatch.setattr(settings, "CLOSED_TEST_EMAILS", ["qa@example.com"])
+    monkeypatch.setattr(settings, "DEV_ACCOUNT_EMAILS", ["qa@example.com"])
     dev_accounts.reset()
     try:
         dev_accounts.register_if_dev("qa-user", "qa@example.com")

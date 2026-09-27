@@ -95,6 +95,50 @@ def test_enrich_image_keywords_batch_falls_back_without_gemini(monkeypatch):
     assert "istanbul" in result[0]
 
 
+def test_unsplash_429_retries_then_placeholder(monkeypatch):
+    monkeypatch.setattr(settings, "UNSPLASH_ACCESS_KEY", "test-key")
+    monkeypatch.setattr(settings, "IMAGE_GEMINI_ENABLED", False)
+    calls = {"n": 0}
+
+    class Limited(FakeResponse):
+        status_code = 429
+        headers = {"Retry-After": "0"}
+
+    def fake_get(*args, **kwargs):
+        calls["n"] += 1
+        return Limited([])
+
+    monkeypatch.setattr(image_service.httpx, "get", fake_get)
+    monkeypatch.setattr(image_service.time, "sleep", lambda *_args, **_kwargs: None)
+    image = image_service.get_image("morning yoga", categories=["İrade"])
+    # Asıl sorgu 3 deneme + kategori yedeği 3 deneme; sonra yer tutucu.
+    assert calls["n"] == 6
+    assert image.source == "placeholder"
+    assert image.url.startswith("https://picsum.photos/")
+
+
+def test_unsplash_429_then_success(monkeypatch):
+    monkeypatch.setattr(settings, "UNSPLASH_ACCESS_KEY", "test-key")
+    monkeypatch.setattr(settings, "IMAGE_GEMINI_ENABLED", False)
+
+    class Limited(FakeResponse):
+        def __init__(self):
+            super().__init__([])
+            self.status_code = 429
+            self.headers = {"Retry-After": "0"}
+
+    queue = [Limited(), FakeResponse([_result(4)])]
+
+    def fake_get(*args, **kwargs):
+        return queue.pop(0)
+
+    monkeypatch.setattr(image_service.httpx, "get", fake_get)
+    monkeypatch.setattr(image_service.time, "sleep", lambda *_args, **_kwargs: None)
+    image = image_service.get_image("morning yoga", categories=["İrade"])
+    assert image.source == "unsplash"
+    assert "photo-4" in image.url
+
+
 def test_missing_key_uses_deterministic_placeholder(monkeypatch):
     monkeypatch.setattr(settings, "UNSPLASH_ACCESS_KEY", "")
     monkeypatch.setattr(settings, "IMAGE_GEMINI_ENABLED", False)

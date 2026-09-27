@@ -36,7 +36,7 @@ from app.models.schemas import (
     PlanSummary, ProfileUpdate, ProofRecord, ProofResult, PushTokenRecord,
     PushTokenRegistration, RevenueCatWebhookPayload, StateResponse, SubscriptionInfo,
     TarotDrawRequest, TarotDrawResponse, Task, TaskCreateRequest, TaskEditRequest,
-    UserProfile,
+    TaskStepsReplace, TaskStepsResponse, UserProfile,
 )
 from app.services import (
     attachment_service, bonus_service, consent_service, fortune_service,
@@ -44,7 +44,7 @@ from app.services import (
     plan_service, event_service, plan_agent_service,
     profile_service, project_service, proof_service, push_service, recap_service,
     scoring_service,
-    subscription_service, task_lifecycle_service, tool_service,
+    subscription_service, task_lifecycle_service, task_step_service, tool_service,
 )
 from app.storage.repository import repo
 
@@ -67,6 +67,10 @@ MULTI_PLAN_PAYWALL = {
 PATH_ACTIVATE_PAYWALL = {
     "code": "paywall_required",
     "message": "Felsefe yolunu niyetine işlemek PRO ile açılır. İncelemek ücretsiz.",
+}
+HORIZON_PAYWALL = {
+    "code": "paywall_required",
+    "message": "Sonraki haftalar PRO ile açılır. İlk haftanın kartları duruyor.",
 }
 FORTUNE_PAYWALL_DETAIL = {
     "code": "paywall_required",
@@ -91,6 +95,31 @@ def _require_premium(user_id: str) -> SubscriptionInfo:
     if not info.has_premium_access:
         raise HTTPException(status_code=402, detail=PAYWALL_DETAIL)
     return info
+
+
+def _require_horizon_pro(user_id: str) -> SubscriptionInfo:
+    """Süre dolmuş planı 365 güne uzatmak: yalnız status=active (deneme yetmez)."""
+    subscription_service.sync_expired_trials(repo, user_id)
+    info = subscription_service.get_subscription(repo, user_id)
+    if info.status != "active":
+        raise HTTPException(status_code=402, detail=HORIZON_PAYWALL)
+    return info
+
+
+def _extension_start(current: Plan, plan_day: int) -> tuple[int | None, bool]:
+    """(start_day, süre_uzatılıyor). Süre içi parti ücretsiz kalır; ufuk PRO'dur."""
+    start_day = plan_service.next_generation_start_day(
+        duration_days=current.duration_days,
+        batch_generated_until=current.batch_generated_until,
+        plan_day=plan_day,
+    )
+    if start_day is not None:
+        return start_day, False
+    horizon = plan_service.horizon_extension_start_day(
+        duration_days=current.duration_days,
+        plan_day=plan_day,
+    )
+    return horizon, horizon is not None
 
 
 def _require_paid_pro(user_id: str) -> SubscriptionInfo:
@@ -525,6 +554,7 @@ def create_plan_event(
     body: PlanEventCreateRequest,
     user_id: str = Depends(get_current_user),
 ) -> PlanEvent:
+    _require_premium(user_id)
     profile = repo.get_profile(user_id)
     today = _user_today(profile.timezone)
     try:
@@ -574,6 +604,7 @@ def delete_plan_event(
 def complete_plan_event(
     occurrence_id: str, user_id: str = Depends(get_current_user)
 ) -> dict:
+    _require_premium(user_id)
     profile = repo.get_profile(user_id)
     today = _user_today(profile.timezone)
     try:
@@ -619,6 +650,7 @@ async def plan_agent_chat(
     x_app_locale: str | None = Header(default=None, alias="X-App-Locale"),
 ) -> ChatResponse:
     _require_consent(user_id, "chat")
+    _require_premium(user_id)
     if not req.messages or not any(message.role == "user" for message in req.messages):
         raise HTTPException(status_code=400, detail="Mesaj gerekli.")
     if not repo.plan_belongs_to_user(user_id, plan_id):
@@ -748,7 +780,13 @@ def _intent_for_plan_extension(
     return CollectedIntent()
 
 
-def _merge_generated_batch(user_id: str, current: Plan, batch: Plan) -> Plan:
+def _merge_generated_batch(
+    user_id: str,
+    current: Plan,
+    batch: Plan,
+    *,
+    duration_days: int | None = None,
+) -> Plan:
     """Üretilen partiyi plana yarışa dayanıklı ekler (release QA T2).
 
     Bugün ve Planım açılışta aynı anda ensure-today çağırabilir; iki istek de
@@ -768,6 +806,8 @@ def _merge_generated_batch(user_id: str, current: Plan, batch: Plan) -> Plan:
     target.batch_generated_until = max(
         target.batch_generated_until, batch.batch_generated_until
     )
+    if duration_days is not None:
+        target.duration_days = max(target.duration_days, duration_days)
     repo.save_plan(user_id, target)
     return target
 
@@ -784,18 +824,18 @@ async def next_batch(
     profile = repo.get_profile(user_id)
     today = _user_today(profile.timezone)
     plan_day = (today - current.start_date).days + 1
-    start_day = plan_service.next_generation_start_day(
-        duration_days=current.duration_days,
-        batch_generated_until=current.batch_generated_until,
-        plan_day=max(plan_day, 1),
-    )
+    start_day, raising_horizon = _extension_start(current, max(plan_day, 1))
     if start_day is None:
         return current
+    duration = current.duration_days
+    if raising_horizon:
+        _require_horizon_pro(user_id)
+        duration = plan_service.PLAN_HORIZON_DAYS
     collected = _intent_for_plan_extension(user_id, req)
     try:
         batch = await plan_service.generate_batch(
             collected,
-            duration_days=current.duration_days,
+            duration_days=duration,
             start_day=start_day,
             start_date=current.start_date,
         )
@@ -803,15 +843,20 @@ async def next_batch(
         raise HTTPException(status_code=422, detail=str(exc))
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
-    return _merge_generated_batch(user_id, current, batch)
+    return _merge_generated_batch(
+        user_id,
+        current,
+        batch,
+        duration_days=duration if raising_horizon else None,
+    )
 
 
 @router.post("/plan/ensure-today", response_model=Plan)
 async def ensure_today_batch(user_id: str = Depends(get_current_user)) -> Plan:
     """Bugünün günü yoksa bugünden bir parti üretir; geçmişi doldurmaz.
 
-    Mobil Bugün/Planım açılışında needs_extension iken çağrılır. Tek istekte
-    bir parti (timeout/maliyet). 2. plan / ilk generate hâlâ premium.
+    Süre içindeki parti ücretsiz devam eder. Kayıtlı süre dolmuşsa (ör. 7)
+    ve takvim günü ilerdeyse 365 ufkuna uzatma yalnız status=active ile açılır.
     """
     current = repo.get_plan(user_id)
     if not current:
@@ -819,18 +864,18 @@ async def ensure_today_batch(user_id: str = Depends(get_current_user)) -> Plan:
     profile = repo.get_profile(user_id)
     today = _user_today(profile.timezone)
     plan_day = (today - current.start_date).days + 1
-    start_day = plan_service.next_generation_start_day(
-        duration_days=current.duration_days,
-        batch_generated_until=current.batch_generated_until,
-        plan_day=plan_day,
-    )
+    start_day, raising_horizon = _extension_start(current, plan_day)
     if start_day is None:
         return current
+    duration = current.duration_days
+    if raising_horizon:
+        _require_horizon_pro(user_id)
+        duration = plan_service.PLAN_HORIZON_DAYS
     collected = _intent_for_plan_extension(user_id)
     try:
         batch = await plan_service.generate_batch(
             collected,
-            duration_days=current.duration_days,
+            duration_days=duration,
             start_day=start_day,
             start_date=current.start_date,
         )
@@ -838,7 +883,12 @@ async def ensure_today_batch(user_id: str = Depends(get_current_user)) -> Plan:
         raise HTTPException(status_code=422, detail=str(exc))
     except GeminiUnavailable:
         raise HTTPException(status_code=503, detail=GEMINI_DOWN_MSG)
-    return _merge_generated_batch(user_id, current, batch)
+    return _merge_generated_batch(
+        user_id,
+        current,
+        batch,
+        duration_days=duration if raising_horizon else None,
+    )
 
 
 @router.patch("/plan/tasks/{task_id}", response_model=Task)
@@ -868,6 +918,34 @@ def edit_plan_task(
         raise HTTPException(status_code=409, detail=str(exc))
     except plan_edit_service.PlanEditError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+
+
+@router.get("/plan/tasks/{task_id}/steps", response_model=TaskStepsResponse)
+def get_task_steps(task_id: str, user_id: str = Depends(get_current_user)) -> TaskStepsResponse:
+    """Kartın alt adımları. Puan yazmaz."""
+    try:
+        steps = task_step_service.list_steps(repo, user_id, task_id)
+    except task_step_service.TaskNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    return TaskStepsResponse(task_id=task_id, steps=steps)
+
+
+@router.put("/plan/tasks/{task_id}/steps", response_model=TaskStepsResponse)
+@limiter.limit(f"{settings.CHAT_RATE_LIMIT_PER_MIN}/minute")
+def put_task_steps(
+    request: Request,
+    task_id: str,
+    body: TaskStepsReplace,
+    user_id: str = Depends(get_current_user),
+) -> TaskStepsResponse:
+    """Alt adım listesini değiştirir. Tamamlamak +50 veya zincir yazmaz."""
+    try:
+        steps = task_step_service.replace_steps(repo, user_id, task_id, body.steps)
+    except task_step_service.TaskNotFound as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+    except task_step_service.TaskStepError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    return TaskStepsResponse(task_id=task_id, steps=steps)
 
 
 @router.post("/plan/days/{date}/tasks", response_model=Task)
@@ -1215,6 +1293,7 @@ def my_state(user_id: str = Depends(get_current_user)) -> StateResponse:
         excuse_count=s.excuse_count,
         silent_miss_streak=s.silent_miss_streak,
         yesterday_silent_misses=yesterday_silent_misses,
+        last_active_day=s.last_active_date,
     )
 
 

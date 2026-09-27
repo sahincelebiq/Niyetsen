@@ -21,7 +21,7 @@ from app.models.schemas import (
     DailyTaskItem, FortuneRecord, GameState, NotificationRecipient, Plan, PlanDay,
     PlanEvent, PlanEventOccurrence, PlanSummary, PointLogRecord, ProofAttemptClaim,
     ProofRecord, ProofResult,
-    PushTokenRecord, ScoreEvent, Task, UserProfile,
+    PushTokenRecord, ScoreEvent, Task, TaskStep, UserProfile,
 )
 from app.core.datetimes import coerce_date, coerce_datetime
 from app.storage.base import Repository
@@ -420,6 +420,45 @@ class SupabaseRepository(Repository):
             .eq("id", task_id).eq("plans.user_id", user_id)
         )
         return _task_from_row(row) if row else None
+
+    def get_task_steps(self, user_id: str, task_id: str) -> list[TaskStep]:
+        row = _maybe_single(
+            self._db.table("plan_step_notes").select("body")
+            .eq("user_id", user_id).eq("task_id", task_id)
+        )
+        if not row:
+            return []
+        try:
+            payload = json.loads(row.get("body") or "")
+        except json.JSONDecodeError:
+            return []
+        if not isinstance(payload, list):
+            return []
+        steps: list[TaskStep] = []
+        for item in payload:
+            if not isinstance(item, dict):
+                continue
+            try:
+                steps.append(TaskStep.model_validate(item))
+            except Exception:  # noqa: BLE001 — bozuk satır listeyi düşürmesin
+                continue
+        return steps
+
+    def save_task_steps(self, user_id: str, task_id: str, steps: list[TaskStep]) -> None:
+        body = json.dumps(
+            [step.model_dump() for step in steps],
+            ensure_ascii=False,
+            separators=(",", ":"),
+        )
+        self._db.table("plan_step_notes").upsert(
+            {
+                "user_id": user_id,
+                "task_id": task_id,
+                "body": body,
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            },
+            on_conflict="user_id,task_id",
+        ).execute()
 
     def _plan_ids_for_user(self, user_id: str) -> list[str]:
         rows = (

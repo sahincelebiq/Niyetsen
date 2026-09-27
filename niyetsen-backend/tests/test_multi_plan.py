@@ -66,8 +66,8 @@ def test_free_user_blocked_from_second_project():
     assert second.json()["detail"]["code"] == "paywall_required"
 
 
-def test_closed_tester_can_start_second_project_without_db_active(monkeypatch):
-    """Allowlist status=active — DB satırı free kalsa da ikinci niyet açılır."""
+def test_closed_tester_cannot_start_second_project_without_purchase(monkeypatch):
+    """Kapalı test Play kullanıcısıdır. İkinci niyet DB active olmadan açılmaz."""
     from app.config import settings
     from app.core import dev_accounts
     from app.storage.repository import repo
@@ -97,8 +97,8 @@ def test_closed_tester_can_start_second_project_without_db_active(monkeypatch):
         assert repo.get_subscription_row(user_id)["subscription_status"] != "active"
 
         second = client.post("/projects/new", headers=headers)
-        assert second.status_code == 200
-        assert second.json()["slot_no"] == 2
+        assert second.status_code == 402
+        assert second.json()["detail"]["code"] == "paywall_required"
     finally:
         dev_accounts.reset()
 
