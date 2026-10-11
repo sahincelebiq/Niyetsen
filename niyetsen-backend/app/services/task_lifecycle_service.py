@@ -14,6 +14,9 @@ log = logging.getLogger("niyetsen.task_lifecycle")
 
 DAY_CLOSE_TIME = time(23, 59)
 DEFAULT_TIMEZONE = ZoneInfo("Europe/Istanbul")
+# Tek cron turunda kapanacak ara gün tavanı. Kalan günler sonraki turda
+# last_active_date'den devam eder; ortaya atlanmaz.
+_MAX_CATCHUP_DAYS = 45
 
 
 class TaskLifecycleError(ValueError):
@@ -72,10 +75,36 @@ def _tasks_for_day(repository: Repository, user_id: str, day: date) -> list:
     return repository.list_tasks_for_date(user_id, day)
 
 
+def _settle_prior_days(repository: Repository, user_id: str, day: date) -> int:
+    """last_active ile `day` arasındaki günleri kapat. Ceza sayısı döner.
+
+    En fazla `_MAX_CATCHUP_DAYS` gün. Bitmezse çapa o noktada kalır; çağıran
+    `day`i henüz kapatmaz.
+    """
+    state = repository.get_state(user_id)
+    if state.last_active_date is None or state.last_active_date >= day - timedelta(days=1):
+        return 0
+    cursor = state.last_active_date + timedelta(days=1)
+    penalized = 0
+    steps = 0
+    while cursor < day and steps < _MAX_CATCHUP_DAYS:
+        row = close_user_day(repository, user_id, cursor, _settling=True)
+        penalized += int(row.get("penalized_tasks", 0))
+        steps += 1
+        state = repository.get_state(user_id)
+        if state.last_active_date is not None and state.last_active_date >= cursor:
+            cursor = state.last_active_date + timedelta(days=1)
+        else:
+            cursor += timedelta(days=1)
+    return penalized
+
+
 def close_user_day(
     repository: Repository,
     user_id: str,
     day: date,
+    *,
+    _settling: bool = False,
 ) -> dict:
     # Önce state (3 sorgu): gün zaten kapandıysa görev sorgusuna hiç girme.
     # Cron 5 dk'da bir TÜM kullanıcıları tarar; en sık yol budur.
@@ -88,19 +117,52 @@ def close_user_day(
             "penalized_tasks": 0,
         }
 
+    # Ara günler kapanmadan bugünü işlemek, boş günü kopukluk sanıp zinciri
+    # sıfırlar veya tek jetonla birkaç günü atlatır. En yeni gün kilitlenmez:
+    # 23:59'dan sonraki turlar geç "Yaptım"ı hâlâ sayabilsin.
+    caught_up = 0
+    if not _settling:
+        caught_up = _settle_prior_days(repository, user_id, day)
+        state = repository.get_state(user_id)
+        if state.last_active_date == day:
+            return {
+                "user_id": user_id,
+                "day": day.isoformat(),
+                "streak": "noop",
+                "penalized_tasks": caught_up,
+            }
+        if (
+            state.last_active_date is not None
+            and state.last_active_date < day - timedelta(days=1)
+        ):
+            return {
+                "user_id": user_id,
+                "day": state.last_active_date.isoformat(),
+                "streak": "skipped",
+                "penalized_tasks": caught_up,
+                "streak_len": state.streak_len,
+                "freeze_tokens": state.freeze_tokens,
+            }
+
     tasks = _tasks_for_day(repository, user_id, day)
     event_done = repository.count_done_event_occurrences(user_id, day)
     if not tasks and event_done == 0:
         # Görevsiz günlerde de aylık Zincir Koruma Jetonu işlensin —
         # aksi hâlde görevsiz geçen ay jeton hiç verilmiyordu.
         # Pending etkinlik cezalandırılmaz ve zinciri kırmaz.
-        if scoring_service.grant_monthly_freeze(state, day):
+        # Ara gün çapasını ilerlet; bugün (en yeni kapanış) açık kalsın.
+        if _settling:
+            if scoring_service.close_rest_day(state, day):
+                repository.save_state(state)
+        elif scoring_service.grant_monthly_freeze(state, day):
             repository.save_state(state)
         return {
             "user_id": user_id,
             "day": day.isoformat(),
             "streak": "skipped",
-            "penalized_tasks": 0,
+            "penalized_tasks": caught_up,
+            "streak_len": state.streak_len,
+            "freeze_tokens": state.freeze_tokens,
         }
 
     any_completed = (
@@ -122,7 +184,7 @@ def close_user_day(
         "user_id": user_id,
         "day": day.isoformat(),
         "streak": streak_result,
-        "penalized_tasks": penalized,
+        "penalized_tasks": penalized + caught_up,
         "streak_len": state.streak_len,
         "freeze_tokens": state.freeze_tokens,
     }

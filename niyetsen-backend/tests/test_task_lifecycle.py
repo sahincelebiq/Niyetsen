@@ -422,3 +422,92 @@ def test_same_day_multiple_silent_misses_each_advance_master_streak():
     assert [event.delta for event in repository.get_point_log(user_id)] == [
         -25, -50, -100,
     ]
+
+
+def _dated_task(task_id: str, day: date, *, status: str = "pending") -> Task:
+    return Task(
+        id=task_id,
+        day=1,
+        title=task_id,
+        categories=["İrade"],
+        date=day,
+        status=status,
+    )
+
+
+def test_rest_day_does_not_reset_streak_when_the_next_day_is_completed():
+    """Görevsiz ara gün zinciri koparmaz; en yeni gün geç tamamlama için açık kalır."""
+    repository = InMemoryRepository()
+    user_id = "rest-day-streak"
+    day1 = date(2026, 7, 1)
+    day2 = date(2026, 7, 2)
+    day3 = date(2026, 7, 3)
+    repository.save_plan(user_id, Plan(
+        id="rest-plan",
+        duration_days=3,
+        batch_generated_until=3,
+        start_date=day1,
+        days=[PlanDay(day=1, tasks=[
+            _dated_task("rest-d1", day1, status="done"),
+            _dated_task("rest-d3", day3, status="done"),
+        ])],
+    ))
+    repository.save_state(GameState(
+        user_id=user_id,
+        streak_len=4,
+        last_active_date=day1,
+        freeze_tokens=1,
+        freeze_last_grant="2026-07",
+    ))
+
+    skipped = task_lifecycle_service.close_user_day(repository, user_id, day2)
+    assert skipped["streak"] == "skipped"
+    assert repository.get_state(user_id).last_active_date == day1
+    assert repository.get_state(user_id).streak_len == 4
+
+    extended = task_lifecycle_service.close_user_day(repository, user_id, day3)
+    assert extended["streak"] == "extended"
+    assert repository.get_state(user_id).streak_len == 5
+    assert repository.get_state(user_id).last_active_date == day3
+    assert repository.get_state(user_id).freeze_tokens == 1
+
+
+def test_catch_up_penalizes_each_missed_day_and_spends_one_freeze():
+    repository = InMemoryRepository()
+    user_id = "catch-up-misses"
+    day1 = date(2026, 7, 1)
+    day2 = date(2026, 7, 2)
+    day3 = date(2026, 7, 3)
+    repository.save_plan(user_id, Plan(
+        id="catch-up-plan",
+        duration_days=3,
+        batch_generated_until=3,
+        start_date=day1,
+        days=[PlanDay(day=1, tasks=[
+            _dated_task("gap-d2", day2),
+            _dated_task("gap-d3", day3),
+        ])],
+    ))
+    repository.save_state(GameState(
+        user_id=user_id,
+        streak_len=4,
+        last_active_date=day1,
+        freeze_tokens=1,
+        freeze_last_grant="2026-07",
+        points={c: 500 for c in (
+            "İrade", "İstikrar", "Disiplin", "Özgüven", "Sosyallik", "Özsaygı",
+        )},
+    ))
+
+    result = task_lifecycle_service.close_user_day(repository, user_id, day3)
+    state = repository.get_state(user_id)
+    assert result["penalized_tasks"] == 2
+    assert repository.get_task(user_id, "gap-d2").status == "missed_silent"
+    assert repository.get_task(user_id, "gap-d3").status == "missed_silent"
+    # Gün 2 jetonu harcar (-25), gün 3 koparır (-50).
+    assert state.points["İrade"] == 425
+    assert state.silent_miss_streak == 2
+    assert state.freeze_tokens == 0
+    assert state.streak_len == 0
+    assert state.last_active_date == day3
+    assert [event.delta for event in repository.get_point_log(user_id)] == [-25, -50]

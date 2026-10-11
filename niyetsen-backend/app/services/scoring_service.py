@@ -45,6 +45,18 @@ def _apply(state: GameState, category: str, delta: int, reason: str,
     events.append(ScoreEvent(category=category, delta=new - old, reason=reason))
 
 
+def _unique_categories(categories: list[str]) -> list[str]:
+    """Aynı etiket bir görevde iki kez yazılırsa puan/ceza bir kez uygulanır."""
+    seen: set[str] = set()
+    unique: list[str] = []
+    for category in categories:
+        if category in seen:
+            continue
+        seen.add(category)
+        unique.append(category)
+    return unique
+
+
 def silent_penalty_amount(silent_miss_streak: int) -> int:
     """Sessiz kaçırma cezası: 25 → 50 → 100 → 200 (TAVAN)."""
     return min(BASE_PENALTY * (2 ** silent_miss_streak), SILENT_PENALTY_CAP)
@@ -69,7 +81,7 @@ def overall_rank(points: dict[str, int]) -> str:
 def complete_task(state: GameState, categories: list[str]) -> list[ScoreEvent]:
     """Görev tamamlandı: her etiketli kategoriye +50; sessiz kaçırma sayacı sıfır."""
     events: list[ScoreEvent] = []
-    for c in categories:
+    for c in _unique_categories(categories):
         _apply(state, c, POINTS_PER_TASK, "görev tamamlandı", events)
     state.silent_miss_streak = 0
     return events
@@ -86,7 +98,7 @@ def miss_task_silent(state: GameState, categories: list[str]) -> list[ScoreEvent
     """Açıklamasız kaçırma: katlanan ceza (tavanlı), sonra sayaç artar."""
     events: list[ScoreEvent] = []
     penalty = silent_penalty_amount(state.silent_miss_streak)
-    for c in categories:
+    for c in _unique_categories(categories):
         _apply(state, c, -penalty, f"sessiz kaçırma (x{2 ** state.silent_miss_streak})", events)
     state.silent_miss_streak += 1
     return events
@@ -98,7 +110,7 @@ def miss_task_excused(state: GameState, categories: list[str]) -> list[ScoreEven
     sayacı sıfırlanır. Ama sınırsız da değil: 10. mazerette tüm puan yarıya.
     """
     events: list[ScoreEvent] = []
-    for c in categories:
+    for c in _unique_categories(categories):
         _apply(state, c, -EXCUSE_PENALTY, "mazeretli erteleme", events)
     state.silent_miss_streak = 0
     state.excuse_count += 1
@@ -125,20 +137,44 @@ def grant_monthly_freeze(state: GameState, today: date) -> bool:
     return False
 
 
+def close_rest_day(state: GameState, day: date) -> bool:
+    """Görevi olmayan ara gün. Zincir uzamaz, jeton harcanmaz; çapa ilerler.
+
+    Böylece ertesi gerçek gün takvim boşluğundan kopmaz. Ay jetonu yine
+    işlenir. Değişiklik olduysa True.
+    """
+    changed = grant_monthly_freeze(state, day)
+    if state.last_active_date is None or state.last_active_date < day:
+        state.last_active_date = day
+        return True
+    return changed
+
+
+def _days_since_active(state: GameState, day: date) -> int | None:
+    if state.last_active_date is None:
+        return None
+    return (day - state.last_active_date).days
+
+
 def close_day(state: GameState, day: date, any_task_completed: bool) -> str:
     """
     Gün sonu cron'unun çağırdığı zincir kapanışı. Dönen değer bildirim tonunu
     seçmek için: 'extended' | 'frozen' | 'broken' | 'noop'
     NOT: kullanıcı timezone'unda 23:59'da çağrılır (routes -> cron).
     """
+    if state.last_active_date is not None and day < state.last_active_date:
+        return "noop"  # daha yeni bir çapa varken geçmişi geri yazma
+
     grant_monthly_freeze(state, day)
 
     if state.last_active_date == day:
         return "noop"  # aynı gün iki kez kapatılamaz
 
+    gap = _days_since_active(state, day)
+
     if any_task_completed:
         # dünden (veya jetonla korunmuş dünden) devam mı, yeni başlangıç mı?
-        if state.last_active_date is not None and (day - state.last_active_date).days == 1:
+        if gap == 1:
             state.streak_len += 1
         else:
             state.streak_len = 1
@@ -146,7 +182,13 @@ def close_day(state: GameState, day: date, any_task_completed: bool) -> str:
         state.best_streak = max(state.best_streak, state.streak_len)
         return "extended"
 
-    # Hiç görev yok: jeton varsa zinciri koru
+    # Jeton yalnız tek boş günü korur. Birden fazla kapanmamış gün tek
+    # jetonla atlanamaz — o boşluk zinciri zaten koparmıştır.
+    if gap is not None and gap > 1:
+        state.streak_len = 0
+        state.last_active_date = day
+        return "broken"
+
     if state.freeze_tokens > 0 and state.streak_len > 0:
         state.freeze_tokens -= 1
         state.last_active_date = day  # gün "korunmuş" sayılır

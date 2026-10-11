@@ -35,6 +35,19 @@ def test_unknown_category_is_ignored():
     assert all(v == 0 for v in s.points.values())
 
 
+def test_duplicate_category_is_scored_and_penalized_once():
+    s = fresh()
+    s.points["İrade"] = 500
+    sc.complete_task(s, ["İrade", "İrade", "Disiplin"])
+    assert s.points["İrade"] == 550
+    assert s.points["Disiplin"] == 50
+    sc.miss_task_silent(s, ["İrade", "İrade"])
+    assert s.points["İrade"] == 525
+    assert s.silent_miss_streak == 1
+    sc.miss_task_excused(s, ["Disiplin", "Disiplin"])
+    assert s.points["Disiplin"] == 25
+
+
 # ---------------- Sessiz kaçırma: katlanma + TAVAN ----------------
 def test_silent_penalty_doubles_then_caps_at_200():
     assert [sc.silent_penalty_amount(n) for n in range(6)] == [25, 50, 100, 200, 200, 200]
@@ -165,3 +178,16 @@ def test_close_day_idempotent_same_day():
     sc.close_day(s, date(2026, 7, 1), True)
     assert sc.close_day(s, date(2026, 7, 1), True) == "noop"
     assert s.streak_len == 1
+
+
+def test_freeze_token_does_not_cover_a_multi_day_gap():
+    s = fresh(
+        freeze_tokens=2,
+        freeze_last_grant="2026-07",
+        streak_len=4,
+        last_active_date=date(2026, 7, 1),
+    )
+    assert sc.close_day(s, date(2026, 7, 4), False) == "broken"
+    assert s.streak_len == 0
+    assert s.freeze_tokens == 2
+    assert s.last_active_date == date(2026, 7, 4)
