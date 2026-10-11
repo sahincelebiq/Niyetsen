@@ -387,8 +387,11 @@ def chat_reset(
     (retention/pazarlama verisi korunur — Şahin'in kararı). Plan, niyet,
     görevler ve puanlara dokunulmaz. Dönen değer: taze karşılama mesajı.
     """
-    thread = repo.create_chat_thread(user_id)
-    log.info("Yeni sohbet oturumu (user=%s, thread=%s)", user_id, thread.id)
+    try:
+        thread = repo.create_chat_thread(user_id)
+        log.info("Yeni sohbet oturumu (user=%s, thread=%s)", user_id, thread.id)
+    except Exception:  # noqa: BLE001 — thread hatası yeni sohbeti düşürmez
+        log.warning("Yeni sohbet oturumu açılamadı (yoksayıldı).", exc_info=True)
     return _compose_chat_greeting(user_id, x_app_locale)
 
 

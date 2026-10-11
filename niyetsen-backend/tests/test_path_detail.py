@@ -16,6 +16,23 @@ def _grant_pro() -> None:
     repo.update_subscription(USER, subscription_status="active")
 
 
+def test_markdown_fallback_source_note_has_disclaimer(monkeypatch):
+    """Persona deposu düşerse kişi adı disclaimer'sız felsefe metninde kalmasın."""
+    from app.services import path_service, persona_service
+
+    monkeypatch.setattr(persona_service, "list_personas", lambda: [])
+    path_service.reset_cache()
+    try:
+        paths = path_service.list_paths()
+        kaizen = next(path for path in paths if path.name == "Kaizen Yolu")
+        assert "James Clear" in kaizen.source_note
+        assert "bağlantılı değildir" in kaizen.source_note
+        assert "James Clear" not in kaizen.philosophy
+        assert kaizen.philosophy
+    finally:
+        path_service.reset_cache()
+
+
 def test_path_detail_free_user_can_browse():
     repo.update_subscription("path-free", subscription_status="free")
     slug = persona_service.list_personas()[0].slug

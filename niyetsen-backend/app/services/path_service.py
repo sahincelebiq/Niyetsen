@@ -33,9 +33,20 @@ _cache: list[PhilosophyPath] | None = None
 _lock = Lock()
 
 
-def _extract_source_note(text: str) -> str:
+_LEGAL_SUFFIX = "kendisiyle bağlantılı değildir."
+
+
+def _raw_source_note(text: str) -> str:
     match = re.search(r"Bu yol[^.]*ilham alır[^.]*\.", text)
     return match.group(0).strip() if match else ""
+
+
+def _extract_source_note(text: str) -> str:
+    """Kişi adı yalnız bu notta; disclaimer'sız cümle hukuk çerçevesini düşürür."""
+    note = _raw_source_note(text)
+    if note and _LEGAL_SUFFIX not in note:
+        note = f"{note.rstrip('.')}; {_LEGAL_SUFFIX}"
+    return note
 
 
 def list_paths() -> list[PhilosophyPath]:
@@ -77,11 +88,15 @@ def list_paths() -> list[PhilosophyPath]:
                 body = "\n".join(lines[1:])
                 fels = re.search(r"FELSEFE:\s*(.+?)(?:\nRehber tonu:|\nPRATİK:)", body, re.S)
                 philosophy = " ".join((fels.group(1) if fels else "").split())
+                collapsed = " ".join(body.split())
+                raw_note = _raw_source_note(philosophy) or _raw_source_note(collapsed)
+                if raw_note and raw_note in philosophy:
+                    philosophy = " ".join(philosophy.replace(raw_note, "").split())
                 paths.append(PhilosophyPath(
                     name=m["name"].strip(),
                     tagline=m["tagline"].strip(),
                     philosophy=philosophy[:600],
-                    source_note=_extract_source_note(philosophy),
+                    source_note=_extract_source_note(raw_note or collapsed),
                 ))
         # Birleştirme: dossier sürümü aynı adlı markdown yolunu EZER.
         dossier_names = {p.name.casefold() for p in persona_paths}

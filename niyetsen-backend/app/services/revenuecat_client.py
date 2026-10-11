@@ -26,7 +26,10 @@ def _parse_expires(value: str | None) -> datetime | None:
         return None
     normalized = value.replace("Z", "+00:00")
     try:
-        return datetime.fromisoformat(normalized)
+        parsed = datetime.fromisoformat(normalized)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=timezone.utc)
+        return parsed
     except ValueError:
         log.warning("RevenueCat expires_date parse edilemedi: %s", value)
         return None

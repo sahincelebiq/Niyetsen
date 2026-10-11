@@ -52,8 +52,13 @@ def _wants_replan(message: str) -> bool:
 
 
 def _use_intent_mode(has_active_plan: bool, plan_has_content: bool, message: str) -> bool:
-    if not has_active_plan or not plan_has_content:
-        return not has_active_plan
+    """İçerik yoksa niyet topla — boş taslak plan da buna dahildir.
+
+    Rehber modu yalnız dolu planda. Taslağı rehber sanmak, yeni niyet
+    sohbetini onboarding sorularından çıkarıp planı hiç hazır etmiyordu.
+    """
+    if not plan_has_content or not has_active_plan:
+        return True
     return _wants_replan(message) or len(message) >= 120
 
 

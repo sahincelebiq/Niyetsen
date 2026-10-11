@@ -168,6 +168,15 @@ def test_entitlement_z_suffix_timestamp_parses() -> None:
     assert expires is not None and expires.tzinfo is not None
 
 
+def test_entitlement_naive_iso_is_utc_not_crash() -> None:
+    """Saat dilimsiz ISO, aware 'şimdi' ile kıyaslanınca TypeError olmamalı."""
+    active, expires = revenuecat_client.entitlement_is_active(
+        _payload({"expires_date": "2099-01-01T00:00:00"})
+    )
+    assert active is True
+    assert expires is not None and expires.tzinfo is not None
+
+
 def test_entitlement_malformed_date_is_treated_as_active_not_crash() -> None:
     """Bozuk tarih 500 fırlatmamalı; parse edilemeyen tarih None sayılır."""
     active, expires = revenuecat_client.entitlement_is_active(

@@ -1,6 +1,9 @@
 """FAZ 7 (V2): Fal modülü — tarot, kahve/el, burç, hak sayaçları."""
 from __future__ import annotations
 
+import asyncio
+from datetime import date
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -211,6 +214,40 @@ def test_weekly_horoscope_separate_cache():
 
     invalid = client.get("/fortune/horoscope?period=aylik", headers={"X-User-Id": user})
     assert invalid.status_code == 400
+
+
+def test_monday_daily_and_weekly_horoscope_do_not_clobber_cache(monkeypatch):
+    """Pazartesi hem günlük hem haftalık anahtarıdır; ikisi de önbellekte kalmalı."""
+    monday = date(2026, 10, 12)
+    calls = {"n": 0}
+
+    async def fake(contents, **kwargs):
+        calls["n"] += 1
+        if "HAFTALIK" in contents:
+            return {"interpretation": "haftalık ayna"}
+        return {"interpretation": "günlük ayna"}
+
+    monkeypatch.setattr(fortune_service, "generate_json", fake)
+    monkeypatch.setattr(fortune_service, "_local_today", lambda _tz: monday)
+    user = "burc_monday_cache"
+
+    daily = asyncio.run(
+        fortune_service.daily_horoscope(repo, user, sign="Koç", period="daily")
+    )
+    weekly = asyncio.run(
+        fortune_service.daily_horoscope(repo, user, sign="Koç", period="weekly")
+    )
+    daily_again = asyncio.run(
+        fortune_service.daily_horoscope(repo, user, sign="Koç", period="daily")
+    )
+    weekly_again = asyncio.run(
+        fortune_service.daily_horoscope(repo, user, sign="Koç", period="weekly")
+    )
+    assert daily.interpretation == "günlük ayna"
+    assert weekly.interpretation == "haftalık ayna"
+    assert daily_again.interpretation == daily.interpretation
+    assert weekly_again.interpretation == weekly.interpretation
+    assert calls["n"] == 2
 
 
 # ---------------- Geçmiş ----------------

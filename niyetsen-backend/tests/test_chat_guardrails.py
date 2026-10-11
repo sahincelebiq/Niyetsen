@@ -71,3 +71,30 @@ def test_active_plan_uses_guide_mode_and_memory(monkeypatch):
     assert response.ready_for_plan is False
     assert "Aktif planı olan" in captured["contents"]
     assert "Son görevler: 20 dakika yürüyüş (done)" in captured["contents"]
+
+
+def test_draft_plan_without_content_stays_in_intent_mode(monkeypatch):
+    """Yeni niyet taslağı rehber moduna düşmemeli — plan hiç hazır olmaz."""
+    captured = {}
+
+    async def fake_json(*args, **kwargs):
+        captured["contents"] = args[0] if args else kwargs.get("contents")
+        return {
+            "reply": "Hangi şehirdesin?",
+            "ready_for_plan": False,
+            "collected": {},
+        }
+
+    monkeypatch.setattr(intent_service, "generate_json", fake_json)
+    asyncio.run(
+        intent_service.handle_chat(
+            ChatRequest(
+                messages=[
+                    ChatMessage(role="user", content="spor planı istiyorum")
+                ]
+            ),
+            has_active_plan=True,
+            plan_has_content=False,
+        )
+    )
+    assert "niyetini netleştir" in captured["contents"]

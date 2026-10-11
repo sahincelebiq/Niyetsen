@@ -17,6 +17,20 @@ def _seed(repo, user: str, texts: list[str]) -> None:
     ])
 
 
+def test_chat_reset_survives_thread_create_failure(monkeypatch):
+    """Thread hatası yeni sohbeti 500'e düşürmemeli."""
+    user = "thread_reset_fail"
+    grant_chat_consent(user, client)
+
+    def boom(*_args, **_kwargs):
+        raise RuntimeError("thread down")
+
+    monkeypatch.setattr("app.api.routes.repo.create_chat_thread", boom)
+    resp = client.post("/chat/reset", headers={"X-User-Id": user})
+    assert resp.status_code == 200
+    assert resp.json()["message"]
+
+
 def test_new_chat_preserves_old_thread(isolated_in_memory_repo):
     user = "thread_user"
     grant_chat_consent(user, client)

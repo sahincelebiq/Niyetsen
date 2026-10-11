@@ -31,22 +31,30 @@ def validate_attachment(data: bytes, mime_type: str) -> None:
 
 
 def _extract_pdf_text(data: bytes) -> str:
-    from pypdf import PdfReader
+    try:
+        from pypdf import PdfReader
 
-    reader = PdfReader(io.BytesIO(data))
-    chunks: list[str] = []
-    for page in reader.pages[:12]:
-        text = (page.extract_text() or "").strip()
-        if text:
-            chunks.append(text)
+        reader = PdfReader(io.BytesIO(data))
+        chunks: list[str] = []
+        for page in reader.pages[:12]:
+            text = (page.extract_text() or "").strip()
+            if text:
+                chunks.append(text)
+    except Exception as exc:  # noqa: BLE001 — bozuk PDF 500 değil, red
+        log.warning("PDF okunamadı: %s", exc)
+        raise AttachmentRejected("PDF'den metin okunamadı.") from exc
     return "\n".join(chunks)[:6000]
 
 
 def _extract_docx_text(data: bytes) -> str:
-    from docx import Document
+    try:
+        from docx import Document
 
-    document = Document(io.BytesIO(data))
-    lines = [p.text.strip() for p in document.paragraphs if p.text.strip()]
+        document = Document(io.BytesIO(data))
+        lines = [p.text.strip() for p in document.paragraphs if p.text.strip()]
+    except Exception as exc:  # noqa: BLE001 — bozuk DOCX 500 değil, red
+        log.warning("DOCX okunamadı: %s", exc)
+        raise AttachmentRejected("DOCX dosyasından metin okunamadı.") from exc
     return "\n".join(lines)[:6000]
 
 
