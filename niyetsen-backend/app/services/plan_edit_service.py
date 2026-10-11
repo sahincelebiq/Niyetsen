@@ -9,12 +9,16 @@ Kurallar (FAZ8_LANSMAN §8.3):
 """
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import date
 
 from app.config import CATEGORIES, settings
 from app.models.schemas import Category, Plan, PlanDay, Task
+from app.services.image_service import ImageResult, get_image
 from app.storage.base import Repository
+
+log = logging.getLogger("niyetsen.plan_edit")
 
 
 class PlanEditError(ValueError):
@@ -129,6 +133,24 @@ def edit_task(
     return task
 
 
+def cover_for_manual_task(title: str, categories: list) -> ImageResult:
+    """Elle eklenen görev: Unsplash veya yer tutucu. Nano Banana bu isteği bekletmez."""
+    try:
+        return get_image(
+            title,
+            categories=list(categories),
+            title=title,
+            allow_gemini=False,
+        )
+    except Exception as exc:  # noqa: BLE001 — kapak görevi düşürmesin
+        log.warning("Görev kapağı atlandı: %s", exc)
+        seed = "".join(ch for ch in title if ch.isalnum()) or "niyetsen"
+        return ImageResult(
+            url=f"https://picsum.photos/seed/{seed}/800/600",
+            source="placeholder",
+        )
+
+
 def add_task(
     repo: Repository,
     user_id: str,
@@ -147,10 +169,10 @@ def add_task(
     if not cleaned:
         raise PlanEditError("Görev başlığı boş olamaz.")
 
-    cats = [
-        c for c in (categories or ["İstikrar"])
-        if c in CATEGORIES
-    ]
+    cats: list[Category] = []
+    for item in categories or ["İstikrar"]:
+        if item in CATEGORIES and item not in cats:
+            cats.append(item)
     if not cats:
         raise PlanEditError("En az bir geçerli kategori gerekli.")
 
@@ -159,14 +181,20 @@ def add_task(
         raise PlanEditError("Bu gün için görev sınırına ulaşıldı.")
 
     plan_day = _ensure_plan_day(plan, day_no)
-    if day_no > plan.batch_generated_until:
-        plan.batch_generated_until = day_no
+    # İmleç yalnız üretilmiş partiyi tutar. Elle eklenen ileri gün (7 → 20)
+    # imleci zıplatırsa aradaki günler bir daha üretilmez.
+    cover = cover_for_manual_task(cleaned, cats)
     task = Task(
         id=str(uuid.uuid4()),
         day=day_no,
         date=task_date,
         title=cleaned,
         categories=cats,
+        image_keyword=cleaned,
+        image_url=cover.url,
+        image_source=cover.source,
+        image_attribution=cover.attribution,
+        image_attribution_url=cover.attribution_url,
         tiny_version=tiny_version.strip() or "2 dakikalık en küçük adımla başla.",
         duration_min=duration_min,
         status="pending",

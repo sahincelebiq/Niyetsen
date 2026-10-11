@@ -40,6 +40,30 @@ EVENT_INTENT_MARKERS = (
 )
 
 
+_PLAN_AGENT_TOOL_NAMES = frozenset(
+    item["name"] for item in tools.PLAN_AGENT_TOOL_DECLARATIONS
+)
+# Model "ekledim" derken sunucu "eklenemedi" döndüyse o cümle yanıta yazılsın.
+_REPLY_CONFIRMS = ("ekle", "added", "hinzugef", "ajout", "أض", "تمت")
+_TOOL_FAILURES = ("eklenemedi", "reddedildi")
+
+
+def _merge_tool_messages(reply: str, tool_messages: list[str]) -> str:
+    if not tool_messages:
+        return reply
+    folded = reply.casefold()
+    if any(key in folded for key in _REPLY_CONFIRMS):
+        missing = [
+            msg for msg in tool_messages
+            if any(flag in msg.casefold() for flag in _TOOL_FAILURES)
+            and msg.casefold() not in folded
+        ]
+        if not missing:
+            return reply
+        return f"{reply}\n\n" + " ".join(missing)
+    return f"{reply}\n\n" + " ".join(tool_messages)
+
+
 def _wants_event_tool(message: str) -> bool:
     folded = message.casefold()
     if any(ch.isdigit() for ch in folded):
@@ -104,11 +128,18 @@ async def handle_plan_chat(
                 declarations=tools.PLAN_AGENT_TOOL_DECLARATIONS,
                 system_instruction=_tool_system_instruction(current, plan_name),
             )
-            tool_calls = [
-                ToolCall(name=call["name"], args=call.get("args", {}))
-                for call in raw_calls
-                if tools.is_allowed(call.get("name", ""))
-            ]
+            # Kapalı liste: global araçlar (mazeret/görev/puan) bu sohbetten
+            # puan yazamaz. Bozuk bir çağrı diğerini düşürmesin.
+            for call in raw_calls or []:
+                if not isinstance(call, dict):
+                    continue
+                name = str(call.get("name") or "")
+                if name not in _PLAN_AGENT_TOOL_NAMES:
+                    continue
+                args = call.get("args") or {}
+                if not isinstance(args, dict):
+                    continue
+                tool_calls.append(ToolCall(name=name, args=args))
         except Exception:  # noqa: BLE001 — araç tespiti sohbeti düşürmez
             log.warning("Plan-ajan araç tespiti atlandı", exc_info=True)
 
@@ -159,11 +190,7 @@ async def handle_plan_chat(
     reply = str(data.get("reply") or "").strip() or (
         "Bu plana nasıl bir etkinlik ekleyelim?"
     )
-    if tool_messages and not any(
-        key in reply.casefold()
-        for key in ("ekle", "added", "hinzugef", "ajout", "أض", "تمت")
-    ):
-        reply = f"{reply}\n\n" + " ".join(tool_messages)
+    reply = _merge_tool_messages(reply, tool_messages)
     suggestions = [
         str(item).strip() for item in (data.get("suggestions") or []) if str(item).strip()
     ][:3]

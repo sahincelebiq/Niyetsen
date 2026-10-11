@@ -9,6 +9,7 @@ from fastapi.testclient import TestClient
 from app.main import app
 from app.models.schemas import Plan, PlanDay, Task
 from app.services import plan_edit_service, task_lifecycle_service
+from app.services.image_service import ImageResult
 from app.storage.repository import InMemoryRepository
 
 client = TestClient(app)
@@ -136,8 +137,15 @@ def test_patch_unknown_task_404(isolated_in_memory_repo: InMemoryRepository):
     assert res.status_code == 404
 
 
-def test_post_add_task(isolated_in_memory_repo: InMemoryRepository):
+def test_post_add_task(isolated_in_memory_repo: InMemoryRepository, monkeypatch):
     _seed_plan(isolated_in_memory_repo)
+    monkeypatch.setattr(
+        "app.services.plan_edit_service.get_image",
+        lambda *args, **kwargs: ImageResult(
+            url="https://images.example/cover.jpg",
+            source="unsplash",
+        ),
+    )
     target = START + timedelta(days=2)
     task = plan_edit_service.add_task(
         isolated_in_memory_repo,
@@ -151,10 +159,19 @@ def test_post_add_task(isolated_in_memory_repo: InMemoryRepository):
     assert task.date == target
     assert task.day == 3
     assert task.status == "pending"
+    assert task.image_url.startswith("https://")
+    assert task.image_source == "unsplash"
     assert isolated_in_memory_repo.get_task(USER, task.id) is not None
 
 
-def test_post_add_task_http(isolated_in_memory_repo: InMemoryRepository):
+def test_post_add_task_http(isolated_in_memory_repo: InMemoryRepository, monkeypatch):
+    monkeypatch.setattr(
+        "app.services.plan_edit_service.get_image",
+        lambda *args, **kwargs: ImageResult(
+            url="https://images.example/cover.jpg",
+            source="unsplash",
+        ),
+    )
     today = date.today()
     plan = Plan(
         id="plan-http",
@@ -188,6 +205,7 @@ def test_post_add_task_http(isolated_in_memory_repo: InMemoryRepository):
     assert body["title"] == "HTTP eklenen"
     assert body["date"] == target.isoformat()
     assert body["categories"] == ["Sosyallik"]
+    assert body["image_url"].startswith("https://")
 
 
 def test_post_rejects_past_date_http(isolated_in_memory_repo: InMemoryRepository):
@@ -235,6 +253,39 @@ def test_ownership_other_user_404(isolated_in_memory_repo: InMemoryRepository):
         json={"title": "Hırsız"},
     )
     assert res.status_code == 404
+
+
+def test_add_beyond_batch_does_not_skip_later_generation(
+    isolated_in_memory_repo: InMemoryRepository, monkeypatch,
+):
+    """İleri güne elle görev, üretilmemiş günlerin imlecini yutmasın."""
+    from app.services import plan_service
+
+    _seed_plan(isolated_in_memory_repo)
+    monkeypatch.setattr(
+        "app.services.plan_edit_service.get_image",
+        lambda *args, **kwargs: ImageResult(
+            url="https://images.example/cover.jpg",
+            source="unsplash",
+        ),
+    )
+    task = plan_edit_service.add_task(
+        isolated_in_memory_repo,
+        USER,
+        START + timedelta(days=19),
+        title="İleri görev",
+        categories=["İrade", "İrade"],
+        today=START,
+    )
+    plan = isolated_in_memory_repo.get_plan(USER)
+    assert plan.batch_generated_until == 7
+    assert task.day == 20
+    assert task.categories == ["İrade"]
+    assert plan_service.next_generation_start_day(
+        duration_days=plan.duration_days,
+        batch_generated_until=plan.batch_generated_until,
+        plan_day=7,
+    ) == 8
 
 
 def test_cron_unaffected_after_move(isolated_in_memory_repo: InMemoryRepository):

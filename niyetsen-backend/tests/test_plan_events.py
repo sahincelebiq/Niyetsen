@@ -459,6 +459,88 @@ def test_etkinlik_tool_without_date_uses_today_and_normalizes_time(
     assert {o.event_id for o in occs} == {su.id}  # START Cuma; pilates Pzt/Çar
 
 
+def test_clock_and_weekday_shapes_still_create_event(
+    isolated_in_memory_repo: InMemoryRepository,
+):
+    """'9:5' ve byweekday=0 / '1,3' etkinliği düşürmesin."""
+    from app.models.schemas import ToolCall
+
+    _seed_plan(isolated_in_memory_repo)
+    _calls, messages = tool_service.dispatch(
+        isolated_in_memory_repo,
+        USER,
+        [
+            ToolCall(name="etkinlik_olustur", args={"title": "Su iç", "time": "9:5"}),
+            ToolCall(
+                name="etkinlik_olustur",
+                args={
+                    "title": "Pilates",
+                    "time": "18:30",
+                    "recurrence": "weekly",
+                    "byweekday": 0,
+                },
+            ),
+            ToolCall(
+                name="etkinlik_olustur",
+                args={
+                    "title": "Kitap",
+                    "time": "21:00",
+                    "recurrence": "weekly",
+                    "byweekday": "1,3",
+                },
+            ),
+        ],
+        plan_id="plan-ev-1",
+        today=START,
+    )
+    assert all("eklenemedi" not in msg.casefold() for msg in messages)
+    events = {e.title: e for e in isolated_in_memory_repo.list_plan_events(USER, "plan-ev-1")}
+    assert events["Su iç"].scheduled_time == "09:05"
+    assert events["Pilates"].byweekday == [0]
+    assert events["Kitap"].byweekday == [1, 3]
+
+
+def test_plan_agent_ignores_score_tools_and_shows_failure(
+    isolated_in_memory_repo: InMemoryRepository, monkeypatch,
+):
+    """Mazeret aracı puan yazmasın; 'ekledim' diyen yanıt başarısızlığı gizlemesin."""
+    import asyncio
+
+    from app.models.schemas import ChatMessage, ChatRequest
+    from app.services import plan_agent_service
+
+    _seed_plan(isolated_in_memory_repo)
+
+    async def fake_function_calls(_message, *, declarations, system_instruction=""):
+        return [
+            {
+                "name": "gorev_ertele_mazeretli",
+                "args": {"task_id": "task-365", "excuse_text": "yorgunum"},
+            },
+            "garbage",
+            {"name": "etkinlik_olustur", "args": {"title": "Su iç", "time": "saat üç"}},
+        ]
+
+    async def fake_generate_json(*_args, **_kwargs):
+        return {"reply": "Ekledim.", "suggestions": []}
+
+    monkeypatch.setattr(plan_agent_service, "generate_function_calls", fake_function_calls)
+    monkeypatch.setattr(plan_agent_service, "generate_json", fake_generate_json)
+    response = asyncio.run(
+        plan_agent_service.handle_plan_chat(
+            isolated_in_memory_repo,
+            USER,
+            "plan-ev-1",
+            ChatRequest(messages=[ChatMessage(role="user", content="her gün su ekle")]),
+            today=START,
+        )
+    )
+    assert "eklenemedi" in response.reply.casefold()
+    assert isolated_in_memory_repo.get_task(USER, "task-365").status == "pending"
+    assert isolated_in_memory_repo.list_plan_events(USER, "plan-ev-1") == []
+    assert isolated_in_memory_repo.get_state(USER).points["İrade"] == 0
+
+
 def test_etkinlik_tool_ignored_without_plan_or_bad_input(
     isolated_in_memory_repo: InMemoryRepository,
 ):

@@ -60,6 +60,77 @@ def _generate_plan(user_id: str) -> dict:
     return resp.json()
 
 
+def test_generate_batch_survives_dirty_model_payload(monkeypatch):
+    """Bozuk süre/kategori veya dict olmayan gün tüm plan kaydını düşürmesin."""
+    import asyncio
+
+    from app.models.schemas import CollectedIntent
+    from app.services.image_service import ImageResult
+
+    captured: dict = {}
+
+    async def fake_json(*_args, **_kwargs):
+        return {
+            "days": [
+                "bozuk-gun",
+                {
+                    "theme": "İkinci",
+                    "tasks": [
+                        "bozuk-gorev",
+                        {
+                            "title": "Yürü",
+                            "categories": "Disiplin",
+                            "duration_min": "yirmi dakika",
+                            "image_keyword": "walk",
+                        },
+                        {
+                            "title": "Oku",
+                            "categories": ["Disiplin", "Disiplin", "İrade"],
+                            "duration_min": 20,
+                            "image_keyword": "read",
+                        },
+                    ],
+                },
+            ]
+        }
+
+    async def fake_enrich(items, *, city, interests):
+        captured["city"] = city
+        captured["interests"] = list(interests)
+        return [keyword for _title, keyword, _cats in items]
+
+    async def fake_image(_keyword, **kwargs):
+        captured["allow_gemini"] = kwargs.get("allow_gemini")
+        captured["image_city"] = kwargs.get("city")
+        return ImageResult(url="https://example.com/a.jpg", source="unsplash")
+
+    monkeypatch.setattr(plan_service, "generate_json", fake_json)
+    monkeypatch.setattr(plan_service, "enrich_image_keywords_batch", fake_enrich)
+    monkeypatch.setattr(plan_service, "get_image_async", fake_image)
+
+    plan = asyncio.run(
+        plan_service.generate_batch(
+            CollectedIntent(),
+            duration_days=7,
+            start_date=date(2026, 8, 1),
+        )
+    )
+    by_title = {
+        task.title: task
+        for day in plan.days
+        for task in day.tasks
+    }
+    assert set(by_title) == {"Yürü", "Oku"}
+    assert by_title["Yürü"].categories == ["Disiplin"]
+    assert by_title["Yürü"].duration_min == 15
+    assert by_title["Oku"].categories == ["Disiplin", "İrade"]
+    assert captured["city"] == ""
+    assert captured["interests"] == []
+    assert captured["image_city"] == ""
+    assert captured["allow_gemini"] is False
+    assert "belirtilmedi" not in by_title["Yürü"].image_keyword
+
+
 def test_get_plan_returns_404_when_none_exists():
     resp = client.get("/plan", headers={"X-User-Id": "no_plan_user"})
     assert resp.status_code == 404

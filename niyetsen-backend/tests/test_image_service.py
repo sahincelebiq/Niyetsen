@@ -67,6 +67,42 @@ def test_empty_search_uses_category_fallback(monkeypatch):
     assert image.source == "category_fallback"
 
 
+def test_compose_drops_unspecified_city_sentinel():
+    query = image_service.compose_image_query(
+        "morning walk",
+        title="Sabah yürüyüşü",
+        city="belirtilmedi",
+        interests=["belirtilmedi"],
+        categories=["İrade"],
+    )
+    assert "belirtilmedi" not in query
+    assert "morning walk" in query
+
+
+def test_enrich_keyword_call_is_one_attempt(monkeypatch):
+    import asyncio
+
+    monkeypatch.setattr(settings, "GEMINI_API_KEY", "test-key")
+    captured: dict = {}
+
+    async def fake_json(*_args, **kwargs):
+        captured.update(kwargs)
+        return {"queries": ["campus library walk"]}
+
+    monkeypatch.setattr("app.core.gemini_client.generate_json", fake_json)
+    result = asyncio.run(
+        image_service.enrich_image_keywords_batch(
+            [("Kütüphane", "library", ["Disiplin"])],
+            city="İstanbul",
+            interests=["kitap"],
+        )
+    )
+    assert result == ["campus library walk"]
+    assert captured["json_retries"] == 1
+    assert captured["timeout_sec"] == 12
+    assert captured["max_retries"] == 0
+
+
 def test_compose_image_query_merges_city_and_interest():
     query = image_service.compose_image_query(
         "morning walk",

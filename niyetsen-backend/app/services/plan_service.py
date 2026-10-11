@@ -75,10 +75,46 @@ def _intent_block(collected: CollectedIntent, duration_days: int, start_day: int
     )
 
 
-def _sanitize_categories(raw: list) -> list[str]:
-    """Model kategori uydurursa ele — kapalı liste (config.CATEGORIES)."""
-    clean = [c for c in (raw or []) if c in CATEGORIES]
+def _sanitize_categories(raw: object) -> list[str]:
+    """Model kategori uydurursa ele — kapalı liste (config.CATEGORIES).
+
+    Dizi yerine tek string ("Disiplin") veya tekrar ("İrade","İrade") gelirse
+    yine bir kez sayılır. Tekrar, tamamlanınca aynı kategoriye +50'yi iki kez
+    yazardı.
+    """
+    if isinstance(raw, str):
+        items: list[object] = [part.strip() for part in raw.replace(";", ",").split(",")]
+    elif isinstance(raw, list):
+        items = list(raw)
+    else:
+        items = []
+    clean: list[str] = []
+    for item in items:
+        if not isinstance(item, str):
+            continue
+        name = item.strip()
+        if name in CATEGORIES and name not in clean:
+            clean.append(name)
     return clean or ["İstikrar"]  # etiketsiz görev kalmasın
+
+
+def _duration_minutes(raw: object) -> int:
+    """Model '20 dakika' / boş / bool dönerse plan kaydı düşmesin."""
+    if isinstance(raw, bool) or raw is None or raw == "":
+        return 15
+    if isinstance(raw, (int, float)):
+        value = int(raw)
+    elif isinstance(raw, str):
+        head = raw.strip().split()[0] if raw.strip() else ""
+        try:
+            value = int(float(head))
+        except (TypeError, ValueError):
+            return 15
+    else:
+        return 15
+    if value < 1:
+        return 15
+    return value
 
 
 def next_generation_start_day(
@@ -150,6 +186,10 @@ async def generate_batch(
     aynen geçirir ki sonraki partideki günler doğru takvim tarihine düşsün.
     """
     start_date = start_date or date.today()
+    # Görsel araması "belirtilmedi" / varsayılan ilgiyi sorguya yazmasın.
+    # Prompt hâlâ eksik alanı görür; Unsplash sorgusu görmez.
+    image_city = (collected.city or "").strip()
+    image_interests = [item.strip() for item in collected.interests if item and item.strip()]
     if not collected.is_ready():
         # FAZ 8 karar değişikliği (toplantı geri bildirimi, 2026-07-28):
         # Eksik alan plan üretimini KİLİTLEMEZ — kullanıcıyı bekletmek,
@@ -185,14 +225,22 @@ async def generate_batch(
         timeout_sec=settings.GEMINI_PLAN_TIMEOUT_SEC,
     )
 
-    raw_days = (data.get("days") or [])[:batch]
+    payload_days = data.get("days")
+    raw_days = payload_days[:batch] if isinstance(payload_days, list) else []
     pending_images: list[tuple[str, str, list[str]]] = []
     pending_meta: list[tuple[int, str, dict, list[str], str, str]] = []
 
     for day_index, day_payload in enumerate(raw_days):
+        if not isinstance(day_payload, dict):
+            continue
         day_no = start_day + day_index
         theme = str(day_payload.get("theme") or "")
-        for task_payload in (day_payload.get("tasks") or [])[: settings.MAX_TASKS_PER_DAY]:
+        task_list = day_payload.get("tasks") or []
+        if not isinstance(task_list, list):
+            continue
+        for task_payload in task_list[: settings.MAX_TASKS_PER_DAY]:
+            if not isinstance(task_payload, dict):
+                continue
             title = str(task_payload.get("title") or "").strip()
             if not title:
                 continue
@@ -211,8 +259,8 @@ async def generate_batch(
 
     enriched_queries = await enrich_image_keywords_batch(
         pending_images,
-        city=collected.city,
-        interests=collected.interests,
+        city=image_city,
+        interests=image_interests,
     )
 
     # Görselleri SIRALI değil, sınırlı eşzamanlılıkla paralel çek:
@@ -228,9 +276,10 @@ async def generate_batch(
                 search_query,
                 categories=categories,
                 title=title,
-                city=collected.city,
-                interests=collected.interests,
+                city=image_city,
+                interests=image_interests,
                 task_type=task_type,
+                allow_gemini=False,
             )
 
     images = await asyncio.gather(
@@ -255,7 +304,7 @@ async def generate_batch(
             image_source=image.source,
             image_attribution=image.attribution,
             image_attribution_url=image.attribution_url,
-            duration_min=int(task_payload.get("duration_min") or 15),
+            duration_min=_duration_minutes(task_payload.get("duration_min")),
             tiny_version=str(task_payload.get("tiny_version") or "2 dakikanı ayır ve sadece başla."),
         )
         day_tasks.setdefault(day_no, []).append(task)

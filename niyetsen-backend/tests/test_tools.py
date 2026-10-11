@@ -135,6 +135,61 @@ def test_excuse_tool_uses_fixed_scoring_path():
     assert "sabit −25" in messages[0]
 
 
+def test_create_task_rejects_past_and_dedupes_categories(monkeypatch):
+    from app.services.image_service import ImageResult
+
+    monkeypatch.setattr(
+        "app.services.plan_edit_service.get_image",
+        lambda *_args, **_kwargs: ImageResult(
+            url="https://images.example/c.jpg",
+            source="unsplash",
+            attribution="Photo by Test on Unsplash",
+        ),
+    )
+    repository = _repo_with_task()
+    today = date(2026, 7, 10)
+    _actions, messages = tool_service.dispatch(
+        repository,
+        "tool-user",
+        [ToolCall(
+            name="gorev_olustur",
+            args={
+                "title": "Eski",
+                "categories": ["İrade"],
+                "date": "2026-07-09",
+            },
+        )],
+        today=today,
+    )
+    assert "Geçmiş" in messages[0]
+    assert len(repository.get_plan("tool-user").days) == 1
+
+    _actions, messages = tool_service.dispatch(
+        repository,
+        "tool-user",
+        [ToolCall(
+            name="gorev_olustur",
+            args={
+                "title": "Yarın yürüyüş",
+                "categories": ["İrade", "İrade", "Disiplin"],
+                "date": "2026-07-11",
+            },
+        )],
+        today=today,
+    )
+    added = [
+        task
+        for day in repository.get_plan("tool-user").days
+        for task in day.tasks
+        if task.title == "Yarın yürüyüş"
+    ]
+    assert len(added) == 1
+    assert added[0].categories == ["İrade", "Disiplin"]
+    assert added[0].image_url.startswith("https://")
+    assert added[0].image_source == "unsplash"
+    assert "eklendi" in messages[-1]
+
+
 def test_device_tool_requires_owned_task():
     repository = _repo_with_task()
     actions, messages = tool_service.dispatch(

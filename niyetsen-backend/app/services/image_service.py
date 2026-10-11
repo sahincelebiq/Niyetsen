@@ -82,11 +82,15 @@ def compose_image_query(
         parts.append(base)
 
     city_part = normalize_image_query(city)
+    if city_part in {"belirtilmedi", "belirtilmemis"}:
+        city_part = ""
     if city_part and city_part not in " ".join(parts):
         parts.append(city_part)
 
     for interest in (interests or [])[:2]:
         token = normalize_image_query(interest)
+        if token in {"belirtilmedi", "belirtilmemis"}:
+            continue
         if token and token not in " ".join(parts):
             parts.append(token)
             break
@@ -194,10 +198,13 @@ async def enrich_image_keywords_batch(
         f"{index + 1}. title={title!r} keyword={keyword!r} categories={cats!r}"
         for index, (title, keyword, cats) in enumerate(items)
     )
-    interest_text = ", ".join(interests) if interests else "belirtilmedi"
+    city_text = (city or "").strip()
+    interest_text = ", ".join(
+        item.strip() for item in interests if item and item.strip()
+    )
     prompt = (
-        f"Kullanıcı şehri: {city or 'belirtilmedi'}\n"
-        f"İlgi alanları: {interest_text}\n\n"
+        f"Kullanıcı şehri: {city_text or 'yok — şehir adı yazma'}\n"
+        f"İlgi alanları: {interest_text or 'yok'}\n\n"
         "Her görev için Unsplash/AI görseli için İngilizce 3-6 kelimelik somut "
         "terim üret. Başlıktaki kurum/yer (üniversite, kampüs, kütüphane, semt) "
         "aynen geçsin. 'warm lifestyle', 'cozy beige', genel masa/kahve YASAK. "
@@ -211,7 +218,11 @@ async def enrich_image_keywords_batch(
             prompt,
             model=settings.GEMINI_FALLBACK_MODEL,
             max_output_tokens=512,
-            json_retries=2,
+            # json_retries tek tur; generate_text'in kendi 3 denemesi
+            # 12s × 4 = 48s ekler ve plan kaydı istemci 120s'de düşer.
+            json_retries=1,
+            max_retries=0,
+            timeout_sec=12,
             response_schema={
                 "type": "object",
                 "properties": {
@@ -434,10 +445,15 @@ async def get_image_async(
     city: str = "",
     interests: list[str] | None = None,
     task_type: str = "",
+    allow_gemini: bool = True,
 ) -> ImageResult:
-    """Hibrit görsel: yer=Unsplash önce; diğerleri Nano Banana (koşullu) → Unsplash."""
+    """Hibrit görsel: yer=Unsplash önce; diğerleri Nano Banana (koşullu) → Unsplash.
+
+    allow_gemini=False: plan/ensure-today isteğinin içinde. Nano Banana denemesi
+    60 sn sürdüğü için istemci 120 sn'de kesiyor ve plan kaydolmuyordu.
+    """
     unsplash_first = task_type == "yer"
-    if not unsplash_first and should_use_gemini_image(
+    if allow_gemini and not unsplash_first and should_use_gemini_image(
         title=title,
         keyword=keyword,
         task_type=task_type,
@@ -467,7 +483,8 @@ async def get_image_async(
         return unsplash_image
 
     if (
-        unsplash_first
+        allow_gemini
+        and unsplash_first
         and settings.GEMINI_API_KEY
         and settings.IMAGE_GEMINI_ENABLED
     ):
@@ -503,6 +520,7 @@ def get_image(
     city: str = "",
     interests: list[str] | None = None,
     task_type: str = "",
+    allow_gemini: bool = True,
 ) -> ImageResult:
     """Senkron sarmalayıcı (testler + geriye dönük uyumluluk)."""
     import asyncio
@@ -535,6 +553,7 @@ def get_image(
             city=city,
             interests=interests,
             task_type=task_type,
+            allow_gemini=allow_gemini,
         )
     )
 

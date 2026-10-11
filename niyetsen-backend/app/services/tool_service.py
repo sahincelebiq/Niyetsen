@@ -13,6 +13,7 @@ from app.config import CATEGORIES, settings
 from app.core import tools
 from app.models.schemas import PlanDay, Task, ToolCall
 from app.services import task_lifecycle_service
+from app.services.plan_edit_service import cover_for_manual_task
 from app.storage.base import Repository
 
 log = logging.getLogger("niyetsen.tools")
@@ -25,10 +26,23 @@ def _owned_task(repository: Repository, user_id: str, task_id: object) -> Task:
     return task
 
 
+def _normalize_clock(raw: str) -> str:
+    """'9.00' / '9:5' → '09:00' / '09:05'. Bozuk metin olduğu gibi kalır."""
+    text = (raw or "").strip()
+    if ":" not in text and "." in text:
+        text = text.replace(".", ":")
+    pieces = text.split(":")
+    if len(pieces) == 2 and pieces[0].isdigit() and pieces[1].isdigit():
+        return f"{int(pieces[0]):02d}:{int(pieces[1]):02d}"
+    return text
+
+
 def _create_task(
     repository: Repository,
     user_id: str,
     args: dict,
+    *,
+    today: date | None = None,
 ) -> str:
     plan = repository.get_plan(user_id)
     if plan is None:
@@ -39,12 +53,16 @@ def _create_task(
         task_date = date.fromisoformat(str(args.get("date") or ""))
     except ValueError as exc:
         raise ValueError("Görev tarihi YYYY-MM-DD biçiminde olmalı.") from exc
-    categories = [
-        str(category) for category in (args.get("categories") or [])
-        if str(category) in CATEGORIES
-    ]
+    categories: list[str] = []
+    for category in args.get("categories") or []:
+        name = str(category)
+        if name in CATEGORIES and name not in categories:
+            categories.append(name)
     if not title or not categories:
         raise ValueError("Görev başlığı ve en az bir geçerli kategori gerekli.")
+    anchor = today or date.today()
+    if task_date < anchor:
+        raise ValueError("Geçmiş güne görev eklenemez.")
     day_no = (task_date - plan.start_date).days + 1
     if day_no < 1 or day_no > plan.duration_days:
         raise ValueError("Görev tarihi aktif planın dışında.")
@@ -55,6 +73,7 @@ def _create_task(
         plan.days.sort(key=lambda day: day.day)
     if len(plan_day.tasks) >= settings.MAX_TASKS_PER_DAY:
         raise ValueError("Bu gün için görev sınırına ulaşıldı.")
+    cover = cover_for_manual_task(title, categories)
     plan_day.tasks.append(
         Task(
             id=str(uuid.uuid4()),
@@ -62,6 +81,11 @@ def _create_task(
             date=task_date,
             title=title,
             categories=categories,
+            image_keyword=title,
+            image_url=cover.url,
+            image_source=cover.source,
+            image_attribution=cover.attribution,
+            image_attribution_url=cover.attribution_url,
             tiny_version=tiny_version or "2 dakikalık en küçük adımla başla.",
         )
     )
@@ -80,12 +104,7 @@ def _create_event(
     from app.services import event_service
 
     title = str(args.get("title") or "").strip()
-    time_str = str(args.get("time") or "09:00").strip()
-    # Model 9:00 / 9.00 gibi yazarsa HH:MM'e normalle.
-    if ":" not in time_str and "." in time_str:
-        time_str = time_str.replace(".", ":")
-    if len(time_str) == 4 and time_str[1] == ":":
-        time_str = f"0{time_str}"
+    time_str = _normalize_clock(str(args.get("time") or "09:00"))
     raw_date = str(args.get("date") or "").strip()
     if raw_date:
         try:
@@ -101,8 +120,17 @@ def _create_event(
         start = today
     recurrence = str(args.get("recurrence") or "none").strip().lower()
     cats = args.get("categories") or []
-    raw_weekdays = args.get("byweekday") or []
+    raw_weekdays = args.get("byweekday")
     # Model 7/9 gibi gün uydurursa etkinliği düşürme, geçersiz günü at.
+    # 0 = Pazartesi; `or []` bunu boş sanıp başlangıç gününe düşürürdü.
+    if raw_weekdays is None or raw_weekdays == "":
+        raw_weekdays = []
+    elif isinstance(raw_weekdays, bool):
+        raw_weekdays = []
+    elif isinstance(raw_weekdays, int):
+        raw_weekdays = [raw_weekdays]
+    elif isinstance(raw_weekdays, str):
+        raw_weekdays = [part.strip() for part in raw_weekdays.split(",") if part.strip()]
     byweekday: list[int] = []
     if isinstance(raw_weekdays, list):
         for value in raw_weekdays:
@@ -169,7 +197,9 @@ def dispatch(
                     "ve sessiz kaçırma sayacı sıfırlandı."
                 )
             elif call.name == "gorev_olustur":
-                messages.append(_create_task(repository, user_id, call.args))
+                messages.append(
+                    _create_task(repository, user_id, call.args, today=today)
+                )
             elif call.name == "etkinlik_olustur":
                 if not plan_id:
                     # Global sohbette bu araç bildirilmez; model yine de çağırdıysa
