@@ -11,3 +11,4 @@ supabase>=2.9
 pyjwt>=2.9
 pytest>=8.0
 slowapi>=0.1
+sentry-sdk>=2.19

@@ -13,7 +13,7 @@ from slowapi.errors import RateLimitExceeded
 
 from app.api.routes import router
 from app.config import settings, validate_prod_secrets
-from app.core.observability import init_observability
+from app.core.observability import capture_exception, init_observability
 from app.core.rate_limit import limiter
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
@@ -117,6 +117,12 @@ async def security_layer(request: Request, call_next):
 async def unhandled_exception_handler(request: Request, exc: Exception):
     logging.getLogger("niyetsen.app").exception(
         "İşlenmeyen hata: %s %s", request.method, request.url.path
+    )
+    capture_exception(
+        exc,
+        method=request.method,
+        path=request.url.path,
+        request_id=request.headers.get("x-request-id", ""),
     )
     return JSONResponse(
         status_code=500,

@@ -41,6 +41,13 @@ def _parse_optional_date(value) -> dt_date | None:
     return coerce_date(value)
 
 
+def _clock(value, default: int) -> int:
+    """0 meşru bir saat/dakikadır; `or default` gece yarısını 08:00 yapıyordu."""
+    if value is None or value == "":
+        return default
+    return int(value)
+
+
 def _event_from_row(row: dict) -> PlanEvent:
     return PlanEvent(
         id=row["id"],
@@ -282,6 +289,36 @@ class SupabaseRepository(Repository):
         self._set_active_plan_id(user_id, plan_row["id"])
         plan = self._plan_row_to_model(plan_row, user_id)
         return plan if plan.days else None
+
+    def _start_date_if_has_tasks(self, plan_row: dict) -> dt_date | None:
+        has_task = (
+            self._db.table("tasks").select("id")
+            .eq("plan_id", plan_row["id"]).limit(1).execute().data
+        ) or []
+        if not has_task:
+            return None
+        return coerce_date(plan_row.get("start_date")) or dt_date.today()
+
+    def get_active_plan_start_date(self, user_id: str) -> dt_date | None:
+        # get_plan tüm görev satırlarını çeker. Cron her 5 dk'da her alıcı
+        # için bunu çağırınca 5 dk penceresi doluyordu. Seçim kuralı aynı:
+        # aktif plan görev içermiyorsa başka plana düşülmez.
+        active_id = self._active_plan_id(user_id)
+        if active_id:
+            plan_row = _maybe_single(
+                self._db.table("plans").select("id,start_date")
+                .eq("id", active_id).eq("user_id", user_id)
+            )
+            if plan_row:
+                return self._start_date_if_has_tasks(plan_row)
+        plan_row = _maybe_single(
+            self._db.table("plans").select("id,start_date")
+            .eq("user_id", user_id).order("slot_no").limit(1)
+        )
+        if not plan_row:
+            return None
+        self._set_active_plan_id(user_id, plan_row["id"])
+        return self._start_date_if_has_tasks(plan_row)
 
     def get_plan_by_id(self, user_id: str, plan_id: str) -> Optional[Plan]:
         plan_row = _maybe_single(
@@ -661,9 +698,10 @@ class SupabaseRepository(Repository):
         while True:
             page = (
                 self._db.table("users").select("id,timezone")
+                .order("id")
                 .range(len(rows), len(rows) + page_size - 1)
                 .execute().data
-            )
+            ) or []
             rows.extend(page)
             if len(page) < page_size:
                 break
@@ -1048,9 +1086,10 @@ class SupabaseRepository(Repository):
                     "last_tarot_push_date,last_recap_push_date,"
                     "users!inner(timezone,notif_hour,notif_minute)"
                 ).eq("enabled", True)
+                .order("token")
                 .range(len(rows), len(rows) + page_size - 1)
                 .execute().data
-            )
+            ) or []
             rows.extend(page)
             if len(page) < page_size:
                 break
@@ -1071,8 +1110,8 @@ class SupabaseRepository(Repository):
                     row.get("last_recap_push_date")
                 ),
                 timezone=(row.get("users") or {}).get("timezone") or "Europe/Istanbul",
-                notif_hour=(row.get("users") or {}).get("notif_hour") or 8,
-                notif_minute=(row.get("users") or {}).get("notif_minute") or 0,
+                notif_hour=_clock((row.get("users") or {}).get("notif_hour"), 8),
+                notif_minute=_clock((row.get("users") or {}).get("notif_minute"), 0),
             )
             for row in rows
         ]
@@ -1180,18 +1219,46 @@ class SupabaseRepository(Repository):
         if payload:
             self._db.table("users").update(payload).eq("id", user_id).execute()
 
+    def _remove_proof_objects(self, user_id: str) -> None:
+        # storage3 list varsayılanı 100 dosya. Offset'i silmeden ilerlet;
+        # silip sonra offset artırmak sonraki sayfayı atlardı.
+        bucket = self._db.storage.from_("proofs")
+        paths: list[str] = []
+        seen: set[str] = set()
+        offset = 0
+        page_size = 100
+        while offset < 10000:
+            files = bucket.list(
+                path=user_id,
+                options={
+                    "limit": page_size,
+                    "offset": offset,
+                    "sortBy": {"column": "name", "order": "asc"},
+                },
+            ) or []
+            if not files:
+                break
+            added = 0
+            for item in files:
+                name = item.get("name") if isinstance(item, dict) else None
+                if not name:
+                    continue
+                path = f"{user_id}/{name}"
+                if path in seen:
+                    continue
+                seen.add(path)
+                paths.append(path)
+                added += 1
+            if added == 0 or len(files) < page_size:
+                break
+            offset += len(files)
+        for start in range(0, len(paths), page_size):
+            bucket.remove(paths[start : start + page_size])
+
     def delete_account(self, user_id: str) -> None:
         # Storage önce: DB/Auth silinirse sahipliği sonradan bulmak zorlaşır.
         try:
-            bucket = self._db.storage.from_("proofs")
-            files = bucket.list(path=user_id)
-            paths = [
-                f"{user_id}/{item['name']}"
-                for item in files
-                if item.get("name")
-            ]
-            if paths:
-                bucket.remove(paths)
+            self._remove_proof_objects(user_id)
         except Exception as exc:  # bucket Faz 3'e kadar bulunmayabilir
             log.info("Proof storage temizliği atlandı (%s): %s", user_id, exc)
 

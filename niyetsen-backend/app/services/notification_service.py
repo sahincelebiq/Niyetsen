@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -51,15 +52,34 @@ def _flush_pending(pending: list[_PendingPush]) -> tuple[int, int, int, int, lis
     sent_tarot = 0
     sent_recap = 0
     errors: list[str] = []
+    # send() geçersiz token'ı düşürür ve daha kısa liste döner. İndeksle
+    # eşlemek yanlış kullanıcıyı "gitti" diye işaretliyordu.
+    valid = [
+        item for item in pending
+        if push_service.is_valid_expo_token(item.message.token)
+    ]
+    errors.extend(
+        item.user_id for item in pending
+        if not push_service.is_valid_expo_token(item.message.token)
+    )
+    if not valid:
+        return 0, 0, 0, 0, errors
     try:
-        results = push_service.send_batched([item.message for item in pending])
+        results = push_service.send_batched([item.message for item in valid])
     except Exception as exc:
-        log.warning("Push batch hatası (%d mesaj): %s", len(pending), exc)
+        log.warning("Push batch hatası (%d mesaj): %s", len(valid), exc)
         return 0, 0, 0, 0, [item.user_id for item in pending]
-    for item, result in zip(pending, results, strict=False):
+    if len(results) != len(valid):
+        log.warning(
+            "Push sonuç sayısı uyuşmuyor (%d mesaj, %d sonuç)",
+            len(valid), len(results),
+        )
+        errors.extend(item.user_id for item in valid)
+        return 0, 0, 0, 0, errors
+    for item, result in zip(valid, results, strict=True):
         if _delivered([result]):
             item.on_success()
-            if item.kind == "task":
+            if item.kind in ("task", "penalty"):
                 sent_task += 1
             elif item.kind == "bonus":
                 sent_bonus += 1
@@ -75,10 +95,16 @@ def _flush_pending(pending: list[_PendingPush]) -> tuple[int, int, int, int, lis
 def run_due_notifications(
     repository: Repository,
     now_utc: datetime | None = None,
+    deadline_ts: float | None = None,
 ) -> dict:
     now_utc = now_utc or datetime.now(timezone.utc)
     pending: list[_PendingPush] = []
     for recipient in repository.list_notification_recipients():
+        if deadline_ts is not None and time.monotonic() >= deadline_ts:
+            log.warning(
+                "Bildirim turu süre bütçesini doldurdu — kalan alıcılar sonraki tura"
+            )
+            break
         try:
             local = _local_now(now_utc, recipient.timezone)
             day = local.date()
@@ -155,8 +181,16 @@ def run_due_notifications(
                 ))
 
             # FAZ 8.8 — Niyetsen Raporu: 14. gün + her 30 günde bir.
-            plan = repository.get_plan(recipient.user_id)
-            days_in = (day - plan.start_date).days + 1 if plan else 0
+            # start_date yalnız vade kapısı geçilince okunur; get_plan tüm
+            # görevleri indirdiği için cron penceresini dolduruyordu.
+            if (
+                local_min >= notif_min
+                and recipient.last_recap_push_date != day
+            ):
+                start = repository.get_active_plan_start_date(recipient.user_id)
+                days_in = (day - start).days + 1 if start else 0
+            else:
+                days_in = 0
             if (
                 local_min >= notif_min
                 and recipient.last_recap_push_date != day

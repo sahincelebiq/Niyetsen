@@ -35,6 +35,15 @@ class Repository(ABC):
     @abstractmethod
     def get_plan(self, user_id: str) -> Optional[Plan]: ...
 
+    def get_active_plan_start_date(self, user_id: str) -> dt_date | None:
+        """Aktif planın başlangıç günü. İçerik yoksa None.
+
+        Bildirim turu rapor vadesi için bunu kullanır. Supabase tüm görev
+        satırlarını indirmeden aynı sonucu verir.
+        """
+        plan = self.get_plan(user_id)
+        return plan.start_date if plan else None
+
     @abstractmethod
     def get_plan_by_id(self, user_id: str, plan_id: str) -> Optional[Plan]: ...
 

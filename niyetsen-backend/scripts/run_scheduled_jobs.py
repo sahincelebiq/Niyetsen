@@ -63,6 +63,29 @@ def _print_result(label: str, payload: dict) -> None:
     print(f"{label}: {json.dumps(payload, ensure_ascii=False)[:800]}")
 
 
+def _report(exc: BaseException, **extra: object) -> None:
+    """Cron exit 0 kalır; DSN varsa aynı hata Sentry'ye de düşer."""
+    try:
+        from app.core.observability import capture_exception
+
+        capture_exception(exc, **extra)
+    except Exception:
+        traceback.print_exc()
+
+
+def _flush_observability() -> None:
+    """Kısa ömürlü cron: kuyruk boşalmadan süreç biterse rapor gitmez.
+
+    SIGTERM yolu os._exit kullandığı için atexit flush çalışmaz.
+    """
+    try:
+        import sentry_sdk
+
+        sentry_sdk.flush(timeout=2)
+    except Exception:
+        pass
+
+
 def _run_with_retry(label: str, fn, *, retries: int = 2, backoff_sec: float = 3.0):
     """Supabase/httpx timeout'ta cron çökmesin — 2 deneme."""
     last_exc: Exception | None = None
@@ -100,6 +123,7 @@ def run_jobs() -> list[str]:
     except Exception as exc:
         warnings.append(f"import: {exc}")
         traceback.print_exc()
+        _report(exc, step="import")
         return warnings
 
     # Railway cron 5 dk'da bir tetikler; tur asla pencereyi taşmasın.
@@ -116,9 +140,23 @@ def run_jobs() -> list[str]:
         _print_result("close-day", close_result)
         failed = close_result.get("failed_users", 0)
         if failed:
+            user_errors = close_result.get("user_errors") or []
             warnings.append(f"close-day: {failed} kullanıcı işlenemedi")
-            for row in (close_result.get("user_errors") or [])[:3]:
+            for row in user_errors[:3]:
                 warnings.append(f"  user {row.get('user_id')}: {row.get('error', '')[:120]}")
+            # logger.exception artık Sentry olayı açmıyor; kullanıcı hataları
+            # close_due_users içinde yutulduğu için buradan bildirilmezse kaybolur.
+            # Sentry'ye kullanıcı kimliği gitmez; Railway uyarısında id kalır.
+            summary = "; ".join(
+                str(row.get("error", ""))[:120] for row in user_errors[:3]
+            )
+            _report(
+                RuntimeError(
+                    f"close-day: {failed} kullanıcı işlenemedi ({summary})"
+                ),
+                step="close-day",
+                failed_users=failed,
+            )
 
         if not skip_push:
             penalized = [
@@ -137,22 +175,29 @@ def run_jobs() -> list[str]:
                 except Exception as exc:
                     warnings.append(f"penalty_notifications: {exc}")
                     traceback.print_exc()
+                    _report(exc, step="penalty_notifications")
     except Exception as exc:
         warnings.append(f"close-day: {exc}")
         traceback.print_exc()
+        _report(exc, step="close-day")
 
     if skip_push:
         print("notifications: atlandı (CRON_SKIP_PUSH=true)")
+    elif time.monotonic() >= deadline_ts:
+        warnings.append("notifications: süre bütçesi doldu — sonraki tura bırakıldı")
     else:
         try:
             notif_result = _run_with_retry(
                 "notifications",
-                lambda: notification_service.run_due_notifications(repo),
+                lambda: notification_service.run_due_notifications(
+                    repo, deadline_ts=deadline_ts
+                ),
             )
             _print_result("notifications", notif_result)
         except Exception as exc:
             warnings.append(f"notifications: {exc}")
             traceback.print_exc()
+            _report(exc, step="notifications")
 
     return warnings
 
@@ -166,12 +211,19 @@ def _graceful_exit(signum: int, _frame) -> None:
     print(f"cron: sinyal alındı ({signum}) — temiz çıkış (exit 0)", file=sys.stderr)
     sys.stdout.flush()
     sys.stderr.flush()
+    _flush_observability()
     os._exit(0)
 
 
 def main() -> None:
     signal.signal(signal.SIGTERM, _graceful_exit)
     signal.signal(signal.SIGINT, _graceful_exit)
+    try:
+        from app.core.observability import init_observability
+
+        init_observability()
+    except Exception:
+        traceback.print_exc()
     print("cron modu: direct")
     _log_env_diagnostic()
 
@@ -190,10 +242,12 @@ def main() -> None:
     except Exception as exc:
         warnings = [f"cron beklenmeyen hata: {exc}"]
         traceback.print_exc()
+        _report(exc, step="cron")
 
     if warnings:
         print("uyarılar:\n" + "\n".join(warnings), file=sys.stderr)
 
+    _flush_observability()
     print("cron tamamlandı (exit 0)")
 
 
