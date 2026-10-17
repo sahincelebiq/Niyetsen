@@ -1,0 +1,40 @@
+{
+  "version": 1,
+  "hooks": {
+    "afterFileEdit": [
+      {
+        "command": "/usr/bin/python3 .cursor/hooks/mobile-tsx-guard.py",
+        "timeout": 10
+      }
+    ],
+    "postToolUse": [
+      {
+        "command": "/usr/bin/python3 .cursor/hooks/mobile-tsx-guard.py",
+        "matcher": "Write|StrReplace|Edit|MultiEdit",
+        "timeout": 10
+      }
+    ],
+    "beforeShellExecution": [
+      {
+        "command": "/usr/bin/python3 .cursor/hooks/shell-guard.py",
+        "matcher": "railway|accept[-_]deploy",
+        "timeout": 10,
+        "failClosed": false
+      }
+    ],
+    "beforeMCPExecution": [
+      {
+        "command": "/usr/bin/python3 .cursor/hooks/mcp-guard.py",
+        "matcher": "accept[-_]deploy",
+        "timeout": 10,
+        "failClosed": true
+      }
+    ],
+    "beforeSubmitPrompt": [
+      {
+        "command": "/usr/bin/python3 .cursor/hooks/secret-guard.py",
+        "timeout": 10
+      }
+    ]
+  }
+}
