@@ -1,239 +1,349 @@
 # Niyetsen
 
-> **Niyetini söze, sözünü kırılmayan bir zincire çevir. 🌙**
+> Niyetini söze, sözünü kırılmayan bir zincire çevir.
 > Turn your intention into words, and your words into an unbroken chain.
 
-Niyetsen, kullanıcının "bu yıl nasıl bir hayat istiyorum?" niyetini sohbetle
-alıp **görselli, günlük, oyunlaştırılmış bir plana** çeviren; görevleri **foto
-kanıtıyla** yaptıran, yapılmayınca puan düşüren; fal & astroloji modülleriyle
-zenginleştirilmiş bir yaşam asistanı uygulamasıdır. iOS + Android.
+Niyetsen'in bireysel çekirdeği (niyet → görselli plan → foto kanıtı → puan →
+zincir) **aynen kalır**; V2 ile üstüne **organizasyon katmanı** gelir:
+şirketler / İK / yöneticiler çalışanlarının *toplulaştırılmış ve anonim*
+niyet–aktivite verisini görür, **kurumsal niyet** tanımlar, çalışan bu niyeti
+kendi planına bağlar. Aynı hesap **mobil + web**'de çalışır; niyetsen.com vitrin
+olmaktan çıkıp giriş kapısı + kurumsal anlatı + blog olur.
 
-Niyetsen is a gamified life-assistant app. It takes a user's intention through a
-conversation, turns it into an **illustrated daily plan**, drives task
-completion via **photo proof** (AI vision verification), applies a
-points/penalty/streak engine, and adds fortune & astrology modules. iOS +
-Android.
+Niyetsen is a gamified life-assistant: a conversation turns the user's
+intention into an illustrated daily plan, tasks are closed with photo proof
+(AI vision), a points/penalty/streak engine keeps the chain alive. V2 adds an
+organization layer (aggregated, anonymous team insight) on top of the same
+individual core; one account works on mobile and web.
+
+**Durum (2026-10-17):** V2 Kurumsal Pivot **onaylandı**; aktif faz **V2 FAZ 0 —
+Hazırlık ve zemin**. Play Store çıkış sprinti paralel sürer. Organizasyon
+paneli, cüzdan, çok modelli yönlendirme bu README'de **"V2 hedef — Faz X"**
+olarak işaretlidir; henüz kodda yoktur.
 
 ---
 
-## 🧭 Bu depoda nereye bakmalı? / Where to start
+## 1. Nereye bakmalı / Where to start
 
-| İhtiyaç / Need | Dosya / File |
+| İhtiyaç | Dosya |
 |---|---|
-| **Yeni geliştirici — kurulum** / New developer setup | [`docs/DEVELOPER_GUIDE.md`](docs/DEVELOPER_GUIDE.md) |
-| **Mimari** / Architecture | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
-| **Neyin nerede olduğu** / Repository map | [`docs/REPO_MAP.md`](docs/REPO_MAP.md) |
-| **Güvenlik** / Security overview & audit | [`docs/SECURITY.md`](docs/SECURITY.md) |
-| **Ürün yol haritası** / Product roadmap (single source of truth) | [`NIYETSEN_MASTER_PLAN.md`](NIYETSEN_MASTER_PLAN.md) |
-| **Tüm doküman dizini** / Full docs index | [`docs/README.md`](docs/README.md) |
-| **Aktif sprint (Play Store)** / Active Play Store goal | [`docs/PLAYSTORE_GOAL.md`](docs/PLAYSTORE_GOAL.md) |
-| **FAZ 8 lansman listesi** / Phase 8 checklist | [`docs/FAZ8_LANSMAN.md`](docs/FAZ8_LANSMAN.md) |
-| **Store ekran görselleri** / Store screenshots | [`store-listing/INDEX.md`](store-listing/INDEX.md) |
-| **Demo günü (28 Temmuz)** / Investor demo runbook | [`docs/DEMO_GUNU_28TEMMUZ.md`](docs/DEMO_GUNU_28TEMMUZ.md) |
-| **Mobil depo (GitHub)** / Mobile repo | [github.com/sahincelebiq/Niyetsen-mobile](https://github.com/sahincelebiq/Niyetsen-mobile) |
+| **V2 yol haritası (tek gerçek kaynak, Faz 0–8, KAPI'lı)** | [`docs/NIYETSEN_V2_KURUMSAL_PIVOT_MASTER_PLAN.md`](docs/NIYETSEN_V2_KURUMSAL_PIVOT_MASTER_PLAN.md) |
+| Kilitli ürün kararları + veri modeli (§1 aynen geçerli; §1.14 V2 kilitleri) | [`NIYETSEN_MASTER_PLAN.md`](NIYETSEN_MASTER_PLAN.md) |
+| Ajan çalışma kuralları (Cursor / Claude Code) | [`CLAUDE.md`](CLAUDE.md) · [`AGENTS.md`](AGENTS.md) |
+| Mimari (katmanlar, istek akışı) — *2.5 model adları bayat, Faz 1'de güncellenir* | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| Neyin nerede olduğu — *sayılar bayat, Faz 1'de güncellenir* | [`docs/REPO_MAP.md`](docs/REPO_MAP.md) |
+| Güvenlik duruşu + denetim | [`docs/SECURITY.md`](docs/SECURITY.md) · [`docs/security/`](docs/security/) |
+| Yeni geliştirici kurulumu | [`docs/DEVELOPER_GUIDE.md`](docs/DEVELOPER_GUIDE.md) |
+| Backend ayrıntısı (servisler, uçlar, model matrisi, cron, testler) | [`niyetsen-backend/README_BACKEND.md`](niyetsen-backend/README_BACKEND.md) |
+| Görev kuyruğu (Play sprinti) | [`docs/SONRAKI_SIRA.md`](docs/SONRAKI_SIRA.md) |
+| Play Store hedefi + yatırımcı bug listesi B1–B9 | [`docs/PLAYSTORE_GOAL.md`](docs/PLAYSTORE_GOAL.md) |
+| Supabase'e özel bağımlılık envanteri + taşınma karşılıkları (Faz 0) | [`docs/SUPABASE_BAGIMLILIK.md`](docs/SUPABASE_BAGIMLILIK.md) |
+| Yedek / geri yükleme tatbikatı / büyük sunucuya geçiş protokolü (Faz 0) | [`docs/GECIS_PROTOKOLU.md`](docs/GECIS_PROTOKOLU.md) |
+| Tüm doküman dizini | [`docs/README.md`](docs/README.md) |
+| Store görselleri + üretici script'ler | [`store-listing/INDEX.md`](store-listing/INDEX.md) |
+| Mobil depo (ayrı git) | [github.com/sahincelebiq/Niyetsen-mobile](https://github.com/sahincelebiq/Niyetsen-mobile) |
+
+Çelişkide sıra: V2 plan §1 → `NIYETSEN_MASTER_PLAN.md` §1 →
+`.cursor/rules/niyetsen-hafiza.mdc` → yoksa Şahin'e sor. Uydurma.
 
 ---
 
-## 🏗️ Mimari özet / Architecture at a glance
+## 2. İki yüzey mimarisi / Two surfaces, one codebase
 
 ```
-┌─────────────────────┐        HTTPS / JWT (Supabase)        ┌──────────────────────┐
-│   Mobile (Expo)     │  ───────────────────────────────▶   │  Backend (FastAPI)   │
-│  React Native + TS  │                                      │   Python 3.11+       │
-│  expo-router        │  ◀───────────────────────────────   │   "çekirdek beyin"   │
-└─────────────────────┘         JSON API (38 uç)             └──────────┬───────────┘
-         │                                                              │
-         │ RevenueCat (IAP)                                             │
-         ▼                                              ┌───────────────┼───────────────┐
-   App Store / Play                                     ▼               ▼               ▼
-                                              ┌──────────────┐  ┌─────────────┐  ┌──────────────┐
-                                              │  Supabase    │  │  Gemini API │  │  Unsplash    │
-                                              │ Postgres+Auth│  │ 3.1 Pro +   │  │  (görseller) │
-                                              │  +Storage    │  │ 2.5 fallback│  └──────────────┘
-                                              └──────────────┘  └─────────────┘
-                                                     ▲
-                                              Railway cron (Config-as-code)
+          ┌──────────────────────────┐   ┌──────────────────────────┐   ┌──────────────────────────┐
+          │  Mobil (iOS + Android)   │   │  Web uygulaması          │   │  Panel (İK / yönetici)   │
+          │  SDK 54 · expo-router 6  │   │  app.niyetsen.com        │   │  panel.niyetsen.com      │
+          │  RN 0.81.5 · Reanimated 4│   │  AYNI Expo kodu, web     │   │  AYNI bundle, (org)/     │
+          │  5 sekme + stack ekranlar│   │  export (statik SPA)     │   │  rota grubu              │
+          │  BUGÜN                   │   │  V2 hedef — Faz 1        │   │  V2 hedef — Faz 3        │
+          └────────────┬─────────────┘   └────────────┬─────────────┘   └────────────┬─────────────┘
+                       │          HTTPS · Bearer JWT (Supabase Auth, JWKS)           │
+                       └──────────────────────────────┬──────────────────────────────┘
+                                                      ▼
+                                   ┌──────────────────────────────────────┐
+                                   │  FastAPI  (Railway `api` servisi)    │
+                                   │  app/api/routes.py → 61 uç           │
+                                   │  services/ (28 modül) · core/        │
+                                   │  Repository ABC  ·  StorageGateway*  │
+                                   └───────┬──────────────┬───────────────┘
+                 Railway `cron` (5 dk)     │              │
+                 close-day · bildirim      │              │
+                       ┌───────────────────┘              └─────────────────────┐
+                       ▼                                                        ▼
+   ┌─────────────────────────────────────┐              ┌─────────────────────────────────────┐
+   │  BUGÜN: Supabase                    │              │  Gemini API (kapı: gemini_client)   │
+   │  Postgres + Auth + Storage          │              │  bugün: gemini-3.1-pro-preview      │
+   │  RLS açık, politika yok (backend)   │              │         + 2.5 ailesi fallback       │
+   ├─────────────────────────────────────┤              │  V2 Faz 1: görev bazlı model router │
+   │  YARIN (Faz 7): standart Postgres   │              │         (V2 plan §5.5 matrisi)      │
+   │  + S3-uyumlu depo (MinIO/S3)        │              └─────────────────────────────────────┘
+   │  Repository + StorageGateway ile    │              Unsplash (görsel) · RevenueCat (IAP)
+   │  sıfır kayıplı geçiş (V2 §7)        │              Sentry · PostHog · Expo Push
+   └─────────────────────────────────────┘
+
+   niyetsen.com → statik HTML vitrin + blog + yasal sayfalar, CANLI HOST: Hostinger Business
+                 (`website/vercel.json` ve `niyetsen-website.vercel.app` KALINTI — kapatılacak, V2 §11 H6)
+   * StorageGateway: V2 hedef — Faz 1–2 (bugün tek doğrudan supabase istemcisi image_service.py:387)
 ```
 
-- **Backend** — Python / FastAPI. Tüm iş mantığı, oyun motoru, AI çağrıları ve
-  kanıt doğrulama burada. Railway'de iki servis: API + cron.
-- **Mobile** — Expo (React Native + TypeScript, expo-router). *Ayrı git deposu*
-  (`mobile/.git` → [Niyetsen-mobile](https://github.com/sahincelebiq/Niyetsen-mobile)).
-- **AI** — Google Gemini, rol bazlı (adlar uydurulmaz — ai.google.dev):
-  `gemini-3.1-pro-preview` (**sohbet + plan** — bağlam/niyet kalitesi),
-  `gemini-2.5-flash` / `gemini-2.5-pro` (otomatik fallback),
-  `gemini-2.5-flash-image` — "**Nano Banana**" (plan görseli; Unsplash hibrit),
-  `gemini-embedding-001` (RAG; sohbette varsayılan keyword — maliyet için).
-- **DB / Auth / Storage** — Supabase (Postgres + Auth + Storage).
-- **Abonelik / Subscriptions** — RevenueCat (yalnız uygulama içi satın alma / IAP only).
-- **Gözlemlenebilirlik** — Sentry (hata), PostHog (analitik).
-- **Website** — `website/` statik tanıtım; Vercel (`website/vercel.json`).
+- **Backend** — Python 3.11+ / FastAPI. Tüm iş mantığı, oyun motoru, AI
+  çağrıları, kanıt doğrulama. Railway'de iki servis: `api` + `cron`.
+- **Mobil / Web** — tek Expo Router uygulaması (`mobile/`, **ayrı git deposu**).
+  `app.json` → `web.output: static`. Ayrı bir Next.js kullanıcı uygulaması
+  yazılmaz; İK paneli aynı kodda `(org)/` rota grubu olarak başlar (Faz 3
+  KAPI'sında Next.js'e ayırma kararı o zaman verilir).
+- **AI** — Google Gemini, tek geçit `core/gemini_client.py`. Bugün
+  `gemini-3.1-pro-preview` (sohbet + plan + Vision) + `gemini-2.5-*` fallback,
+  `gemini-2.5-flash-image` (plan görseli, Unsplash hibrit),
+  `gemini-embedding-001` (RAG). V2 Faz 1'de `core/model_router.py` görev bazlı
+  yönlendirir; 2.5 ailesi fallback'ten çıkar. Model adı uydurulmaz —
+  yalnız ai.google.dev/gemini-api/docs/models listesinden.
+- **Kimlik** — Supabase Auth (e-posta/şifre + OTP, Google, Apple); backend
+  JWT'yi JWKS ile her istekte doğrular (`/health` hariç). Rol **sunucuda**
+  türetilir (V2: `org_memberships` + `app_metadata.platform_role`;
+  `user_metadata` yetkide asla kullanılmaz).
+- **Abonelik** — bireysel: RevenueCat, yalnız IAP. Kurumsal: ödeme uygulama
+  dışı, web panelden (V2 hedef — Faz 6).
+- **Website** — `website/` saf statik HTML (19 TR blog yazısı, 5 dilde yasal
+  sayfa). Canlı host **Hostinger Business**; Vercel yalnız kalıntı.
 
 ---
 
-## 📦 Depo yapısı / Repository layout
+## 3. Depo yapısı / Repository layout
 
 ```
-Niyetsen/
-├── README.md                  ← buradasın / you are here
-├── NIYETSEN_MASTER_PLAN.md    ← tek gerçek kaynak: fazlar, kilitli kararlar, veri modeli
-├── CLAUDE.md / AGENTS.md      ← AI ajan çalışma kuralları (Cursor + Claude Code)
-├── STORE_READINESS.md         ← App Store / Play yayın hazırlık listesi
-├── docs/                      ← TÜM dokümanlar (bu PR ile derli toplandı)
-│   ├── README.md              ← doküman dizini
-│   ├── ARCHITECTURE.md        ← mimari
-│   ├── REPO_MAP.md            ← neyin nerede olduğu
-│   ├── SECURITY.md            ← güvenlik + denetim
-│   ├── DEVELOPER_GUIDE.md     ← kurulum & çalıştırma
-│   ├── FAZ*.md / *_SYNC.md    ← faz geçmişi ve ajan devir notları
-│   └── arsiv-planlama/        ← eski .docx/.xlsx planlama belgeleri (arşiv)
-├── niyetsen-backend/          ← Python/FastAPI backend ("ana beyin")
-├── mobile/                    ← Expo uygulaması (ayrı git deposu — commit edilmez)
-├── store-listing/             ← Play / App Store ekran görselleri + üretici
-└── website/                   ← tanıtım sitesi + blog (statik / Vercel)
+Niyetsen/                          ← kök git deposu (backend + docs + website)
+├── README.md                      ← buradasın
+├── README_BACKEND.md              ← niyetsen-backend/README_BACKEND.md ile birebir kopya
+├── NIYETSEN_MASTER_PLAN.md        ← kilitli kararlar §1 (+ §1.14 V2), veri modeli §2
+├── CLAUDE.md · AGENTS.md          ← ajan kuralları
+├── STORE_READINESS.md             ← mağaza hazırlık listesi
+├── docs/                          ← tüm dokümanlar
+│   ├── NIYETSEN_V2_KURUMSAL_PIVOT_MASTER_PLAN.md   ← V2 yol haritası (Faz 0–8)
+│   ├── ARCHITECTURE.md · REPO_MAP.md · SECURITY.md · DEVELOPER_GUIDE.md
+│   ├── SONRAKI_SIRA.md · PLAYSTORE_GOAL.md · FAZ8_LANSMAN.md
+│   ├── security/                  ← denetim raporları
+│   ├── supabase/                  ← şema durumu
+│   └── arsiv-planlama/            ← eski planlama belgeleri + README_v1_2026-10.md
+├── niyetsen-backend/              ← Python / FastAPI ("çekirdek beyin")
+│   ├── app/{api,core,services,storage,models}/
+│   ├── knowledge/                 ← RAG bilgi tabanı (Railway imajına COPY'lenir)
+│   ├── supabase/migrations/       ← DDL TEK KAYNAK (29 SQL + RUN_IN_SUPABASE_SQL_EDITOR.sql)
+│   ├── scripts/                   ← cron giriş noktası, yedek (pg_dump / verify / tatbikat), ingest, Railway yardımcıları
+│   ├── tests/                     ← 43 test dosyası, 381 + yedek testleri
+│   └── railway.api.toml · railway.cron.toml · Dockerfile · Dockerfile.cron (pg_dump 17)
+├── mobile/                        ← Expo uygulaması — AYRI GİT DEPOSU (Niyetsen-mobile)
+│   └── src/app/                   ← expo-router: (tabs)/ 5 sekme + stack ekranlar
+├── website/                       ← niyetsen.com statik HTML (Hostinger); .htaccess
+├── store-listing/                 ← Play / App Store görselleri + üretici script'ler
+└── .cursor/                       ← rules/ (hafıza, sprint) · skills/ · agents/ (org-mimar, gizlilik-denetci,
+                                     web-vitrin, model-router) · hooks.json + hooks/ (hex/Easing/any, railway, sır)
 ```
 
-> Ayrıntılı harita için / For the full map: [`docs/REPO_MAP.md`](docs/REPO_MAP.md).
+Mobil tab'lar (`mobile/src/app/(tabs)/`): `index` Sohbet · `daily` Bugün ·
+`explore` Planım · `rank` Zincir · `settings` Profil. Mistik, rapor, paywall,
+yollar, lig vb. kök Stack'te. V2 hedef (Faz 1–3): `auth` iki sekme, anket
+adımı, `kurumum`, `davet`, `(org)/`, `(admin)/`.
 
 ---
 
-## ⚡ Hızlı başlangıç / Quick start
+## 4. Kurulum ve çalıştırma / Setup
 
-**Backend:**
+**Backend**
 ```bash
 cd niyetsen-backend
 python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-cp .env.example .env         # GEMINI_API_KEY'i .env'e yaz — KODA DEĞİL
-pytest -q                    # testler (anahtar gerekmez)
+cp .env.example .env            # GEMINI_API_KEY vb. .env'e — KODA DEĞİL
+pytest -q                       # 381 geçmeli (anahtar gerekmez, in-memory repo)
 uvicorn app.main:app --reload   # http://127.0.0.1:8000/docs
 ```
+Dev'de kimlik `AUTH_DISABLED=true` + `X-User-Id: <id>` başlığı. Fiziksel
+cihaz için `--host 0.0.0.0` ve mobil `.env`'de Mac LAN IP'si.
 
-**Mobile:**
+**Mobil (Expo)**
 ```bash
 cd mobile
 npm install
-cp .env.example .env         # EXPO_PUBLIC_API_URL vb. doldur
-npx expo start
+cp .env.example .env            # EXPO_PUBLIC_* — yalnız publishable/anon anahtarlar
+npx expo start                  # i / a / Expo Go QR
+npx tsc --noEmit                # 0 hata şartı
 ```
+RevenueCat satın alma Expo Go'da çalışmaz (EAS / dev build gerekir).
 
-> Tam kurulum, ortam değişkenleri ve cihazda test için:
-> **[`docs/DEVELOPER_GUIDE.md`](docs/DEVELOPER_GUIDE.md)**.
+**Web uygulaması (V2 hedef — Faz 1)**
+```bash
+cd mobile
+npx expo export --platform web  # dist/ → app.niyetsen.com (Hostinger alt alan adı, statik SPA)
+```
+`.htaccess` SPA fallback, PKCE handler `app.niyetsen.com/auth/callback`,
+Railway `CORS_ALLOWED_ORIGINS`'e `app.` + `panel.` eklenir. `niyetsen.com/auth/callback`
+mobil şifre sıfırlama bilgi sayfası olarak **kalır**.
 
----
+**Website (niyetsen.com)**
+Statik HTML; yayın paketi **allowlist** ile üretilir ve yalnız o yüklenir:
+```bash
+cd website && scripts/build_release.sh   # → website/_release/ (vercel.json, .py, .env*, .vercel/ dışarıda)
+```
+Deploy = Hostinger Business (hPanel / Hostinger MCP `hosting_deployStaticWebsite`,
+canlıyı ezer → Şahin onayı; ardından önbellek temizliği). `website/.htaccess`:
+header'lar, HSTS, clean-URL fallback, `txt|xml` 1 saat cache, `404.html`
+(V2 §11 H1–H5). Vercel kalıntısının kapatılması (H6) Şahin panel işi.
 
-## 🔐 Güvenlik / Security (özet)
-
-- Sırlar **yalnız** `.env` içinde; `.env` gitignore'da; repoda takip edilen sır **yok**.
-- Prod'da kimlik doğrulaması kapatılamaz (`app/main.py` çalıştırma-anı kilidi).
-- Supabase JWT (JWKS / RS256) her istekte doğrulanır (`/health` hariç).
-- Rate limit, istek gövdesi tavanı, güvenlik başlıkları ve güvenli hata yanıtı aktif.
-
-Ayrıntılı denetim: **[`docs/SECURITY.md`](docs/SECURITY.md)**.
-
----
-
-## 🎯 Ürünün üç katmanı / What the product actually is
-
-Niyetsen üç katmandan oluşur; ilki bağı kurar, diğer ikisi değeri derinleştirir.
-
-### 1. AI Asistan — potansiyeli açan sohbet · **ücretsiz, sınırsız**
-Rehber genel tavsiye vermez: her istekte **kullanıcı belleği** (aktif niyet,
-zincir, rank, son görevler, ruh hali) ve **RAG bilgi tabanı** (felsefe,
-motivasyon, atomik alışkanlıklar, 16 gerçek kullanıcı senaryosu) bağlama girer.
-Sohbet oturumları başlıklarıyla saklanır; kullanıcı istediği konuşmaya döner.
-Ücretsiz katmanda sınırsızdır — **bağ kurulmadan abonelik istenmez** (edinim
-ve retention stratejisinin merkezi).
-
-### 2. Plan & Kanıt — çekirdek halka · **premium**
-Sohbetten çıkan niyet, kullanıcının gerçek hayatından türeyen 365 günlük
-görselli plana dönüşür. Tempo bilinçlidir: ilk günler garantili kazanım,
-haftada bir nefes günü, kademeli zorluk, görevlerin birbirine zincirlenmesi.
-Her görev uygulama içi kamerayla çekilen tek fotoğrafla kapanır; Vision modeli
-değerlendirir, puan işlenir. Ceza caydırır ama **utandırmaz**: tavanlı ceza,
-sıfır tabanı, dürüst mazeret yolu, aylık zincir koruma jetonu.
-
-### 3. Mistik Katman — tutundurma kancası · **premium**
-Günlük tarot (78 kartlık tam deste), kahve & el falı görsel yorumu,
-günlük/haftalık burç. İlke: **fal kader değil, aynadır** — her yorum kullanıcının
-niyetine ve bugün atabileceği en küçük adıma bağlanır; korku satılmaz, kriz
-sinyalinde yorum durur, her ekranda "eğlence amaçlıdır" ibaresi bulunur.
-Ana konumlama yaşam planlamadır; mistik katman ikincil ve ayrıştırıcıdır.
-
-### ✦ İdol Modu — Felsefe Yolları · **premium, ürünün imzası**
-> Bu özellik bir film izlenirken doğdu. Film biter, içinde bir şey kıpırdar:
-> "Ben de böyle biri olmak istiyorum." O his ~48 saatte söner. Niyetsen o anı
-> yakalayıp 365 günlük bir yola çevirir.
-
-Kullanıcı ilham aldığı kişiyi söyler; sistem bunu bir **Felsefe Yolu**'na
-çevirir (Greenlights Yolu, Kaizen Yolu, Stoacı Yol, Ustalık Yolu, Şafak Yolu…).
-Her yol iki katmanlıdır: **felsefe** (dünya görüşü → rehberin tonuna işler) ve
-**pratik** (spor, okuma, rutin, karar biçimi → plan motoruna işler).
-İlke: **taklit değil, tercüme** — o kişi olmak değil, disiplinini kullanıcının
-kendi hayatının diline çevirmek.
-
-*Hukuki çerçeve kodda zorlanır:* paketler kişi adıyla değil felsefe adıyla
-sunulur; kişi adı yalnız "…kamuya açık yaklaşımından ilham alır; kendisiyle
-bağlantılı değildir" kaynak notunda geçer (kişilik hakları + App Store 5.2.1).
-
-**Persona veri akışı:** `knowledge/personas/<slug>.json` (15 alanlı persona
-modeli — yol adı ve kategori üst düzeyde, 13 alan dossier içinde:
-core_beliefs, mindset, habits, daily_routine, reading_profile,
-books_read_or_recommended, decision_style, failure_and_recovery,
-public_quotes, lessons_for_users, sources …) → `python -m scripts.ingest_personas`
-→ Supabase `idol_personas` + 80-150 kelimelik `persona_chunks`.
-**Yeni idol eklemek deploy gerektirmez.** Şema: `knowledge/personas/_SEMA.md`.
+Tam kurulum, ortam değişkenleri ve sık sorunlar: [`docs/DEVELOPER_GUIDE.md`](docs/DEVELOPER_GUIDE.md).
 
 ---
 
-## 🔄 Çalışma mantığı / Request algorithm
+## 5. Test ve kalite kapıları / Quality gates
+
+| Kapı | Şart |
+|---|---|
+| Backend | `pytest -q` → **381 geçti** (2026-10-17). Düşürme; V2 fazları artırır (Faz 1 KAPI ≥ 400). |
+| Mobil tip | `npx tsc --noEmit` → **0 hata** |
+| Reanimated | `Easing` / `Animated` **asla** `react-native`'ten import edilmez (worklet crash). ESLint `no-restricted-imports` kuralı kaldırılamaz. |
+| Tema | Hex hardcode yok — yalnız `theme.ts` / `MysticColors` token'ları (bugün 7 istisna kamera siyah/beyaz, Faz 1'de token). |
+| TypeScript | `any` yok (bugün 0). |
+| Gizlilik (V2) | Her org/rollup ucu için `test_privacy_k5.py` zorunlu (Faz 2+). |
+| Cihaz | Her ekran gerçek cihazda (Expo Go / dev build); simülatör yetmez. |
+
+**Commit biçimi:** kök `v2: <konu>` · mobil `v2-ui: <konu>`; küçük, tek konulu.
+**Commit ve push yalnız Şahin isteyince.** `mobile/` ayrı depodur, kök repoya
+commit edilmez.
+
+---
+
+## 6. Deploy
+
+**Railway (backend)** — GitHub push canlıda deploy **tetiklemez**; CLI ile:
+
+```bash
+# api: REPO KÖKÜNDEN (rootDirectory = niyetsen-backend; içeriden çalıştırılırsa yol ikiye katlanır)
+railway up --project <id> --environment <id> --service api --ci
+
+# cron: niyetsen-backend/ İÇİNDEN (Config-as-code /railway.cron.toml orada)
+cd niyetsen-backend && railway up --service cron --ci
+```
+Doğrulama: `/health` 200 · yeni uçlar JWT'siz 401 · cron log `exit 0`.
+Cron servisi `railway.cron.toml` kullanır (`railway.toml` değil); yanlış
+dosya uvicorn açar → 5 dk'da SIGKILL → "Deploy Crashed" spam. Production'da
+bekleyen staged patch'e **`accept-deploy` ASLA** (env'leri siler) —
+dashboard'dan discard. Tanı: [`docs/RAILWAY_SORUN_GIDERME.md`](docs/RAILWAY_SORUN_GIDERME.md).
+
+**Supabase (migration disiplini)**
+- DDL **yalnız** `niyetsen-backend/supabase/migrations/` altında, zaman damgalı,
+  standart Postgres (Supabase'e özel RPC / Edge Function / `auth.users` FK'si
+  yeni tablolarda yok).
+- SQL Editor'da **yalnız VERIFY** (`RUN_IN_SUPABASE_SQL_EDITOR.sql`); elle DDL
+  yapıştırma biter. Migration'lar otomatik uygulanmaz — Şahin çalıştırır.
+- Kök `supabase/migrations/` stub'ı Faz 0'da kaldırıldı (tek kaynak).
+- `plans.id` ve `users.id` **TEXT** — FK yazarken `text references`.
+- Supabase'e özel her bağımlılığın taşınma karşılığı:
+  [`docs/SUPABASE_BAGIMLILIK.md`](docs/SUPABASE_BAGIMLILIK.md).
+
+**Yedek ve geçiş (V2 §7 — Faz 0)**
+- Günlük `pg_dump --format=custom` (şemalar `public,auth,storage`) → S3-uyumlu
+  kova (R2/B2/MinIO), 30 gün saklama: `scripts/backup_pg_dump.py` (+
+  `backup_io.py`, saf mantık `app/core/backup.py`, testler `tests/test_backup.py`).
+  Cron turuna bağlı (`run_scheduled_jobs.py` → `backup` adımı, `BACKUP_HOUR_UTC`);
+  cron imajı `Dockerfile.cron` (postgresql-client-17 — Supabase 17.6).
+- `scripts/verify_backup.py` (snapshot / compare / fetch-latest / local-dump /
+  drill) + `scripts/restore_drill_local.sh`: geçici PG17'ye restore + satır
+  sayısı / md5 karşılaştırması; haftalık tatbikat tek komut.
+  `scripts/local_pg_from_migrations.sh`: gerçek migration'lar vanilla Postgres'te
+  (29/29 hatasız, 2026-10-17). **KAPI 0** = üretim dump'ıyla tatbikat yeşil
+  (boru hattı stand-in ile doğrulandı; üretim koşusu DB şifresi + kova bekliyor).
+- Geçiş günü protokolü (dondurma penceresi, kontrol toplamları, çift JWKS,
+  14 gün salt okunur Supabase) ve tatbikat kayıtları:
+  [`docs/GECIS_PROTOKOLU.md`](docs/GECIS_PROTOKOLU.md).
+
+**Mobil** — EAS (`mobile/eas.json`); Play / TestFlight profilleri `package.json` script'lerinde.
+
+---
+
+## 7. Gizlilik tabanı / Privacy floor (V2 kilit 1.2/1 — tartışılmaz)
+
+- **k ≥ 5 toplulaştırma:** 5 kişiden az departman / filtre kombinasyonu için
+  veri **döndürülmez** — servis katmanında (`org_analytics_service`), SQL
+  view'da değil. Kesişen filtreler dâhil.
+- **Yönetici tek kişiyi görmez:** İK / yönetici hiçbir ekranda bir kişinin
+  görev, plan, sohbet, fal veya anket "eksik yön" cevabını görmez. Görünen:
+  katılım %, 6 kategori dağılımı, zincir ortalaması, kurumsal niyete bağlı
+  ilerleme %, anket toplamları.
+- **Davet + açık onay:** katılım geri alınabilir; katılmayan hiçbir ürün içi
+  dezavantaj yaşamaz. Bireysel veri işleme dayanağı **kullanıcı sözleşmesi**,
+  işveren değil; organizasyon verisi yalnız toplulaştırılmış işlenir.
+- **Fal / mistik / kriz verisi organizasyona asla akmaz.**
+- **Roller:** `owner` / `hr_admin` / `manager` / `member`; her panel okuması
+  `org_audit_log`'a yazılır.
+- **Utandırma yasağı panelde de:** "en az aktif çalışan" listesi yok; yalnız
+  kazanım dili. Her panel ekranında sabit not: "Veriler toplulaştırılmıştır;
+  5 kişiden küçük gruplar gösterilmez."
+- **Oyun puanı ≠ cüzdan:** `points` ile `reward_wallet` ayrı defterler; puan
+  harcanınca rank düşmez (V2 hedef — Faz 2 çekirdek, Faz 8 partner).
+
+Organizasyon katmanı, panel ve cüzdan **V2 hedef — Faz 2–3**; bugün kodda yok.
+
+---
+
+## 8. Oyun kuralları / Game rules (değişmez)
 
 ```
-Kullanıcı mesajı
-  ↓ [1] Rıza + güvenlik kapısı (KVKK onayları, kriz sinyali taraması)
-  ↓ [2] Bağlam kurulumu — sıra DEĞİŞMEZ
-        SYSTEM  : sabit rehber kimliği (core/prompts.py)
-        CONTEXT : RAG parçaları (felsefe · motivasyon · senaryolar ·
-                  tetiklenirse tarot/burç/persona) + KULLANICI BELLEĞİ
-        USER    : kullanıcı mesajı            ← RAG etiketli, injection korumalı
-  ↓ [3] Model çağrısı → yapısal JSON (reply, suggestions, collected, ready)
-  ↓ [4] Niyet tamamlandıysa → Plan motoru (Pro model)
-        tempo kuralları + (varsa) Felsefe Yolu dossier bağlamı + görseller
-  ↓ [5] Günlük döngü: görev → foto kanıtı → Vision skoru → puan + zincir
-        gün sonu cron (kullanıcı saat diliminde 23:59) → ceza/koruma/streak
+Görev tamamlama        +50  (etiketli her kategoriye)
+Sessiz kaçırma         −25 × 2ⁿ, TAVAN 200; herhangi bir tamamlama sayacı sıfırlar
+Mazeret yolu           sabit −25, katlanmaz, sayaç sıfırlanır; 10. mazerette puan ×0.5
+Puan tabanı            0 — negatif yok
+Zincir                 günde ≥1 görev = devam; gün sınırı kullanıcı TZ 23:59
+Zincir Koruma Jetonu   ayda 1, otomatik
+Kanıt                  Vision güven ≥60 onay; <60 nazik tekrar (maks 3, 3.'de beyanla kabul)
+6 kategori             İrade · İstikrar · Disiplin · Özgüven · Sosyallik · Özsaygı
+Ton                    dürüst yüzleşme evet, utandırma hayır — Wrapped ve panelde kaçırılanlar gösterilmez
 ```
-
-**Oyun mekaniği:** görev +50 · sessiz kaçırma −25×2ⁿ (tavan 200) · dürüst
-mazeret sabit −25 · puan tabanı 0 · 6 kategori (İrade, İstikrar, Disiplin,
-Özgüven, Sosyallik, Özsaygı) · ayda 1 zincir koruma jetonu.
+Kaynak: `niyetsen-backend/app/config.py` sabitleri + `tests/test_scoring.py`
+sözleşmesi + `NIYETSEN_MASTER_PLAN.md` §1.2–1.5. Kurumsal katman formülü
+değiştirmez.
 
 ---
 
-## 🗄️ Depolama / Storage map
+## 9. Yol haritası / Roadmap (V2 §13)
 
-| Katman | Teknoloji | İçerik |
+KAPI geçmeden sonraki faza başlanmaz. Aktif: **FAZ 0** (2026-10-17).
+
+| Faz | Özet | KAPI |
 |---|---|---|
-| Veritabanı | Supabase (Postgres) | users, plans, tasks, proofs, points, point_log, streaks, **chat_threads**, chat_msgs, intents, user_consents, push_tokens, bonus_offers, **fortune_log**, **idol_personas + persona_chunks** |
-| Kimlik | Supabase Auth (JWT) | e-posta/şifre, Apple & Google |
-| Dosya | Supabase Storage | kanıt fotoğrafları (özel bucket), plan görselleri (açık) |
-| Bilgi tabanı | `knowledge/` + `rag_service` | felsefe, motivasyon, atomik alışkanlıklar, senaryolar, tarot (78 kart), burçlar, persona dossier'ları |
-| Vektör | Gemini embedding + kosinüs + **disk önbelleği** | yeniden başlatmada embedding maliyeti tekrarlanmaz |
-| Ödeme | RevenueCat (yalnız IAP) | 7 gün deneme → aylık/yıllık abonelik |
+| **0 — Hazırlık ve zemin** (aktif) | README V2, Supabase leaked-password + sağlayıcı doğrulama, migration tek kaynak, günlük `pg_dump` + `verify_backup.py`, Cursor alt ajan + hook'lar, AAB güvenlik taraması, Hostinger P1 | Yedek restore tatbikatı yeşil; Google web girişi etkin; README yayında; pytest 381 / tsc 0 |
+| 1 — Kimlik, anket, çok model, web uygulaması | Router bölme, `model_router.py`, Vision fixture (B4), plan A/B, 3 soru anketi, iki sekmeli giriş, `app.niyetsen.com` | Web'de Google girişi + aynı hesap mobilde; Vision fixture yeşil; pytest ≥ 400 |
+| 2 — Organizasyon çekirdeği | Org tabloları, `/org/*`, `authz.py`, wallet + outbox (bayrak kapalı), `davet` / `kurumum` ekranları | Davet → onay → niyet–plan bağlama uçtan uca; `test_privacy_k5.py` iskeleti |
+| 3 — İK paneli + rollup + içgörü | `org_daily_rollups` cron, k≥5 guard, `(org)/` ekranları, CSV | 2 pilot kurum; k<5 gizleniyor; Expo vs Next.js kararı |
+| 4 — Platform admin + maliyet | `(admin)/`, `/admin/*`, `model_usage_log`, bayraklar | Admin dışı 403; model maliyeti günlük görünür |
+| 5 — niyetsen.com yenileme | İlkbahar tasarım, Bireyler / Kurumlar, `/public/leads`, Hostinger yayın | Lighthouse ≥ 90; eski URL'ler 200/301 |
+| 6 — Kurumsal faturalama + RC deneyleri | Web Billing veya fatura; koltuk → `premium` grant/revoke | Koltuk aktif → PRO; iptal → 24 sa içinde kalkar |
+| 7 — Büyük sunucuya geçiş | Standart Postgres + S3, `StorageGateway`, çift JWKS, dondurma gecesi | Satır/md5/puan toplamı eşit; 24 sa hata < %1 |
+| 8 — Ödül / entegrasyon pazarı | `partner_integrations`, `redemptions`, "Ödüller" sekmesi | Sandbox partnerde kupon uçtan uca; cüzdan rank'i düşürmüyor |
+
+**Paralel:** Play IAP + Data Safety sprinti (`docs/PLAYSTORE_GOAL.md`,
+B1–B9 kapanmadan "hazır" denmez), Sentry / PostHog, `pytest` / `tsc` yeşil.
+Lig: opt-in rumuzlu haftalık gelişim ligi kodda var (`/league/*`); public
+leaderboard, bölgesel lig ve Realtime **yapılmaz**.
 
 ---
 
-## 📱 Durum / Status
+## 10. Güvenlik özeti / Security (özet)
 
-**Aktif sprint:** Play Store çıkışı — [`docs/PLAYSTORE_GOAL.md`](docs/PLAYSTORE_GOAL.md)
-(+ [`docs/FAZ8_LANSMAN.md`](docs/FAZ8_LANSMAN.md)). Mağaza kontrol listesi:
-[`STORE_READINESS.md`](STORE_READINESS.md).
+- Sırlar **yalnız** `.env` / Railway / EAS değişkenlerinde; repoda sır yok;
+  `.env.example` placeholder taşır.
+- Prod kilitleri (`app/main.py`): `AUTH_DISABLED=true`, `USE_SUPABASE_DB=false`,
+  boş `CRON_SECRET`, boş `REVENUECAT_WEBHOOK_SECRET` → süreç açılmaz.
+- Supabase JWT (JWKS, RS256/ES256, `aud=authenticated`) her istekte; `/health` hariç.
+- Rate limit (kullanıcı başına), istek gövdesi tavanı, güvenlik başlıkları,
+  güvenli hata yanıtı; foto ≤ 5 MB jpeg/png, yalnız uygulama içi kamera.
+- Prompt sırası SYSTEM → CONTEXT → USER tek yerde (`core/prompt_builder.py`);
+  kullanıcı mesajı system rolüne karışmaz; araç listesi `core/tools.py` kapalı.
+- V2: `/health` yalnız `ok` + `version` döner (Faz 1); `service_role` /
+  `sb_secret` web bundle'ında yok (CI grep); servislerde `supabase` import'u
+  yasak (CI grep, Faz 1).
 
-Kod tarafında FAZ 7–8 iskeleti hazır: sohbet (3.1 Pro), plan/kanıt, çoklu niyet,
-İdol Modu (10 Felsefe Yolu), mistik katman, Wrapped rapor, PRO kapıları.
-Backend: **`pytest -q` ~200 yeşil**. Mobil ayrı depoda (`npx tsc --noEmit`).
-
-Kilitli kararlar / yol haritası: [`NIYETSEN_MASTER_PLAN.md`](NIYETSEN_MASTER_PLAN.md).
-Public leaderboard **v3** — bu sprintte yok.
+Ayrıntı: [`docs/SECURITY.md`](docs/SECURITY.md) · [`docs/security/`](docs/security/).
 
 ---
 
