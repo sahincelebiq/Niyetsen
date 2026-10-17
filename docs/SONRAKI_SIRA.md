@@ -1,126 +1,94 @@
-# Sonraki sıra (kilit, 2026-08-16 — Şahin)
+# Sonraki sıra — V2 Kurumsal Pivot kuyruğu (kilit, 2026-10-17 — Şahin)
 
-> Şahin 16 Ağu 16:36: RC kimlik arkada beklesin, sıradan ilerle, paywall UI,
-> rapor için **önce soru**. Model / mistik ajan / CNN katmanı hâlâ “devam et”.
+> Şahin 17 Eki: "Faz 0'a başlayabilirsin." Tek kaynak:
+> `docs/NIYETSEN_V2_KURUMSAL_PIVOT_MASTER_PLAN.md` §13 (KAPI'lı faz planı).
+> Kural: **KAPI geçmeden sonraki faza başlanmaz.** Play Store sprinti
+> (IAP + Data Safety) bu kuyrukla **paralel** sürer; aşağıdaki "Paralel ray"
+> bölümü onun operasyon notlarıdır.
 
-Play Console **Kapalı test — Alpha `10 (1.0.1)`** inceleme/yayın.
-RevenueCat JSON yüklü; **Credentials need attention** Google gecikmesi
-(dakika–24 saat). Play daveti Active.
+## V2 faz sırası
 
-## Sıra
+| Faz | Konu | Süre | KAPI | Durum |
+|---|---|---|---|---|
+| **0** | Hazırlık ve zemin: plan onayı işlemleri, README V2, Supabase panel (leaked-password, Google/Apple, redirect), migration tek kaynak + `SUPABASE_BAGIMLILIK.md`, günlük `pg_dump` + `verify_backup.py` + restore tatbikatı, 4 alt ajan + hook'lar, AAB güvenlik taraması, `mobile/AGENTS.md` v54, Hostinger P1 (H1–H6) | 2–3 gün | Restore tatbikatı yeşil (satır + md5); Google web girişi etkin; README V2 yayında; pytest 381 / tsc 0 | **AKTİF** (2026-10-17) |
+| 1 | Kimlik, anket, çok model, web uygulaması: router bölme → model router (2.5 çıkar, `/health` sadeleşir, `model_usage_log`) → Vision fixture (B4 kapanır) → Argon A/B → `user_surveys` + 3 ekran → iki sekmeli giriş → `app.niyetsen.com` Expo web export → `api.ts` bölme, 7 hex → token, `AUTH_DISABLED` varsayılan false → **AAB kapanışı** (R23: `RECORD_AUDIO` blockedPermissions, implicit token dalı kaldır + `state`, R8 açık) → `image_url` göreli anahtar (R21) | 1–1.5 hafta | Web'de Google ile giriş + aynı hesap mobilde; anket cihazda; router birim testleri; Vision fixture yeşil; yeni AAB YÜKSEK 0; tsc 0; pytest ≥ 420 | bekliyor |
+| 2 | Organizasyon çekirdeği: V2 §5.3 tabloları (migration), `org_service` + `/org/*`, `core/authz.py`, `wallet_service` + `outbox_service` (bayrak kapalı), mobil `davet.tsx` / `kurumum.tsx`, Rapor "Kurumum" kartı | 1.5–2 hafta | Davet → onay → kurumsal niyete plan bağlama uçtan uca; `test_privacy_k5.py` iskeleti; scoring testleri aynı | bekliyor |
+| 3 | İK paneli + rollup + içgörü: `org_daily_rollups` cron, k≥5 guard, `(org)/` ekranları, `react-native-svg` grafikler, CSV (audit), PostHog org event'leri | 2 hafta | 2 pilot kurum; k<5 gizleniyor; panel taşmasız; **Expo vs Next.js kararı** | bekliyor |
+| 4 | Platform admin + maliyet görünürlüğü | 3–4 gün | Admin dışı `/admin` 403; model maliyeti günlük görünür | bekliyor |
+| 5 | niyetsen.com yenileme (İlkbahar) + Hostinger yayın + `/public/leads` | 1 hafta | Lighthouse ≥ 90; eski URL'ler 200/301; formlar API'ye | bekliyor |
+| 6 | Kurumsal faturalama (RC Web Billing / fatura) + RC deney #1 | 1 hafta | Koltuk aktif → PRO; iptal → 24 sa içinde kalkar | bekliyor |
+| 7 | Büyük sunucuya geçiş (V2 §7.2) | 1 hafta + 14 gün | Satır/md5/puan toplamı eşit; 24 sa hata < %1; geri dönüş test edildi | bekliyor |
+| 8 | Ödül/entegrasyon pazarı (partner, kupon, "Ödüller") | sonra | Sandbox partnerde kupon uçtan uca; harcama rank düşürmez | bekliyor |
 
-0. Alpha yayınla + (isteğe) aynı AAB dahili teste — **sen**
-1. RC Valid + ürün `niyetsen_monthly:monthly` / `niyetsen_yearly:yearly` bağla — **sen + ben**
-2. **Ödeme UI** — kodda İlkbahar paywall (150 / 1.200 fallback) **bu oturumda yapıldı**. Mağaza fiyatı RC yeşillenince gelir.
-3. **Raporlar** — sonsuz spinner kapatıldı. Şahin kilit (16 Ağu):
-   açılış = **Panel**; üstte **1 cümle ayna** (6 yön + erteleme örüntüsü,
-   kaçırılan listesi/ceza yok) + altında kazanım KPI. Hikâye isteyene.
-   `mirror_line` backend’de kural bazlı (Gemini yok).
-4. Mistik akışlar
-5. Ana sohbet ajanı
-6. Örüntüleme (ConvNet yok)
-7. MiniMax-M3 yalnız aday
+## FAZ 0 — açık/kapalı (canlı liste)
 
-## UI planı (İlkbahar, Fraunces/Manrope, Reanimated)
+Kutucukların tek gerçek kaynağı V2 plan §13 FAZ 0 bloğudur; burada yalnız
+**kimde** olduğu yazar.
 
-| Ekran | Ne |
-|---|---|
-| Paywall | 1 title, 3 vaat (plan/kanıt/rapor; fal ücretsiz), yıllık önerilen `tint` CTA, aylık sakin, geri yükle + yasal |
-| Rapor | Önce açılır panel; sonra “neden / nasıl” — utandırma yok, yalnız kazanım + dürüst yüzleşme |
-| Mistik | Hub sohbet; tarot/kahve/el/astro kısayol; `MysticColors`; ComingSoon canlı rotada yok |
-| Ajan | `core/tools.py` dışı araç yok; bellek + niyet |
+| Madde | Kim | Not |
+|---|---|---|
+| Plan onayı işlemleri (MASTER_PLAN §1.14, SONRAKI_SIRA, hafıza sözlüğü) | ben | ✅ 2026-10-17 |
+| README V2 + README_BACKEND | ben | ✅ 2026-10-17 (eski README arşivde) |
+| Migration tek kaynak + `docs/SUPABASE_BAGIMLILIK.md` | ben | ✅ kök kopya kaldırıldı; envanter yazıldı |
+| Günlük `pg_dump` cron + `scripts/verify_backup.py` + `docs/GECIS_PROTOKOLU.md` | ben | ✅ kod + cron adımı + `Dockerfile.cron` + 21 test; stand-in tatbikat EŞİT |
+| **Restore tatbikatı — üretim** (KAPI 0) | **sen** → ben | `.env` `DIRECT_URL` şifresi (`[YOUR-PASSWORD]` duruyor) + Railway `cron` env'ine `BACKUP_*` + S3 kova kimliği (öneri: Cloudflare R2) → `scripts/restore_drill_local.sh --from-source` |
+| 4 alt ajan + hook'lar | ben | ✅ `.cursor/agents/`, `.cursor/hooks.json` (canlıda doğrulandı) |
+| AAB güvenlik taraması → `docs/security/AAB_TARAMA_2026-10.md` | ben | ✅ KRİTİK 0 · YÜKSEK 2 (RECORD_AUDIO, deep-link token) → F1 AAB'sinde kapanır |
+| `mobile/AGENTS.md` v54 | ben | ✅ |
+| Hostinger `.htaccess` H1–H3 + P2 + `404.html`, yayın allowlist (H5 `scripts/build_release.sh`) | ben | ✅ kod; **deploy senin onayınla** (`hosting_deployStaticWebsite` canlıyı ezer) |
+| Cron yeniden deploy (`Dockerfile.cron`) | ben (sen "deploy et" deyince) | `niyetsen-backend/` içinden `railway up --service cron --ci`; env'ler girilmeden de zararsız (`not_configured`) |
+| Hostinger CDN BYPASS kontrolü (H4) | **sen** | hPanel → Performans → CDN |
+| Vercel kalıntısı: `niyetsen-website.vercel.app` 308 → niyetsen.com veya projeyi sil (H6/K6) | **sen** | Vercel'i GitHub'a bağlamak **gerekmez** — site Hostinger'da |
+| Supabase: leaked-password koruması **aç** (R3) | **sen** | Authentication → Attack Protection |
+| Supabase: Google + Apple sağlayıcı **etkin** (R4) | **sen** | Authentication → Sign In / Providers; Google client ID/secret, Apple Services ID |
+| Supabase: redirect URL'leri (`https://app.niyetsen.com/auth/callback`, `https://panel.niyetsen.com/auth/callback`, `niyetsen://auth/callback`) | **sen** | Authentication → URL Configuration; `https://niyetsen.com/**` jokerini kesin yollara çevir |
 
-Fiyat kilit: aylık **150 TL**. Yıllık fallback **1.200 TL** (150×8) ta ki Play’deki yıllık netleşene.
+## Paralel ray — Play Store / RevenueCat (operasyon notları, 2026-08-16'dan)
 
-Play Console şu an **Kapalı test — Alpha `10 (1.0.1)`** inceliyor.
-Yönetilen yayınlama açık → inceleme bitince otomatik yayılmaz; **Yayın özeti**
-üzerinden sen yayınlarsın.
+Play Console **Kapalı test — Alpha `10 (1.0.1)`**. RevenueCat JSON yüklü;
+**Credentials need attention** Google gecikmesi (dakika–24 saat). Play daveti
+Active. Fiyat kilit: aylık **150 TL**; yıllık fallback **1.200 TL** (150×8).
 
-## Sıra (tek tek, “devam et” ile)
+### Dahili test ≠ Kapalı test (Alpha)
 
-0. **Şimdi (sen + Play):** Alpha incelemesi + gerekirse aynı AAB’yi **Dahili test**e de yükle. Aşağıdaki “Dahili test” bölümü.
-1. **RevenueCat + Play IAP** — sen dashboard; ben ürün ID’lerini bağlarım. Paywall UI sonra.
-2. **Ödeme ekranı UI** — mevcut `paywall.tsx` üzerine Figma → kod (İlkbahar, Fraunces/Manrope, Reanimated only).
-3. **Raporlar** — tıklayınca açılmıyor; önce açılır yap, sonra örüntü katmanı.
-4. **Mistik** — sohbet / tarot / fal / el / astroloji / fal geçmişi çalışır + tasarım.
-5. **Ana sohbet ajanı** — mevcut `core/tools.py` dışına araç eklenmez; bellek + niyet + dürüst yüzleşme güçlenir.
-6. **Örüntüleme (CNN metaforu, ConvNet eğitimi YOK)** — 6 kategori + erteleme/mazeret/zincirden “neden erteliyor / neden özgüvensiz / nasıl irade” katmanı. v1 fine-tuning YASAK.
-7. **Model istişaresi (şimdi karar yok)** — Gemini 3.1 Pro durur; MiniMax-M3 aday, A/B sonra. Kanıt Vision Gemini’de kalır ta ki MiniMax görsel kanıt KAPI’sı geçene kadar.
-
-## Dahili test ≠ Kapalı test (Alpha)
-
-Play’de bunlar **ayrı ray**. Biri dolunca diğeri güncellenmez.
+Play'de bunlar **ayrı ray**. Biri dolunca diğeri güncellenmez.
 
 | Ray | Menü | Kim görür | 1.0.1 (v10) |
 |-----|------|-----------|-------------|
 | **Dahili test** | Test edin ve yayınlayın → Test → **Dahili test** | Yalnız dahili liste + o rayın opt-in linki | Hâlâ **5 Ağustos** yazıyorsa bu raya v10 **yüklenmemiş** demektir. Normal. |
-| **Kapalı test (Alpha)** | Test edin ve yayınlayın → Test → **Kapalı test** | Kapalı test e-posta listesi + Alpha opt-in | Ekrandaki inceleme **burası**. Busra buradaysa burayı bekler. |
+| **Kapalı test (Alpha)** | Test edin ve yayınlayın → Test → **Kapalı test** | Kapalı test e-posta listesi + Alpha opt-in | Ekrandaki inceleme **burası**. |
 
 Aynı AAB iki raya da yüklenebilir; versionCode 10 her ikisinde de geçerli.
-Dahili testteki tester kapalı testi görmez (ve tersi), opt-in linki farklıdır.
+**Yönetilen yayınlama:** kontrol bitince Yayın özeti → değişiklikleri
+**yayınla**; tester güncellemeyi 1–2 saatte çeker.
 
-**Yönetilen yayınlama:** “hızlı kontrol 7 dk” ≠ kullanıcıda güncelleme.
-Kontrol bitince Yayın özeti → değişiklikleri **yayınla**. Sonra tester
-Play Store’da uygulamayı açıp güncellemeyi çeker (bazen 1–2 saat).
-
-## RevenueCat — senin tıklama yolu (ürünler henüz boş)
+### RevenueCat — tıklama yolu
 
 Kod + RC iskelet hazır: Play app `com.niyetsenai`, entitlement `premium`,
-offering `default` (paketsiz). **Products listesi boş** — satın alma
-“paket bulunamadı” der ta ki sen Play aboneliğini açıp bağlayana kadar.
+offering `default`. Ürünler: `niyetsen_monthly:monthly` (P1M),
+`niyetsen_yearly:yearly` (P1Y) — V2 plan §2'ye göre RC'de **aktif**.
 
-### A. Play Console (önce burası)
+1. Play Console → Google Play ile para kazanın → Ürünler → Abonelikler:
+   `niyetsen_monthly` / temel plan `monthly` (150 TL); `niyetsen_yearly` /
+   `yearly` (fiyat Şahin). Ayarlar → Lisans testi: sen + Busra + kapalı test
+   e-postaları. Abonelikler **aktif** olmalı.
+2. RevenueCat → proje Niyetsen → Apps → Niyetsen Play (`com.niyetsenai`) →
+   Play service account JSON → Products (`niyetsen_monthly:monthly`,
+   `niyetsen_yearly:yearly`) → Entitlements → premium → Offerings → default
+   (`$rc_monthly`, `$rc_annual`) → Integrations → Webhooks:
+   `https://api-production-86f1.up.railway.app/webhooks/revenuecat`,
+   `Authorization: Bearer <Railway REVENUECAT_WEBHOOK_SECRET>`.
+3. RC Experiment #1 (yıllık vurgulu vs aylık vurgulu paywall) → **Faz 6**,
+   Play ürünü canlı olunca.
 
-1. Sol menü **Google Play ile para kazanın** → **Ürünler** → **Abonelikler**.
-2. Abonelik oluştur:
-   - Ürün kimliği: `niyetsen_monthly` (sonra değişmez)
-   - Temel plan kimliği: `monthly`
-   - Fiyat: **150 TL / ay**, Türkiye (2026-08-16 Şahin; eski 450 kiliti kalktı)
-3. İkinci abonelik:
-   - Ürün: `niyetsen_yearly`
-   - Temel plan: `yearly`
-   - Yıllık fiyat: Şahin sonra (eski 3.600 kiliti durur; aylık 150’ye göre yeniden seçilecek)
-4. **Ayarlar → Lisans testi** — sen + Busra + kapalı test e-postaları.
-5. Abonelikler **aktif** olmalı (taslak yetmez). Kapalı/dahili AAB yüklü
-   uygulamada test satın alma lisans testi ile ücretsiz geçer.
+### Eski kuyruk (2026-08-16) → V2'de nereye gitti
 
-### B. RevenueCat (Play ID’leri birebir)
-
-1. [app.revenuecat.com](https://app.revenuecat.com) → proje **Niyetsen**
-2. **Apps** → **Niyetsen Play** (`com.niyetsenai`) — yeni app açma
-3. Play service account JSON’u Apps → Play Store credentials’a yükle
-   (yoksa ürünler “unattached” kalır)
-4. **Products** — store identifier formatı zorunlu:
-   - `niyetsen_monthly:monthly`
-   - `niyetsen_yearly:yearly`
-5. **Entitlements → premium** → bu iki ürünü bağla
-6. **Offerings → default** (current) → paketler:
-   - Monthly → `$rc_monthly`
-   - Annual → `$rc_annual`
-7. **Integrations → Webhooks** (yoksa):
-   - URL: `https://api-production-86f1.up.railway.app/webhooks/revenuecat`
-   - Authorization: `Bearer <Railway REVENUECAT_WEBHOOK_SECRET>`
-
-Android public key EAS `play-internal` / `production` içinde.
-Yeni AAB gerekmez; ürün bağlanınca mevcut 1.0.1 mağaza fiyatını çeker.
-
-Bittiğinde sohbette ürün ID’lerini yaz — ben RC tarafını bağlarım / doğrularım.
-
-## Model notu (karar kilitlenmedi)
-
-| | Gemini 3.1 Pro (şimdi) | MiniMax-M3 (aday) |
-|--|------------------------|-------------------|
-| Resmi ad | `gemini-3.1-pro-preview` | `MiniMax-M3` (docs, 2026-06) |
-| Metin fiyat (1M token) | ~$2 in / $12 out (≤200k) | ~$0.30 in / $1.20 out (≤512k, kampanya) |
-| Kanıt foto | Vision hazır, canlı | Multimodal iddia var; **su≠meyve KAPI’sız geçiş YOK** |
-| Araçlar | `core/tools.py` + thinking_level çözüldü | Function calling A/B şart |
-| Risk | Kota / maliyet | TR ton, JWT/prompt enjeksiyon, yeni client |
-
-**Şimdi:** Gemini durur. Key alma serbest; koda bağlama “devam et” + A/B sonra.
-
-## Örüntüleme (CNN) — ne evet / ne hayır
-
-- Evet: mevcut 6 kategori + erteleme / mazeret / sessiz kaçırma / zincir
-  katmanlarından “neden / nasıl” örüntüsü. Rapor + sohbet bellek.
-- Hayır: ConvNet eğitmek, fine-tuning, yeni puan formülü uydurmak,
-  utandırma tonu, public leaderboard.
+| Eski madde | V2 karşılığı |
+|---|---|
+| Ödeme UI (İlkbahar paywall) | yapıldı; mağaza fiyatı RC yeşillenince |
+| Raporlar (panel + 1 cümle ayna, kural bazlı) | korunur; "Kurumum" kartı Faz 2 |
+| Mistik akışlar | Play sprinti içinde sürer; org'a veri akmaz (kilit) |
+| Ana sohbet ajanı | Faz 1 model router üstüne; araç listesi `core/tools.py` |
+| Örüntüleme (ConvNet yok) | Faz 3 kural bazlı içgörü + bireysel ayna |
+| MiniMax-M3 aday | **kapandı** — çok modelli Gemini (V2 §5.5) |
+| Public leaderboard | v3 — hâlâ yok; org içi opt-in lig Faz 3 "Challenge (v2.1)" |

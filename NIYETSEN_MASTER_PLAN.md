@@ -1,5 +1,10 @@
 # NİYETSEN — MASTER GELİŞTİRME PLANI (Cursor için)
 
+> **2026-10-17 — V2 Kurumsal Pivot ONAYLANDI (Şahin):** yol haritası artık
+> `docs/NIYETSEN_V2_KURUMSAL_PIVOT_MASTER_PLAN.md` §13 (FAZ 0–8, KAPI'lı).
+> Bu dosyanın §1 kilitleri **aynen geçerli**; V2'ye özgü yeni kilitler §1.14'te.
+> Aktif faz: **V2 FAZ 0 — Hazırlık ve zemin**. Play Store sprinti paralel sürer.
+
 > **Bu dosya nasıl kullanılır:** Bu dosyayı repo köküne koy. Cursor'a şunu söyle:
 > *"NIYETSEN_MASTER_PLAN.md dosyasını oku. Faz 0'dan başla. Her fazın sonundaki
 > KAPI kriterleri geçmeden bir sonraki faza GEÇME. Her görevi bitirince bu dosyada
@@ -180,6 +185,37 @@ Eski algoritmada katlanma tavansızdı (25→50→100→200→400…). **Geçerl
 - Kapsam: FAZ 4'te (Expo Push altyapısının üzerine) inşa edilecek, şimdi
   kodlanmıyor — sadece karar kilitlendi. Yeni bir function-calling aracı
   gerekirse `tools.py`'daki KAPALI LİSTE kuralı gereği ayrıca onay istenecek.
+
+### 1.14 V2 kilitleri — Kurumsal pivot (ONAYLANDI, 2026-10-17)
+Kaynak: `docs/NIYETSEN_V2_KURUMSAL_PIVOT_MASTER_PLAN.md` §1 (tam metin orada;
+çelişkide o belge kazanır). Özet:
+- **Korunanlar:** §1.1–1.13'teki her kural aynen; kurumsal katman puan
+  formülünü, tonu (utandırma yasağı **panelde de**), IAP-only kuralını, prompt
+  sırasını ve araç listesini değiştirmez. Fal/mistik/kriz verisi organizasyona
+  **asla** akmaz.
+- **Gizlilik tabanı:** toplulaştırma eşiği **k ≥ 5** (servis katmanında);
+  yönetici/İK tek kişinin görev/plan/sohbet/fal/anket cevabını hiçbir ekranda
+  görmez; katılım davet + açık onay, geri alınabilir; roller
+  `owner / hr_admin / manager / member`; her panel okuması `org_audit_log`'a.
+- **Çift yüzey, tek kod:** Expo Router uygulaması mobil + web
+  (`app.niyetsen.com`); İK paneli aynı kodda `(org)/` rota grubu; ayrı Next.js
+  kullanıcı uygulaması yazılmaz (Faz 3 KAPI'sında panel için yeniden bakılır).
+- **Sunucu bağımsızlığı:** iş mantığı yalnız `Repository` arayüzüyle konuşur;
+  servislerde `supabase` import'u yasak (tek istisna `image_service.py:387`,
+  `StorageGateway`'e taşınacak); yeni tablolarda Supabase'e özel RPC/Edge/
+  `auth.users` FK yok; `users.id`/`plans.id` TEXT kalır; günlük `pg_dump` +
+  geri yükleme tatbikatı **veri kaybı önlem kapısı** (V2 §7).
+- **Ödül temeli:** `points` (oyun puanı) ile `reward_wallet` (harcanabilir
+  bakiye) **ayrı defterler**; puan harcanınca rank düşmez. Partnerler Faz 8.
+- **Çok modelli Gemini:** görev bazlı `core/model_router.py`; 2.5 ailesi
+  fallback'ten çıkar; model adı yalnız ai.google.dev listesinden (V2 §5.5).
+- **Kayıt sonrası 3 soru** (amaç → eksik yön → bizi nereden duydun), atlanabilir;
+  "eksik yön" yalnız kişiye özel, org rollup'ına girmez.
+- **Giriş ekranı seçmeli:** "Kendim için" / "Kurumum için"; rol sunucuda
+  (`org_memberships` + `app_metadata.platform_role`); `user_metadata` yetkide
+  asla kullanılmaz.
+- **Faz disiplini:** KAPI geçmeden sonraki faza başlanmaz; commit kök
+  `v2: <konu>`, mobil `v2-ui: <konu>`; commit yalnız Şahin isteyince.
 
 ---
 

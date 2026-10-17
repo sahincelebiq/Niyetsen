@@ -11,8 +11,39 @@ canlıda yaşanmış bir hatanın veya Şahin'in verdiği bir kararın izidir.
 
 > **Play Store çıkış sprinti aktif** → ayrıntılı açık/kapalı liste:
 > `.cursor/rules/playstore-cikis-hafiza.mdc` (alwaysApply).
+>
+> **V2 Kurumsal Pivot ONAYLANDI (2026-10-17, Şahin)** → yol haritası
+> `docs/NIYETSEN_V2_KURUMSAL_PIVOT_MASTER_PLAN.md` §13; kuyruk
+> `docs/SONRAKI_SIRA.md`; kilitler MASTER_PLAN §1.14. **Aktif: V2 FAZ 0.**
 
 ## Sözlük (Şahin'in dili → sistem karşılığı)
+
+### V2 terimleri (2026-10-17)
+- **Organizasyon / Kurum** = `organizations` + `org_memberships`; roller
+  `owner / hr_admin / manager / member`. "Niyetsen Kurumsal" (K8).
+- **Kurumsal niyet** = `org_intentions` (şirket/departman hedefi); çalışan
+  kendi planını `org_intention_links` ile bağlar. Yöneticiye yalnız **toplu**
+  ilerleme % gider.
+- **k ≥ 5** = toplulaştırma eşiği; 5 kişiden az grup/filtre kombinasyonu için
+  veri **döndürülmez** (servis katmanı, `test_privacy_k5.py` zorunlu).
+  "Eksik yön" anket cevabı ve fal/mistik/kriz verisi organizasyona **asla** akmaz.
+- **Çift yüzey, tek kod** = aynı Expo Router uygulaması mobil + web
+  (`app.niyetsen.com`); İK paneli `(org)/` rota grubu (`panel.niyetsen.com`).
+  Ayrı Next.js kullanıcı uygulaması YOK.
+- **Sunucu bağımsızlığı** = iş mantığı yalnız `Repository`; servislerde
+  `supabase` import'u yasak; `StorageGateway` (S3-uyumlu); standart Postgres
+  SQL; günlük `pg_dump` + geri yükleme tatbikatı = **veri kaybı önlem kapısı**.
+- **Cüzdan** = `reward_wallet` + `wallet_ledger`; oyun puanından **ayrı defter**
+  (harcayınca rank düşmez). Partner/kupon Faz 8.
+- **Outbox** = `integration_outbox`; dışa açık olay akışı (task_completed,
+  wallet_earned, streak_milestone); yayımcı Faz 8.
+- **Model router** = `core/model_router.py`, görev→model (V2 §5.5); 2.5 ailesi
+  fallback'ten çıkar; env `GEMINI_MODEL_CHAT/PLAN/VISION/AGENT/FORTUNE/ORG/IMAGE`.
+- **3 soru** = kayıt sonrası anket (amaç → eksik yön → bizi nereden duydun),
+  `user_surveys`; atlanabilir.
+- **Kendim için / Kurumum için** = giriş ekranı sekmeleri; rol sunucuda,
+  `user_metadata` yetkide kullanılmaz.
+- **Platform admin** = biz; `platform_admins` → `app_metadata.platform_role`.
 
 - **Zincir** = streak. Gün sınırı kullanıcı timezone 23:59. "Zincir Koruma
   Jetonu" = ayda 1 otomatik freeze token.
@@ -126,12 +157,40 @@ canlıda yaşanmış bir hatanın veya Şahin'in verdiği bir kararın izidir.
 
 ## Çalışma protokolü
 
-- Test: backend `pytest -q` (~184 yeşil — düşürme); mobil
+- Test: backend `pytest -q` (**381 yeşil**, 2026-10-17 — düşürme); mobil
   `npx tsc --noEmit` 0 hata + Expo Go gerçek cihaz.
-- Commit: `faz8: <konu>` / `faz8-ui: <konu>` küçük/tek konulu.
-  mobile/ AYRI git deposudur (`Niyetsen-mobile`).
+- Commit: V2'de kök `v2: <konu>` / mobil `v2-ui: <konu>` (Play sprinti işleri
+  `faz8:` kalabilir) küçük/tek konulu. mobile/ AYRI git deposudur
+  (`Niyetsen-mobile`). Commit yalnız Şahin isteyince.
 - Kararsızlıkta: MASTER_PLAN §1 → bu dosya → playstore-cikis-hafiza →
-  yoksa Şahin'e sor. UYDURMA.
+  V2 plan §12 açık kararlar → yoksa Şahin'e sor. UYDURMA.
+
+## 2026-10-17 anlık (V2 FAZ 0 açıldı)
+
+- Şahin onayı: "Faz 0'a başlayabilirsin". Plan `docs/NIYETSEN_V2_KURUMSAL_
+  PIVOT_MASTER_PLAN.md` v1.0; MASTER_PLAN §1.14; SONRAKI_SIRA V2 kuyruğu.
+- **Migration tek kaynak** = `niyetsen-backend/supabase/migrations/` (kök
+  `supabase/migrations/` kopyası kaldırıldı). Yeni DDL yalnız orada; SQL
+  Editor'a elle DDL yapıştırma biter (Tuzak #5 → VERIFY dosyası kalır).
+- Yedek: `scripts/backup_pg_dump.py` (günlük `pg_dump -Fc` → S3-uyumlu kova,
+  30 gün) + `scripts/verify_backup.py` (satır sayısı + md5 karşılaştırma);
+  runbook `docs/GECIS_PROTOKOLU.md`. Env: `BACKUP_DATABASE_URL`,
+  `BACKUP_S3_*`. Kimlikler Şahin'den (Railway cron env).
+- Şahin panel maddeleri (F0): Supabase leaked-password koruması, Google +
+  Apple sağlayıcı, redirect URL'leri (`app.`/`panel.`), S3 kova kimliği,
+  Hostinger CDN BYPASS, Vercel kalıntısı 308/sil.
+- Envanter bulguları (`docs/SUPABASE_BAGIMLILIK.md`, 64 madde): backend
+  Postgres'e doğrudan bağlanmaz (PostgREST); mobil yalnız Auth için supabase-js
+  (DB/Storage erişimi yok). **Taşınma tuzakları:** `tasks.image_url` kalıcı
+  Storage public URL'si (R21 → göreli anahtar); `users.id` = auth UUID = RC
+  appUserID = PostHog distinctId → hedef auth aynı UUID'leri taşımalı (R22).
+- AAB v9 taraması (`docs/security/AAB_TARAMA_2026-10.md`): sır sızıntısı yok;
+  YÜKSEK: `RECORD_AUDIO` (expo-camera manifesti) + deep-link'ten token kabulü
+  (`auth-redirect.ts`) → F1 AAB'sinde kapanır (R23).
+- **Stack kilidi hatırlatma:** backend Python/FastAPI + google-genai; Vercel AI
+  SDK (`ai` npm) / Prisma / Vercel AI Gateway **V2 planında yok** — model
+  router Gemini API'ye doğrudan gider. Chat'e düşen anahtar dosyaya yazılmaz,
+  rotasyon istenir (K11, V2 §12).
 
 ## 2026-09-10 anlık (plan etkinlikleri + plan-içi ajan)
 

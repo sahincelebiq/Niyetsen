@@ -158,7 +158,35 @@ Apple: Providers → Apple ayrıca açılır; iOS bundle `com.niyetsen.app`.
 ## A7. Attack Protection
 
 Authentication → Attack Protection → **Leaked password protection** aç
-(HaveIBeenPwned). Advisor uyarısı duruyor.
+(HaveIBeenPwned). Advisor uyarısı duruyor (**2026-10-17 14:40 yeniden
+kontrol: hâlâ WARN / kapalı** — V2 Faz 0 R3, Şahin).
+
+## A9. V2 Faz 0/1 ekleri (2026-10-17)
+
+Kanıt (SQL, `auth.identities`): `email` 8 kimlik, **`google` 4 kimlik**,
+`apple` 0 → Google sağlayıcısı native'de **etkin ve çalışmış**; Apple
+henüz hiç kullanılmamış (iOS yayını öncesi Providers → Apple açılıp
+`com.niyetsen.app` Services ID girilmeli — R4'ün Apple yarısı).
+
+**Redirect URLs — Faz 1 web uygulaması için ekle** (URL Configuration):
+
+```
+https://app.niyetsen.com/auth/callback
+https://panel.niyetsen.com/auth/callback
+```
+
+`https://niyetsen.com/**` jokerini **kesin yollara** indir
+(`/auth/callback`, `/sifre-sifirla`): joker, açık yönlendirme yüzeyi
+bırakır; `niyetsen.com/auth/callback` mobil şifre sıfırlama bilgi sayfası
+olarak kalır, gerçek PKCE handler `app.niyetsen.com/auth/callback` olur.
+
+**Google Cloud web client** → Authorized JavaScript origins'e
+`https://app.niyetsen.com` ve `https://panel.niyetsen.com` (web'de Google
+butonu için şart; redirect URI Supabase callback'i olarak kalır).
+
+Mobil tarafta AAB taraması (R23) implicit `access_token/refresh_token`
+dalının kaldırılmasını ister; yalnız PKCE `code` / `token_hash` kalır —
+URL Configuration'daki girişler bundan etkilenmez.
 
 ## A8. Doğrulama (takımda OLMAYAN bir e-posta)
 
