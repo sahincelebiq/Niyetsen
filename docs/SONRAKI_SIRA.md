@@ -35,7 +35,7 @@ Kutucukların tek gerçek kaynağı V2 plan §13 FAZ 0 bloğudur; burada yalnız
 | 4 alt ajan + hook'lar | ben | ✅ `.cursor/agents/`, `.cursor/hooks.json` (canlıda doğrulandı) |
 | AAB güvenlik taraması → `docs/security/AAB_TARAMA_2026-10.md` | ben | ✅ KRİTİK 0 · YÜKSEK 2 (RECORD_AUDIO, deep-link token) → F1 AAB'sinde kapanır |
 | `mobile/AGENTS.md` v54 | ben | ✅ |
-| Hostinger `.htaccess` H1–H3 + P2 + `404.html`, yayın allowlist (H5 `scripts/build_release.sh`) | ben | ✅ kod; **deploy senin onayınla** (`hosting_deployStaticWebsite` canlıyı ezer) |
+| Hostinger `.htaccess` H1–H3 + P2 + `404.html`, yayın allowlist, canlı deploy | ben | ✅ 2026-10-17 yayında doğrulandı (blog 200, sitemap 1 saat, HSTS, `vercel.json` 404) |
 | Cron yeniden deploy (`Dockerfile.cron`) | ben (sen "deploy et" deyince) | `niyetsen-backend/` içinden `railway up --service cron --ci`; env'ler girilmeden de zararsız (`not_configured`) |
 | Hostinger CDN BYPASS kontrolü (H4) | **sen** | hPanel → Performans → CDN |
 | Vercel kalıntısı: `niyetsen-website.vercel.app` 308 → niyetsen.com veya projeyi sil (H6/K6) | **sen** | Vercel'i GitHub'a bağlamak **gerekmez** — site Hostinger'da |
