@@ -78,6 +78,25 @@ def test_valid_token_authenticates():
     assert resp.status_code == 200
 
 
+def test_auth_disabled_accepts_x_user_id_without_bearer(monkeypatch):
+    monkeypatch.setattr(settings, "AUTH_DISABLED", True)
+    resp = client.get("/me/state", headers={"X-User-Id": "sahin"})
+    assert resp.status_code == 200
+
+
+def test_auth_disabled_still_validates_bearer(monkeypatch):
+    """Mobil her istekte Bearer gönderir; AUTH_DISABLED açıkken de JWT doğrulanır."""
+    monkeypatch.setattr(settings, "AUTH_DISABLED", True)
+    resp = client.get("/me/state", headers={"Authorization": "Bearer garbage"})
+    assert resp.status_code == 401
+
+
+def test_auth_disabled_valid_bearer_still_authenticates(monkeypatch):
+    monkeypatch.setattr(settings, "AUTH_DISABLED", True)
+    resp = client.get("/me/state", headers={"Authorization": f"Bearer {_token('user-abc')}"})
+    assert resp.status_code == 200
+
+
 def test_rate_limit_identity_survives_jwt_refresh_for_same_user():
     first = _token("stable-user")
     second = jwt.encode(

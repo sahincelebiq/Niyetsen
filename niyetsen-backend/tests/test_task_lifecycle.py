@@ -322,6 +322,13 @@ def test_excuse_persists_floor_adjusted_event():
         headers={"X-User-Id": user_id},
     )
     assert response.status_code == 200
+    body = response.json()
+    assert "message" in body and body["message"]
+    assert isinstance(body["events"], list)
+    assert {key for event in body["events"] for key in event} <= {
+        "category", "delta", "reason",
+    }
+    assert all({"category", "delta", "reason"} <= set(event) for event in body["events"])
     assert repo.get_state(user_id).points["İrade"] == 0
     assert repo.get_state(user_id).silent_miss_streak == 0
     assert repo.get_task(user_id, "excuse-task").status == "missed_excused"

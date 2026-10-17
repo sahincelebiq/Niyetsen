@@ -11,6 +11,7 @@ Start with the root [`../README.md`](../README.md), then dive in below. /
 | [`ARCHITECTURE.md`](ARCHITECTURE.md) | System, backend & mobile architecture, request lifecycle, prod safety-locks. |
 | [`REPO_MAP.md`](REPO_MAP.md) | "What is where" — every directory explained + endpoint groups. / "Neyin nerede olduğu." |
 | [`SECURITY.md`](SECURITY.md) | Security posture, point-in-time audit, hardening recommendations. |
+| [`CONTRACT_AUDIT.md`](CONTRACT_AUDIT.md) | Backend ↔ mobile API contract (auth, plan/proof/score, history/next). |
 | [`DEVELOPER_GUIDE.md`](DEVELOPER_GUIDE.md) | Zero-to-running: backend + mobile setup, env vars, tests, deploy. |
 
 ## Authoritative planning / Bağlayıcı planlama

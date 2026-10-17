@@ -60,8 +60,8 @@ Her yuva kodda `Cursor notu` / `CURSOR YUVASI` yorumlarıyla işaretli:
    Devreye almak için `.env`'de `SUPABASE_SERVICE_KEY` doldur + `USE_SUPABASE_DB=true`.
    Routes değişmedi.
 2. ✅ **JWT doğrulama** (`api/routes.py > get_current_user`) — pyjwt +
-   `SUPABASE_JWT_SECRET` (Project Settings > API > Legacy JWT Secret). Devreye
-   almak için `.env`'de `AUTH_DISABLED=false`. Testler: `tests/test_auth.py`.
+   Supabase JWKS (`RS256`/`ES256`). Bearer varsa `AUTH_DISABLED` açıkken de
+   doğrulanır. Prod: `AUTH_DISABLED=false`. Testler: `tests/test_auth.py`.
 3. **Gün sonu zamanlayıcı** — `/cron/close-day` tek kullanıcı sürümü hazır;
    tüm kullanıcılar için APScheduler/Railway cron döngüsü yaz (kullanıcı
    timezone'unda 23:59).
