@@ -24,6 +24,8 @@ Sosyal Medya*/
 # Website yerel sırları (Vercel OIDC vb.)
 website/.env.local
 website/.vercel/
+# Website yayın paketi (scripts/build_release.sh üretir; Hostinger'a bu yüklenir)
+website/_release/
 
 # Python
 __pycache__/

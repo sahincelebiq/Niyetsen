@@ -29,21 +29,43 @@ RewriteRule ^blog$ /blog/ [L,R=301]
   AddOutputFilterByType DEFLATE text/html text/plain text/css text/javascript application/javascript application/json image/svg+xml application/manifest+json application/xml application/xml+rss
 </IfModule>
 
-# Şifre sıfırlama / e-posta dönüşü — Google OAuth callback değil
+# Şifre sıfırlama / e-posta dönüşü — Google OAuth callback değil.
+# V2: gerçek PKCE handler app.niyetsen.com/auth/callback (Faz 1); bu sayfa KALIR.
 RewriteRule ^auth/callback/?$ /auth-callback.html [L]
 RewriteRule ^sifre-sifirla/?$ /auth-callback.html [L]
 RewriteRule ^reset-password/?$ /auth-callback.html [L]
+
+# Eski Vercel yönlendirmesi (vercel.json redirects karşılığı)
+RewriteRule ^www/?$ / [L,R=301]
+
+# Genel temiz URL (V2 §11 H2): /blog/yazi veya /blog/yazi/ → /blog/yazi.html
+# Yalnız eşleşen .html dosyası varsa; uzantılı istekler ve dizinler dokunulmaz.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_URI} !\.[A-Za-z0-9]{2,5}$
+RewriteCond %{DOCUMENT_ROOT}/$1.html -f
+RewriteRule ^(.+?)/?$ /$1.html [L]
+
+ErrorDocument 404 /404.html
+
+# Yayın arşivine girmemesi gereken dosyalar yanlışlıkla yüklenirse bile kapalı (H5)
+<FilesMatch "^(\.env.*|\.vercelignore|vercel\.json|build_legal_pages\.py|.*\.py|\.DS_Store|\.gitignore)$">
+  Require all denied
+</FilesMatch>
+RedirectMatch 404 ^/\.vercel(/|$)
 
 <IfModule LiteSpeed>
   CacheLookup on
 </IfModule>
 
 <IfModule mod_headers.c>
-  Header set X-Content-Type-Options "nosniff"
-  Header set Referrer-Policy "strict-origin-when-cross-origin"
-  Header set X-Frame-Options "SAMEORIGIN"
-  Header set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
-  Header set Cross-Origin-Opener-Policy "same-origin-allow-popups"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=(), payment=()"
+  Header always set Cross-Origin-Opener-Policy "same-origin-allow-popups"
+  # HSTS (H3). includeSubDomains Faz 1'de app./api. TLS'li olunca eklenir.
+  Header always set Strict-Transport-Security "max-age=31536000"
   Header always set Content-Security-Policy "upgrade-insecure-requests; base-uri 'self'; form-action 'self' https://formsubmit.co; object-src 'none'; frame-ancestors 'self'"
 
   <FilesMatch "\.(html|htm)$">
@@ -53,9 +75,18 @@ RewriteRule ^reset-password/?$ /auth-callback.html [L]
     Header set Vary "Accept-Encoding"
   </FilesMatch>
 
-  <FilesMatch "\.(css|js|png|jpg|jpeg|webp|svg|ico|woff2|woff|webmanifest|txt|xml)$">
+  # Sürümlenmiş statikler: 1 yıl, değişmez (HTML ?v= ile bust eder)
+  <FilesMatch "\.(css|js|png|jpg|jpeg|webp|svg|ico|woff2|woff|webmanifest)$">
     Header unset Pragma
     Header set Cache-Control "public, max-age=31536000, immutable"
+    Header set Vary "Accept-Encoding"
+  </FilesMatch>
+
+  # sitemap.xml / robots.txt / llms.txt (H1): sürümlenmez → 1 saat
+  <FilesMatch "\.(txt|xml)$">
+    Header unset Pragma
+    Header unset Expires
+    Header set Cache-Control "public, max-age=3600"
     Header set Vary "Accept-Encoding"
   </FilesMatch>
 </IfModule>
