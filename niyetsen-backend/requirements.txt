@@ -12,3 +12,5 @@ pyjwt>=2.9
 pytest>=8.0
 slowapi>=0.1
 sentry-sdk>=2.19
+# V2 §7.1 — günlük pg_dump yedeği S3-uyumlu kovaya (R2/B2/MinIO); Faz 7 StorageGateway
+boto3>=1.35

@@ -44,6 +44,13 @@ def _log_env_diagnostic() -> None:
         "SUPABASE_SERVICE_KEY": "set" if _service_key_set() else "MISSING",
         "CRON_SKIP_PUSH": os.environ.get("CRON_SKIP_PUSH", "false"),
         "SUPABASE_TIMEOUT_SEC": os.environ.get("SUPABASE_TIMEOUT_SEC", "120"),
+        "BACKUP": "configured"
+        if all(
+            os.environ.get(k, "").strip()
+            for k in ("BACKUP_S3_ENDPOINT", "BACKUP_S3_BUCKET", "BACKUP_S3_ACCESS_KEY", "BACKUP_S3_SECRET_KEY")
+        )
+        and (os.environ.get("BACKUP_DATABASE_URL", "").strip() or os.environ.get("DIRECT_URL", "").strip())
+        else "not_configured",
     }
     print("cron env: " + json.dumps(checks, ensure_ascii=False))
 
@@ -198,6 +205,27 @@ def run_jobs() -> list[str]:
             warnings.append(f"notifications: {exc}")
             traceback.print_exc()
             _report(exc, step="notifications")
+
+    # V2 §7.1 — günlük pg_dump yedeği (BACKUP_HOUR_UTC saatinde, günde bir).
+    # Yapılandırılmamışsa sessizce atlanır; hata diğer işleri etkilemez.
+    skip_backup = os.environ.get("CRON_SKIP_BACKUP", "").strip().lower() in ("1", "true", "yes")
+    if skip_backup:
+        print("backup: atlandı (CRON_SKIP_BACKUP=true)")
+    elif time.monotonic() >= deadline_ts:
+        warnings.append("backup: süre bütçesi doldu — sonraki tura bırakıldı")
+    else:
+        try:
+            from scripts import backup_pg_dump
+
+            backup_result = backup_pg_dump.run_daily()
+            _print_result("backup", backup_result)
+            if backup_result.get("status") == "error":
+                warnings.append(f"backup: {backup_result.get('error')}")
+                _report(RuntimeError(f"backup: {backup_result.get('error')}"), step="backup")
+        except Exception as exc:  # run_daily zırhlı; import/çevre hatası için
+            warnings.append(f"backup: {exc}")
+            traceback.print_exc()
+            _report(exc, step="backup")
 
     return warnings
 

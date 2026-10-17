@@ -1,6 +1,7 @@
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "Dockerfile"
+# Dockerfile.cron = API imajı + postgresql-client-17 (günlük pg_dump yedeği, V2 §7.1)
+dockerfilePath = "Dockerfile.cron"
 
 [deploy]
 startCommand = "python scripts/run_scheduled_jobs.py"
