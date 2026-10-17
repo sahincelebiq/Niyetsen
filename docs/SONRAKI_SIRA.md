@@ -37,7 +37,7 @@ Kutucukların tek gerçek kaynağı V2 plan §13 FAZ 0 bloğudur; burada yalnız
 | `mobile/AGENTS.md` v54 | ben | ✅ |
 | Hostinger `.htaccess` H1–H3 + P2 + `404.html`, yayın allowlist, canlı deploy | ben | ✅ 2026-10-17 yayında doğrulandı (blog 200, sitemap 1 saat, HSTS, `vercel.json` 404) |
 | Cron yeniden deploy (`Dockerfile.cron`) | ben (sen "deploy et" deyince) | `niyetsen-backend/` içinden `railway up --service cron --ci`; env'ler girilmeden de zararsız (`not_configured`) |
-| Hostinger CDN BYPASS kontrolü (H4) | **sen** | hPanel → Performans → CDN |
+| Hostinger CDN BYPASS (H4) | **sen** | API: önbelleksiz mod kapalı + site önbelleği açık; canlıda HTML ve CSS hâlâ `x-hcdn-cache-status: BYPASS`. hPanel → Performans → CDN |
 | Vercel kalıntısı: `niyetsen-website.vercel.app` 308 → niyetsen.com veya projeyi sil (H6/K6) | **sen** | Vercel'i GitHub'a bağlamak **gerekmez** — site Hostinger'da |
 | Supabase: leaked-password koruması **aç** (R3) | **sen** | Authentication → Attack Protection |
 | Supabase: Google + Apple sağlayıcı **etkin** (R4) | **sen** | Authentication → Sign In / Providers; Google client ID/secret, Apple Services ID |
