@@ -27,7 +27,7 @@ Gemini istemcide yok; JWT JWKS ile imzalı; prod boot kilitleri (`AUTH_DISABLED`
 | 3 | H-03 | `ChatMessage.content` uzunluk sınırı yok → Gemini maliyet DoS. |
 | 4 | H-04 | SlowAPI kimlik/limit in-memory → Railway birden fazla replica’da limit zayıflar (maliyet). |
 | 5 | H-05 | Prod’da RLS’in gerçekten açık olduğu **DOĞRULANAMADI** — kapalıysa anon key ile tablo sızıntısı KRİTİK olur. |
-| 6 | H-06 | Authenticated kullanıcı `proofs` bucket’ına kendi klasörüne doğrudan yazabilir (Vision/backend bypass storage spam). |
+| 6 | H-06 | **KAPALI (2026-09-06)** — authenticated `proofs` write policy yok (prod + repo drop migration). SELECT own durur; yazma yalnız API/`service_role`. |
 | 7 | H-07 | Play Data Safety / KVKK’da Gemini’ye foto+profil aktarımı beyanı kod dışı — form doldurulmadan çıkış riski. |
 | 8 | H-08 | `npm audit --production`: 3 high — yayın öncesi giderilmeli veya risk kabulü yazılı olmalı. |
 
@@ -43,7 +43,7 @@ Gemini istemcide yok; JWT JWKS ile imzalı; prod boot kilitleri (`AUTH_DISABLED`
 | H-03 | YÜKSEK | [`schemas.py:19-22`](niyetsen-backend/app/models/schemas.py); [`intent_service.py:153-183`](niyetsen-backend/app/services/intent_service.py) | `ChatMessage.content: str` — `max_length` yok; history Gemini’ye gidiyor. | Auth’lu hesapla çok büyük mesaj / uzun history → token patlaması, fatura şişmesi. Rate limit 10/dk var ama tek istek boyutu sınırsız. | `content` için `max_length` (ör. 4000); istek toplam karakter tavanı; fazla history kes. |
 | H-04 | YÜKSEK | [`rate_limit.py:11-32`](niyetsen-backend/app/core/rate_limit.py); [`main.py:66-67`](niyetsen-backend/app/main.py) | Limiter varsayılan in-memory; Redis/storage_uri yok. | N replica’da limit ×N; saldırgan chat/proof/fal ile Gemini kotasını hızla eritir. | Redis (veya eşdeğeri) shared limiter; kullanıcı başına günlük Gemini çağrı tavanı + kill switch. |
 | H-05 | YÜKSEK | Migration’lar RLS enable ediyor (ör. [`20260707000000_niyetsen_core_tables.sql:61-67`](niyetsen-backend/supabase/migrations/20260707000000_niyetsen_core_tables.sql)); **prod uygulama durumu kodda yok** | Tasarım: RLS açık + çoğu tabloda policy yok = anon/authenticated PostgREST’ten deny. Prod’da migration uygulanmadıysa RLS kapalı kalabilir. | Anon key (bundle’da meşru) ile `users`/`tasks`/`point_log` dump — klasik Supabase faciası. | Aşağıdaki SQL’leri prod’da çalıştır; RLS kapalı tablo kalmasın. |
-| H-06 | YÜKSEK | [`20260711000000_faz3_task_loop.sql:47-85`](niyetsen-backend/supabase/migrations/20260711000000_faz3_task_loop.sql) | `proofs` bucket private; ama `authenticated` için insert/update/delete/select own-folder policy var. Backend de service_role ile yazıyor. | Çalıntı JWT ile kullanıcı kendi `user_id/` altına 5MB×N spam yükler (Storage maliyeti). Puan için hâlâ API gerekir; yine de DoS. | İstemci doğrudan Storage yazmasın: storage insert policy’yi kaldır veya yalnız service_role; mobil yalnızca API upload. |
+| H-06 | YÜKSEK → **KAPALI** | [`20260906140000_h06_drop_proofs_authenticated_writes.sql`](niyetsen-backend/supabase/migrations/20260906140000_h06_drop_proofs_authenticated_writes.sql) | Faz 3 tarihsel olarak own-folder CRUD oluşturur. Prod’da (2026-09-06) yalnız `proofs_select_own`. Yeni migration insert/update/delete’i idempotent drop eder; SELECT own kalır. Mobil `uploadTaskProof` → `POST /task/{id}/proof` (doğrudan Storage yazmaz). | — | Taze ortamda da apply sonrası write policy 0. VERIFY: `RUN_IN_SUPABASE_SQL_EDITOR.sql` E2. |
 | H-07 | YÜKSEK | Consent var ([`routes.py:1038-1061`](niyetsen-backend/app/api/routes.py); legal [`legal.ts`](mobile/src/constants/legal.ts)); **Play Data Safety formu repo’da yok** | Foto+sohbet+profil Gemini’ye (yurt dışı) gidiyor; form/beyan Dashboard’da. | Store reddi / KVKK şikâyeti. | Data Safety: fotoğraflar, kişisel bilgiler, AI üçüncü taraf; aydınlatmada Gemini/Google aktarımı açık yaz. |
 | H-08 | YÜKSEK | `npm audit --production` (mobile, 2026-08-02) | 3 high (`brace-expansion`, `fast-uri`, `postcss` zinciri), 20 moderate. | Zincire bağlı build-time/config plugin riski; exploitable yüzey sürüme göre değişir. | `npm audit fix` + Expo uyumlu yükseltme; kalamayanlar için yazılı risk kabulü. |
 | M-01 | ORTA | [`niyetsen-backend/.env.example:52-53`](niyetsen-backend/.env.example) | Gerçek Supabase project ref `postgres.ktweahgrrppmxpdhohdh` + bölge host’u commit’te (şifre placeholder). | Proje kimliği + bölge saldırı yüzeyi daraltır (şifre brute, phishing hedefi). | Placeholder: `postgres.YOUR_PROJECT_REF`; ref’i örnekten çıkar. |
@@ -138,7 +138,7 @@ Olmayanlar (auth var): history, excuse, state, profile, bonus, threads… — H-
 | push_tokens, bonus_offers | Evet | 0 | |
 | fortune_log, chat_threads | Evet | 0 | |
 | idol_personas, persona_chunks | Evet | 0 | |
-| storage.objects / proofs | — | own-folder CRUD authenticated | H-06 |
+| storage.objects / proofs | — | yalnız SELECT own-folder (`proofs_select_own`); write yok | H-06 KAPALI |
 | storage.objects / plan-images | — | public SELECT | D-02 |
 
 `SECURITY DEFINER` fonksiyonlar `SET search_path = public` ile tanımlı (ör. consent/proof/bonus) — boş `search_path` ideal değil ama sabit `public` set edilmiş; grant’ler service_role’a kısıtlı (bonus).
@@ -158,7 +158,7 @@ Olmayanlar (auth var): history, excuse, state, profile, bonus, threads… — H-
 |------|-----|-------------|------------|
 | 0 | K-01 | 30 dk | Şimdi: rotate + dosyayı repo dışına; git’e ekleme |
 | 1 | H-05 | 1–2 sa (manuel SQL + düzeltme) | Her şeyden önce prod gerçeği |
-| 2 | H-06 | 2–4 sa | Storage policy + mobil yol |
+| 2 | H-06 | **yapıldı 2026-09-06** | Dedicated drop migration + VERIFY E2; mobil API upload doğrulandı |
 | 3 | H-01 | 4–8 sa | Pillow re-encode; rıza metni |
 | 4 | H-02 + M-02 | 4–8 sa | Kanıt ekonomisi |
 | 5 | H-03 + M-03 | 2–4 sa | Şema limitleri |
