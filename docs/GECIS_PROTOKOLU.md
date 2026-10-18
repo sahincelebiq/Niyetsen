@@ -97,6 +97,7 @@ Supabase rolleri). Gerçek bağımlılık listesi: `docs/SUPABASE_BAGIMLILIK.md`
 
 | Tarih | Kaynak | Dump | Tablo / satır | pg_restore | Sonuç | Not |
 |---|---|---|---|---|---|---|
-| 2026-10-17 | **Stand-in** (gerçek migration'lar, yerel PG 17.11, örnek veri) | 84 KB, sha256 `fcc8212d…` | 24 / 24 | çıkış 1 (yalnız zararsız `schema "public" already exists`) | **EŞİT ✅** — boru hattı doğrulandı | Üretim DB'ye karşı tatbikat **bekliyor**: `.env` `DIRECT_URL` hâlâ `[YOUR-PASSWORD]`; Şahin şifreyi girince `restore_drill_local.sh --from-source` koşulacak ve bu satırın altına yazılacak. |
+| 2026-10-17 | **Stand-in** (gerçek migration'lar, yerel PG 17.11, örnek veri) | 84 KB, sha256 `fcc8212d…` | 24 / 24 | çıkış 1 (yalnız zararsız `schema "public" already exists`) | **EŞİT ✅** — boru hattı doğrulandı | Üretimden önce prova |
+| 2026-10-18 | **Üretim Supabase** (session pooler 5432, PG 17.6 → yerel 17.11) | 364 KB, sha256 `0c6dbfd0…` | 56 / 1468 | çıkış 1, anlamlı hata 0 | **EŞİT ✅** | md5 karşılaştırması UTC + `COLLATE "C"` ile. S3'e günlük yükleme hâlâ kova anahtarı bekliyor |
 
-KAPI 0 için gereken: üretim Supabase'den alınmış dump ile yeşil satır.
+KAPI 0'ın yedek yarısı: üretim satırı **yeşil** (2026-10-18). Günlük cron yüklemesi `BACKUP_S3_*` gelince başlar.

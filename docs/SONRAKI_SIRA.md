@@ -31,7 +31,7 @@ Kutucukların tek gerçek kaynağı V2 plan §13 FAZ 0 bloğudur; burada yalnız
 | README V2 + README_BACKEND | ben | ✅ 2026-10-17 (eski README arşivde) |
 | Migration tek kaynak + `docs/SUPABASE_BAGIMLILIK.md` | ben | ✅ kök kopya kaldırıldı; envanter yazıldı |
 | Günlük `pg_dump` cron + `scripts/verify_backup.py` + `docs/GECIS_PROTOKOLU.md` | ben | ✅ kod + cron adımı + `Dockerfile.cron` + 21 test; stand-in tatbikat EŞİT |
-| **Restore tatbikatı — üretim** (KAPI 0) | **sen** → ben | `.env` `DIRECT_URL` şifresi (`[YOUR-PASSWORD]` duruyor) + Railway `cron` env'ine `BACKUP_*` + S3 kova kimliği (öneri: Cloudflare R2) → `scripts/restore_drill_local.sh --from-source` |
+| **Restore tatbikatı — üretim** (KAPI 0) | ben | ✅ 2026-10-18: 56 tablo / 1468 satır, md5 eşit (`docs/GECIS_PROTOKOLU.md` §7). Günlük S3 yüklemesi hâlâ `BACKUP_S3_*` bekliyor |
 | 4 alt ajan + hook'lar | ben | ✅ `.cursor/agents/`, `.cursor/hooks.json` (canlıda doğrulandı) |
 | AAB güvenlik taraması → `docs/security/AAB_TARAMA_2026-10.md` | ben | ✅ KRİTİK 0 · YÜKSEK 2 (RECORD_AUDIO, deep-link token) → F1 AAB'sinde kapanır |
 | `mobile/AGENTS.md` v54 | ben | ✅ |

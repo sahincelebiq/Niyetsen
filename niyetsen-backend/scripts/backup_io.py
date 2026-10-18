@@ -43,11 +43,21 @@ def tool_version(name: str) -> str:
         return "?"
 
 
+def _pg_env() -> dict[str, str]:
+    """Anlık görüntü metni oturum saat dilimine bağlıdır. Kaynak (Supabase) ve
+    hedef (yerel) aynı dilimde olmazsa md5 tutmaz, satırlar eşit olsa bile."""
+    env = os.environ.copy()
+    env["PGOPTIONS"] = "-c timezone=UTC -c datestyle=ISO,MDY"
+    return env
+
+
 def run_command(cmd: list[str], *, dsn: str | None = None, timeout: int = 1800) -> subprocess.CompletedProcess[str]:
     """Komutu çalıştırır; hata mesajında DSN maskelenir."""
     shown = [mask_dsn(part) if dsn and dsn in part else part for part in cmd]
     try:
-        return subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, check=False)
+        return subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout, check=False, env=_pg_env()
+        )
     except subprocess.TimeoutExpired as exc:
         raise BackupToolError(f"zaman aşımı ({timeout}s): {' '.join(shown)}") from exc
 

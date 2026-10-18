@@ -253,8 +253,10 @@ def md5_sql(schema: str, table: str) -> str:
     """Satırları metne çevirip sıralı birleştirir; boş tablo → md5('')."""
     _check_ident(schema)
     _check_ident(table)
+    # COLLATE "C" şart: kaynak (Supabase) ve hedef (yerel initdb) farklı
+    # collation kullanırsa aynı satırlar farklı sırada birleşir ve md5 tutmaz.
     return (
-        "select md5(coalesce(string_agg(t::text, E'\\n' order by t::text), '')) "
+        "select md5(coalesce(string_agg(t::text, E'\\n' order by t::text collate \"C\"), '')) "
         f'from "{schema}"."{table}" t'
     )
 
