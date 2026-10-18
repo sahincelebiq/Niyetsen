@@ -176,9 +176,10 @@ canlıda yaşanmış bir hatanın veya Şahin'in verdiği bir kararın izidir.
   30 gün) + `scripts/verify_backup.py` (satır sayısı + md5 karşılaştırma);
   runbook `docs/GECIS_PROTOKOLU.md`. Env: `BACKUP_DATABASE_URL`,
   `BACKUP_S3_*`. Kimlikler Şahin'den (Railway cron env).
-- Şahin panel maddeleri (F0): Supabase leaked-password koruması, Google +
-  Apple sağlayıcı, redirect URL'leri (`app.`/`panel.`), S3 kova kimliği,
-  Hostinger CDN BYPASS, Vercel kalıntısı 308/sil.
+- Şahin panel maddeleri (F0): leaked-password **Pro'ya ertelendi**
+  (2026-10-18, Captcha açık); Google etkin, Apple + redirect URL'leri
+  (`app.`/`panel.`) duruyor; S3 kova kimliği, Hostinger CDN BYPASS, Vercel
+  kalıntısı 308/sil.
 - Envanter bulguları (`docs/SUPABASE_BAGIMLILIK.md`, 64 madde): backend
   Postgres'e doğrudan bağlanmaz (PostgREST); mobil yalnız Auth için supabase-js
   (DB/Storage erişimi yok). **Taşınma tuzakları:** `tasks.image_url` kalıcı

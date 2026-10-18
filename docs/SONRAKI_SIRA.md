@@ -39,7 +39,7 @@ Kutucukların tek gerçek kaynağı V2 plan §13 FAZ 0 bloğudur; burada yalnız
 | Cron yeniden deploy (`Dockerfile.cron`) | ben (sen "deploy et" deyince) | `niyetsen-backend/` içinden `railway up --service cron --ci`; env'ler girilmeden de zararsız (`not_configured`) |
 | Hostinger CDN BYPASS (H4) | **sen** | API: önbelleksiz mod kapalı + site önbelleği açık; canlıda HTML ve CSS hâlâ `x-hcdn-cache-status: BYPASS`. hPanel → Performans → CDN |
 | Vercel kalıntısı: `niyetsen-website.vercel.app` 308 → niyetsen.com veya projeyi sil (H6/K6) | **sen** | Vercel'i GitHub'a bağlamak **gerekmez** — site Hostinger'da |
-| Supabase: leaked-password koruması **aç** (R3) | **sen** | Authentication → Attack Protection |
+| Supabase: leaked-password koruması (R3) | **sonra** | 2026-10-18: Attack Protection'da satır DISABLED; açmak **Pro** istiyor. Şahin şimdi yükseltmiyor. Captcha (Turnstile) açık. Pro olunca e-posta sağlayıcısında "Prevent use of leaked passwords" |
 | Supabase: Google + Apple sağlayıcı **etkin** (R4) | **sen** | Authentication → Sign In / Providers; Google client ID/secret, Apple Services ID |
 | Supabase: redirect URL'leri (`https://app.niyetsen.com/auth/callback`, `https://panel.niyetsen.com/auth/callback`, `niyetsen://auth/callback`) | **sen** | Authentication → URL Configuration; `https://niyetsen.com/**` jokerini kesin yollara çevir |
 

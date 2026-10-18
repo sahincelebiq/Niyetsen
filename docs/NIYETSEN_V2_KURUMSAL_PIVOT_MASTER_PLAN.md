@@ -511,7 +511,7 @@ oturumda yalnız okundu.
 |---|---|---|---|---|
 | R1 | 2.5 fallback'ler Google tarafında **erişim kısıtlı**; `GEMINI_MODEL_IMAGE=gemini-2.5-flash-image` | YÜKSEK | `config.py` | Faz 1: model router + yeni fallback'ler |
 | R2 | `/health` env + model adlarını herkese açıyor | ORTA | `routes.py` 226–234 | Faz 1: yalnız `ok`+`version` |
-| R3 | Supabase Auth leaked-password koruması kapalı | ORTA | Supabase advisor | Faz 0: aç |
+| R3 | Supabase Auth leaked-password koruması kapalı | ORTA | Supabase advisor | 2026-10-18: açmak **Pro** istiyor. Şahin şimdi yükseltmiyor. Captcha açık. Pro olunca e-posta sağlayıcısında aç |
 | R4 | Google/Apple sağlayıcıları Supabase'de etkin mi belirsiz (AUTH_KURULUM "not enabled") | YÜKSEK (web giriş) | Supabase dashboard | Faz 0: doğrula/etkinleştir |
 | R5 | `league_members.user_id → auth.users(id)` FK + `image_service.py:387` doğrudan `supabase` istemcisi (sunucu bağımsızlığını kırar) | ORTA | `20260810120000` migration, `image_service.py` | Faz 1–2: `users(id)` FK + `StorageGateway` |
 | R6 | DDL SQL Editor'a elle yapıştırılıyor; kök `supabase/migrations/` kopya stub | ORTA | Tuzak #5 | Faz 0: tek kaynak + disiplin |
@@ -604,7 +604,7 @@ P2: `Header set` → `Header always set` + `ErrorDocument 404 /404.html`;
 ### FAZ 0 — Hazırlık ve zemin (2–3 gün) — *AKTİF, 2026-10-17*
 - [x] Bu plan onayı → MASTER_PLAN §1.14 "V2 kilitleri", SONRAKI_SIRA, hafıza sözlüğü. *(2026-10-17)*
 - [x] **Yeni `README.md` (V2)** + `README_BACKEND.md` (kök kopya birebir); eski README → `docs/arsiv-planlama/README_v1_2026-10.md`.
-- [ ] Supabase (**Şahin — panel**, adımlar `docs/AUTH_KURULUM.md` A7/A9): leaked-password koruması aç (advisor 2026-10-17 14:40: hâlâ **WARN/kapalı**); Google sağlayıcı **etkin — kanıt `auth.identities` 4 google kimliği** (R4'ün Google yarısı ✅); Apple 0 kimlik → iOS öncesi açılacak; redirect URL'leri (`https://app.niyetsen.com/auth/callback`, `https://panel.niyetsen.com/auth/callback`) ekle, `niyetsen.com/**` jokerini kesin yollara indir; Google Cloud web client origins'e `app.`/`panel.`.
+- [ ] Supabase (**Şahin — panel**, adımlar `docs/AUTH_KURULUM.md` A7/A9): leaked-password **Pro'ya ertelendi** (2026-10-18, advisor hâlâ WARN; Captcha açık). Google sağlayıcı **etkin — kanıt `auth.identities` 4 google kimliği** (R4'ün Google yarısı ✅); Apple 0 kimlik → iOS öncesi açılacak; redirect URL'leri (`https://app.niyetsen.com/auth/callback`, `https://panel.niyetsen.com/auth/callback`) ekle, `niyetsen.com/**` jokerini kesin yollara indir; Google Cloud web client origins'e `app.`/`panel.`.
 - [x] Migration tek kaynak: kök `supabase/migrations/` kopyası kaldırıldı (backend kopyasıyla birebir doğrulandı); `docs/SUPABASE_BAGIMLILIK.md` yazıldı (dosya:satır envanteri, A/B taşınma karşılıkları).
 - [x] Günlük `pg_dump` cron (`scripts/backup_pg_dump.py` + `run_scheduled_jobs.py` backup adımı + `Dockerfile.cron` pg 17) + `scripts/verify_backup.py` + `restore_drill_local.sh` + `local_pg_from_migrations.sh` (29/29 migration vanilla PG'de hatasız) + `docs/GECIS_PROTOKOLU.md`; 21 test. **Stand-in tatbikat EŞİT ✅.**
 - [ ] **Üretim tatbikatı** (KAPI 0): `.env` `DIRECT_URL` hâlâ `[YOUR-PASSWORD]` → Şahin DB şifresini girer; Railway cron'a `BACKUP_*` + S3 kova kimliği (öneri Cloudflare R2) → `restore_drill_local.sh --from-source` yeşil → GECIS_PROTOKOLU §7'ye kayıt.

@@ -157,9 +157,14 @@ Apple: Providers → Apple ayrıca açılır; iOS bundle `com.niyetsen.app`.
 
 ## A7. Attack Protection
 
-Authentication → Attack Protection → **Leaked password protection** aç
-(HaveIBeenPwned). Advisor uyarısı duruyor (**2026-10-17 14:40 yeniden
-kontrol: hâlâ WARN / kapalı** — V2 Faz 0 R3, Şahin).
+Authentication → Attack Protection. Bu sayfadaki yeşil anahtar **Captcha**'dır
+(Turnstile, 2026-10-18'de açık).
+
+**Prevent use of leaked passwords** aynı sayfada durum olarak görünür; anahtar
+e-posta sağlayıcısındadır (sağdaki "Configure in email provider"). 2026-10-18'de
+bu satır **DISABLED** ve açmak **Pro plan** istiyor. Şahin şimdi Pro'ya
+geçmiyor. Advisor WARN'ı Pro'ya kadar kabul. Pro olunca e-posta sağlayıcısında
+anahtarı aç; advisor'dan WARN kalkınca R3 kapanır.
 
 ## A9. V2 Faz 0/1 ekleri (2026-10-17)
 
